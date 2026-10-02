@@ -1,0 +1,62 @@
+[
+  {
+    "name": "BALLCODE.ASM",
+    "size": 16985,
+    "sha256": "cbd10e711ece9374b560a99d8af703dc6f96db36a820bd647ebbd2827c3a864b"
+  },
+  {
+    "name": "FANTASIE.ASM",
+    "size": 122515,
+    "sha256": "52500bf0a0f6f7dbf011cb4b456b04e0800cfb6387bb851e3c1dcbc51f4573b8"
+  },
+  {
+    "name": "FANTASIE.MAC",
+    "size": 7070,
+    "sha256": "8e161a6a3bea03822d4d184d7390cef4e45f6d7b7c7ba84be4624a3a8c521327"
+  },
+  {
+    "name": "INTRO.ASM",
+    "size": 83651,
+    "sha256": "615e7bd32c3cfcd808ca8a01a3887c0d1b2be141b22cc69cbc7237bae8151770"
+  },
+  {
+    "name": "MACROS1.ASM",
+    "size": 9660,
+    "sha256": "30f4881d09c7e6acdddeb81815cf375a4de845721e00e0b81fe4b3c1d77be77d"
+  },
+  {
+    "name": "MACROS3.ASM",
+    "size": 4364,
+    "sha256": "80fcbc4d169d5be965cf0aaabbfb7660fbcb720931c7896c17e7cf5aeb946533"
+  },
+  {
+    "name": "PLAND.ASM",
+    "size": 126320,
+    "sha256": "4c162a657f167f723c5c0deed3762bb3163a44673dadae1695531cc5d61e5422"
+  },
+  {
+    "name": "README.md",
+    "size": 19,
+    "sha256": "231fd59d7262478a740e493c5648edbf4873b6d9d13154e6ae871e8a5c442b1d"
+  },
+  {
+    "name": "SDEV.ASM",
+    "size": 107437,
+    "sha256": "4b2b95c26fb43e7c6f299060e4c54d06c249cdd0bd9d28e5d0cdd030729800ae"
+  },
+  {
+    "name": "SHOW.ASM",
+    "size": 91914,
+    "sha256": "38479bb73a3db80bd62cf79a3526d7cd14a69f9859f1d2f6c11586ef3be9254f"
+  },
+  {
+    "name": "START.ASM",
+    "size": 8237,
+    "sha256": "6f2fa95c20456026ba117ae78c385384cc98517bb31b44d24e4d441f1292dce7"
+  },
+  {
+    "name": "STONES.ASM",
+    "size": 122275,
+    "sha256": "03533a4a0bbe7e0d43969ae040781153d99e7af27a2383ea0b3eac230f5b9278"
+  }
+]

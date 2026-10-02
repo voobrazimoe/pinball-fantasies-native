@@ -1,0 +1,58 @@
+{
+  "1": {
+    "texts": {
+      "count": 293,
+      "sha256": "619aee8b3d0b456c7f0f66a7312bd6cd2d4d8e1f374248339f0494134272e722"
+    },
+    "animations": {
+      "count": 19,
+      "sha256": "7a0b3a54756793f3a7f6b3411056ae4e1823f91840afd90c7c41731d350861a8"
+    },
+    "lampflash": {
+      "count": 31,
+      "sha256": "aff6e022ba3a2eb878450c4130dfefc5fdde7df09987aaf81bfaaeee42845a49"
+    }
+  },
+  "2": {
+    "texts": {
+      "count": 275,
+      "sha256": "f066bd30bae90039d7090ef744344fe8fb17ca5b9af71057dbb64a951201940d"
+    },
+    "animations": {
+      "count": 14,
+      "sha256": "b227f691aafceedf88627abd010590aa8ef12faca29513df524e04af2cb3233a"
+    },
+    "lampflash": {
+      "count": 28,
+      "sha256": "800d88b2a93bfa2048c4352ba7925a4b6a4718c1a7ac01e4c03738ac8cc786ee"
+    }
+  },
+  "3": {
+    "texts": {
+      "count": 227,
+      "sha256": "72780869f23ecc16da7660c03427a003f81e2ee815e442806eaa034aa28b25e8"
+    },
+    "animations": {
+      "count": 18,
+      "sha256": "2c9d512d69756066a7e5e045d8f5416ee26e0b87f5f396a526972551e31f959c"
+    },
+    "lampflash": {
+      "count": 18,
+      "sha256": "ecc5576fafc9e053acfe05e16151c1686b3bf794b693d17984b64077b971b0b8"
+    }
+  },
+  "4": {
+    "texts": {
+      "count": 311,
+      "sha256": "00b6b55d351d5534e4feb1667cadd9b182aae4ae8218cffbee6ecbc695b01d7e"
+    },
+    "animations": {
+      "count": 13,
+      "sha256": "6a33aa6e6ae1824c87ce300d98fb754ba0e350ea4b7ac278f0a903d956c20b64"
+    },
+    "lampflash": {
+      "count": 19,
+      "sha256": "8a2a01b4cfd8834c6d5409ca3848fab69efe80bd84bad2d786c6f4ad33c68a50"
+    }
+  }
+}

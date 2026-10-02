@@ -1,0 +1,280 @@
+
+/tmp/pf5-SBLASTER-static.bin:     file format binary
+
+
+Disassembly of section .data:
+
+0000019e <.data+0x19e>:
+     19e:	68 e2 01             	push   0x1e2
+     1a1:	1f                   	pop    ds
+     1a2:	89 16 de 66          	mov    WORD PTR ds:0x66de,dx
+     1a6:	8c 06 e0 66          	mov    WORD PTR ds:0x66e0,es
+     1aa:	e9 40 ff             	jmp    0xed
+     1ad:	68 e2 01             	push   0x1e2
+     1b0:	07                   	pop    es
+     1b1:	8b f2                	mov    si,dx
+     1b3:	bf a6 6a             	mov    di,0x6aa6
+     1b6:	b9 41 00             	mov    cx,0x41
+     1b9:	f3 a4                	rep movs BYTE PTR es:[di],BYTE PTR ds:[si]
+     1bb:	68 e2 01             	push   0x1e2
+     1be:	1f                   	pop    ds
+     1bf:	e8 50 05             	call   0x712
+     1c2:	72 03                	jb     0x1c7
+     1c4:	e9 26 ff             	jmp    0xed
+     1c7:	e8 a5 16             	call   0x186f
+     1ca:	2e a0 b7 0a          	mov    al,cs:0xab7
+     1ce:	2e a2 05 01          	mov    cs:0x105,al
+     1d2:	e9 18 ff             	jmp    0xed
+     1d5:	68 e2 01             	push   0x1e2
+     1d8:	1f                   	pop    ds
+     1d9:	b0 33                	mov    al,0x33
+     1db:	fe ca                	dec    dl
+     1dd:	f6 e2                	mul    dl
+     1df:	8b f8                	mov    di,ax
+     1e1:	81 c7 98 07          	add    di,0x798
+     1e5:	8a e9                	mov    ch,cl
+     1e7:	8a cb                	mov    cl,bl
+     1e9:	b2 00                	mov    dl,0x0
+     1eb:	b6 00                	mov    dh,0x0
+     1ed:	0a ff                	or     bh,bh
+     1ef:	74 04                	je     0x1f5
+     1f1:	b2 0c                	mov    dl,0xc
+     1f3:	8a f7                	mov    dh,bh
+     1f5:	e8 0d 0c             	call   0xe05
+     1f8:	e9 f2 fe             	jmp    0xed
+     1fb:	68 e2 01             	push   0x1e2
+     1fe:	1f                   	pop    ds
+     1ff:	2e 80 3e 3a 14 00    	cmp    BYTE PTR cs:0x143a,0x0
+     205:	4b                   	dec    bx
+     206:	87 1e 0a 05          	xchg   WORD PTR ds:0x50a,bx
+     20a:	c6 06 fe 06 01       	mov    BYTE PTR ds:0x6fe,0x1
+     20f:	c6 06 87 07 01       	mov    BYTE PTR ds:0x787,0x1
+     214:	2e 88 1e 05 01       	mov    BYTE PTR cs:0x105,bl
+     219:	e9 d1 fe             	jmp    0xed
+
+
+/tmp/pf5-SBLASTER-static.bin:     file format binary
+
+
+Disassembly of section .data:
+
+00000caf <.data+0xcaf>:
+     caf:	ff 36 99 08          	push   WORD PTR ds:0x899
+     cb3:	a1 97 08             	mov    ax,ds:0x897
+     cb6:	33 d2                	xor    dx,dx
+     cb8:	f7 36 95 07          	div    WORD PTR ds:0x795
+     cbc:	0b d2                	or     dx,dx
+     cbe:	74 2d                	je     0xced
+     cc0:	a1 99 08             	mov    ax,ds:0x899
+     cc3:	03 06 97 08          	add    ax,WORD PTR ds:0x897
+     cc7:	2e 8b 1e 35 0b       	mov    bx,WORD PTR cs:0xb35
+     ccc:	2b c3                	sub    ax,bx
+     cce:	76 04                	jbe    0xcd4
+     cd0:	29 06 99 08          	sub    WORD PTR ds:0x899,ax
+     cd4:	a1 97 08             	mov    ax,ds:0x897
+     cd7:	03 06 99 08          	add    ax,WORD PTR ds:0x899
+     cdb:	33 d2                	xor    dx,dx
+     cdd:	f7 36 95 07          	div    WORD PTR ds:0x795
+     ce1:	3b 16 99 08          	cmp    dx,WORD PTR ds:0x899
+     ce5:	73 2d                	jae    0xd14
+     ce7:	29 16 99 08          	sub    WORD PTR ds:0x899,dx
+     ceb:	eb 27                	jmp    0xd14
+     ced:	2e ff 06 58 0b       	inc    WORD PTR cs:0xb58
+     cf2:	2e 83 16 5a 0b 00    	adc    WORD PTR cs:0xb5a,0x0
+     cf8:	fe 0e 87 07          	dec    BYTE PTR ds:0x787
+     cfc:	74 05                	je     0xd03
+     cfe:	e8 18 01             	call   0xe19
+     d01:	eb 11                	jmp    0xd14
+     d03:	a0 86 07             	mov    al,ds:0x786
+     d06:	a2 87 07             	mov    ds:0x787,al
+     d09:	2e 80 3e 57 02 ff    	cmp    BYTE PTR cs:0x257,0xff
+     d0f:	74 03                	je     0xd14
+     d11:	e8 5f 00             	call   0xd73
+     d14:	e8 14 01             	call   0xe2b
+     d17:	e8 9e 02             	call   0xfb8
+     d1a:	a1 99 08             	mov    ax,ds:0x899
+     d1d:	01 06 97 08          	add    WORD PTR ds:0x897,ax
+     d21:	a1 97 08             	mov    ax,ds:0x897
+     d24:	2e 8b 1e 35 0b       	mov    bx,WORD PTR cs:0xb35
+     d29:	3b c3                	cmp    ax,bx
+     d2b:	72 06                	jb     0xd33
+     d2d:	c7 06 97 08 00 00    	mov    WORD PTR ds:0x897,0x0
+     d33:	a1 99 08             	mov    ax,ds:0x899
+     d36:	8f 06 99 08          	pop    WORD PTR ds:0x899
+     d3a:	29 06 99 08          	sub    WORD PTR ds:0x899,ax
+     d3e:	83 3e 99 08 50       	cmp    WORD PTR ds:0x899,0x50
+     d43:	72 03                	jb     0xd48
+     d45:	e9 67 ff             	jmp    0xcaf
+
+
+/tmp/pf5-SBLASTER-static.bin:     file format binary
+
+
+Disassembly of section .data:
+
+00000d73 <.data+0xd73>:
+     d73:	2e c4 36 5e 0b       	les    si,DWORD PTR cs:0xb5e
+     d78:	8b 0e 88 07          	mov    cx,WORD PTR ds:0x788
+     d7c:	bf 98 07             	mov    di,0x798
+     d7f:	51                   	push   cx
+     d80:	26 8b 04             	mov    ax,WORD PTR es:[si]
+     d83:	8a c8                	mov    cl,al
+     d85:	80 e1 3f             	and    cl,0x3f
+     d88:	c1 c0 02             	rol    ax,0x2
+     d8b:	8a ec                	mov    ch,ah
+     d8d:	80 e5 1f             	and    ch,0x1f
+     d90:	88 2e 8a 07          	mov    BYTE PTR ds:0x78a,ch
+     d94:	c1 c0 03             	rol    ax,0x3
+     d97:	24 0f                	and    al,0xf
+     d99:	8a d0                	mov    dl,al
+     d9b:	26 8a 74 02          	mov    dh,BYTE PTR es:[si+0x2]
+     d9f:	e8 63 00             	call   0xe05
+     da2:	83 c7 33             	add    di,0x33
+     da5:	83 c6 03             	add    si,0x3
+     da8:	59                   	pop    cx
+     da9:	e2 d4                	loop   0xd7f
+     dab:	80 3e fe 06 00       	cmp    BYTE PTR ds:0x6fe,0x0
+     db0:	75 13                	jne    0xdc5
+     db2:	2e 89 36 5e 0b       	mov    WORD PTR cs:0xb5e,si
+     db7:	8b c6                	mov    ax,si
+     db9:	33 d2                	xor    dx,dx
+     dbb:	be 00 03             	mov    si,0x300
+     dbe:	f7 f6                	div    si
+     dc0:	0b d2                	or     dx,dx
+     dc2:	74 01                	je     0xdc5
+     dc4:	c3                   	ret
+     dc5:	ff 06 0a 05          	inc    WORD PTR ds:0x50a
+     dc9:	8b 36 0a 05          	mov    si,WORD PTR ds:0x50a
+     dcd:	3b 36 0c 05          	cmp    si,WORD PTR ds:0x50c
+     dd1:	72 0f                	jb     0xde2
+     dd3:	c7 06 0a 05 00 00    	mov    WORD PTR ds:0x50a,0x0
+     dd9:	a1 84 07             	mov    ax,ds:0x784
+     ddc:	01 06 0a 05          	add    WORD PTR ds:0x50a,ax
+     de0:	eb e7                	jmp    0xdc9
+     de2:	8a a4 02 07          	mov    ah,BYTE PTR [si+0x702]
+     de6:	88 26 00 07          	mov    BYTE PTR ds:0x700,ah
+     dea:	a0 fe 06             	mov    al,ds:0x6fe
+     ded:	fe c8                	dec    al
+     def:	7d 02                	jge    0xdf3
+     df1:	32 c0                	xor    al,al
+     df3:	c0 e0 02             	shl    al,0x2
+     df6:	bb 03 00             	mov    bx,0x3
+     df9:	f7 e3                	mul    bx
+     dfb:	2e a3 5e 0b          	mov    cs:0xb5e,ax
+     dff:	c6 06 fe 06 00       	mov    BYTE PTR ds:0x6fe,0x0
+     e04:	c3                   	ret
+     e05:	80 fa 03             	cmp    dl,0x3
+     e08:	74 0b                	je     0xe15
+     e0a:	80 fa 05             	cmp    dl,0x5
+     e0d:	74 06                	je     0xe15
+     e0f:	e8 38 02             	call   0x104a
+     e12:	e8 f3 01             	call   0x1008
+     e15:	e8 87 02             	call   0x109f
+     e18:	c3                   	ret
+     e19:	8b 0e 88 07          	mov    cx,WORD PTR ds:0x788
+     e1d:	bf 98 07             	mov    di,0x798
+     e20:	51                   	push   cx
+     e21:	ff 55 02             	call   WORD PTR [di+0x2]
+     e24:	59                   	pop    cx
+     e25:	83 c7 33             	add    di,0x33
+     e28:	e2 f6                	loop   0xe20
+     e2a:	c3                   	ret
+
+
+/tmp/pf5-SBLASTER-static.bin:     file format binary
+
+
+Disassembly of section .data:
+
+0000109f <.data+0x109f>:
+    109f:	80 7d 30 ff          	cmp    BYTE PTR [di+0x30],0xff
+    10a3:	c6 45 30 00          	mov    BYTE PTR [di+0x30],0x0
+    10a7:	75 21                	jne    0x10ca
+    10a9:	8b 5d 22             	mov    bx,WORD PTR [di+0x22]
+    10ac:	52                   	push   dx
+    10ad:	ba 36 00             	mov    dx,0x36
+    10b0:	b8 0f 1f             	mov    ax,0x1f0f
+    10b3:	f7 f3                	div    bx
+    10b5:	33 d2                	xor    dx,dx
+    10b7:	f7 36 8b 07          	div    WORD PTR ds:0x78b
+    10bb:	8b d8                	mov    bx,ax
+    10bd:	33 c0                	xor    ax,ax
+    10bf:	f7 36 8b 07          	div    WORD PTR ds:0x78b
+    10c3:	5a                   	pop    dx
+    10c4:	89 5d 12             	mov    WORD PTR [di+0x12],bx
+    10c7:	89 45 14             	mov    WORD PTR [di+0x14],ax
+    10ca:	c7 45 02 9f 18       	mov    WORD PTR [di+0x2],0x189f
+    10cf:	8a da                	mov    bl,dl
+    10d1:	32 ff                	xor    bh,bh
+    10d3:	80 e3 0f             	and    bl,0xf
+    10d6:	d1 e3                	shl    bx,1
+    10d8:	8a e6                	mov    ah,dh
+    10da:	ff a7 ca 04          	jmp    WORD PTR [bx+0x4ca]
+
+
+/tmp/pf5-SBLASTER-static.bin:     file format binary
+
+
+Disassembly of section .data:
+
+000012e4 <.data+0x12e4>:
+    12e4:	80 3e fe 06 00       	cmp    BYTE PTR ds:0x6fe,0x0
+    12e9:	74 03                	je     0x12ee
+    12eb:	e9 b1 05             	jmp    0x189f
+    12ee:	8a c4                	mov    al,ah
+    12f0:	83 3e de 66 00       	cmp    WORD PTR ds:0x66de,0x0
+    12f5:	74 06                	je     0x12fd
+    12f7:	1e                   	push   ds
+    12f8:	ff 1e de 66          	call   DWORD PTR ds:0x66de
+    12fc:	1f                   	pop    ds
+    12fd:	a2 0a 05             	mov    ds:0x50a,al
+    1300:	ff 0e 0a 05          	dec    WORD PTR ds:0x50a
+    1304:	c6 06 fe 06 01       	mov    BYTE PTR ds:0x6fe,0x1
+    1309:	c3                   	ret
+
+
+/tmp/pf5-SBLASTER-static.bin:     file format binary
+
+
+Disassembly of section .data:
+
+00001cc9 <.data+0x1cc9>:
+    1cc9:	fb                   	sti
+    1cca:	bb 00 00             	mov    bx,0x0
+    1ccd:	8a 44 fb             	mov    al,BYTE PTR [si-0x5]
+    1cd0:	2e 3a 06 06 1d       	cmp    al,BYTE PTR cs:0x1d06
+    1cd5:	72 1e                	jb     0x1cf5
+    1cd7:	2e ff 36 06 1d       	push   WORD PTR cs:0x1d06
+    1cdc:	2e a2 06 1d          	mov    cs:0x1d06,al
+    1ce0:	e8 25 00             	call   0x1d08
+    1ce3:	b8 00 00             	mov    ax,0x0
+    1ce6:	73 03                	jae    0x1ceb
+    1ce8:	b8 ff ff             	mov    ax,0xffff
+    1ceb:	50                   	push   ax
+    1cec:	ff 5c fc             	call   DWORD PTR [si-0x4]
+    1cef:	5b                   	pop    bx
+    1cf0:	2e 8f 06 06 1d       	pop    WORD PTR cs:0x1d06
+    1cf5:	83 fb 00             	cmp    bx,0x0
+    1cf8:	74 08                	je     0x1d02
+    1cfa:	3d 39 30             	cmp    ax,0x3039
+    1cfd:	74 03                	je     0x1d02
+    1cff:	e8 3e 00             	call   0x1d40
+    1d02:	1f                   	pop    ds
+    1d03:	07                   	pop    es
+    1d04:	61                   	popa
+    1d05:	cf                   	iret
+    1d06:	00 00                	add    BYTE PTR [bx+si],al
+    1d08:	68 e2 01             	push   0x1e2
+    1d0b:	1f                   	pop    ds
+    1d0c:	2e 80 3e 3a 14 00    	cmp    BYTE PTR cs:0x143a,0x0
+    1d12:	74 16                	je     0x1d2a
+    1d14:	e8 15 00             	call   0x1d2c
+    1d17:	8b 1e 95 07          	mov    bx,WORD PTR ds:0x795
+    1d1b:	83 3e 93 07 05       	cmp    WORD PTR ds:0x793,0x5
+    1d20:	72 02                	jb     0x1d24
+    1d22:	d1 e3                	shl    bx,1
+    1d24:	3b c3                	cmp    ax,bx
+    1d26:	77 02                	ja     0x1d2a
+    1d28:	f9                   	stc
+    1d29:	c3                   	ret
+    1d2a:	f8                   	clc

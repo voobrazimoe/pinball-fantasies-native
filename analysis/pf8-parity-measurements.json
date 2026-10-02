@@ -1,0 +1,216 @@
+[
+  {
+    "checkpoint": "griffin",
+    "native": "01-griffin.png",
+    "oracle": "verified-x-griffin.png",
+    "sample_divisor": [
+      2,
+      2
+    ],
+    "logical_region": null,
+    "matching_pixels": 76800,
+    "total_pixels": 76800,
+    "oracle_rgba_sha256": "601fdc129d7d205799eaca29a04971fce322066f7592b7438490dd2973d595f0"
+  },
+  {
+    "checkpoint": "selector",
+    "native": "02-selector.png",
+    "oracle": "verified-x-selector-settled.png",
+    "sample_divisor": [
+      1,
+      2
+    ],
+    "logical_region": null,
+    "matching_pixels": 153600,
+    "total_pixels": 153600,
+    "oracle_rgba_sha256": "4e417d97102cad08961a5336c7d8050ab6edd5ef57363077ad0ba1d695e58811"
+  },
+  {
+    "checkpoint": "selector-instructions",
+    "native": "02-selector-sidebar.png",
+    "oracle": "dosbox-x-selector-next.png",
+    "sample_divisor": [
+      1,
+      2
+    ],
+    "logical_region": [
+      8,
+      95,
+      120,
+      185
+    ],
+    "matching_pixels": 10080,
+    "total_pixels": 10080,
+    "oracle_rgba_sha256": "8f58db44b8d3a98bfa4d38283f7c52dec3d73c24921bc6e725a2ab77f23862b9"
+  },
+  {
+    "checkpoint": "party-initial",
+    "native": "04-table1-initial.png",
+    "oracle": "dos-party-initial-logical.png",
+    "sample_divisor": [
+      1,
+      1
+    ],
+    "logical_region": null,
+    "matching_pixels": 112000,
+    "total_pixels": 112000,
+    "oracle_rgba_sha256": "e0419ebbb2e5028ff67a1419287af02e61573a1ea60da71fbd7e7713e3b1fd2b"
+  },
+  {
+    "checkpoint": "speed-initial",
+    "native": "09-table2-initial.png",
+    "oracle": "dosbox-x-speed-initial-logical.png",
+    "sample_divisor": [
+      1,
+      1
+    ],
+    "logical_region": null,
+    "matching_pixels": 112000,
+    "total_pixels": 112000,
+    "oracle_rgba_sha256": "ea817652d617e7e11cc7ddeb0f0d3443936d0d738d3a45beeba0f5993c3dabe3"
+  },
+  {
+    "checkpoint": "party-plunger-charged",
+    "native": "table1-plunger-charged.png",
+    "oracle": "verified-x-party-charged-final.png",
+    "sample_divisor": [
+      2,
+      1
+    ],
+    "logical_region": [
+      304,
+      297,
+      314,
+      314
+    ],
+    "matching_pixels": 170,
+    "total_pixels": 170,
+    "oracle_rgba_sha256": "863a34bcc1ed578d99ae8b0106265b25d3f953d5fd9553a92527d22d87aca66b"
+  },
+  {
+    "checkpoint": "speed-plunger-charged",
+    "native": "table2-plunger-charged.png",
+    "oracle": "dosbox-x-speed-charged.png",
+    "sample_divisor": [
+      2,
+      1
+    ],
+    "logical_region": [
+      304,
+      297,
+      314,
+      314
+    ],
+    "matching_pixels": 170,
+    "total_pixels": 170,
+    "oracle_rgba_sha256": "8e711a48b30d93bc4625aff62d4356475fd94530c840a83f2f93741cbb4d5071"
+  },
+  {
+    "checkpoint": "party-tilt",
+    "native": "07-table1-tilt.png",
+    "oracle": "verified-x-party-tilt-early.png",
+    "sample_divisor": [
+      2,
+      1
+    ],
+    "logical_region": [
+      0,
+      317,
+      320,
+      350
+    ],
+    "matching_pixels": 10560,
+    "total_pixels": 10560,
+    "oracle_rgba_sha256": "094979d97d4520dc808fa47ff5d243326e6c4cf598ba70918d558698d859ed85"
+  },
+  {
+    "checkpoint": "speed-tilt",
+    "native": "12-table2-tilt.png",
+    "oracle": "verified-x-speed-tilt.png",
+    "sample_divisor": [
+      2,
+      1
+    ],
+    "logical_region": [
+      0,
+      317,
+      320,
+      350
+    ],
+    "matching_pixels": 10560,
+    "total_pixels": 10560,
+    "oracle_rgba_sha256": "094979d97d4520dc808fa47ff5d243326e6c4cf598ba70918d558698d859ed85"
+  },
+  {
+    "checkpoint": "party-source-scroller",
+    "native": "05-party-source-scroller.png",
+    "oracle": "verified-x-party-scroll-long.png",
+    "sample_divisor": [
+      2,
+      1
+    ],
+    "logical_region": [
+      0,
+      317,
+      320,
+      350
+    ],
+    "matching_pixels": 10560,
+    "total_pixels": 10560,
+    "oracle_rgba_sha256": "9447e081b159395053037e4d873b6f41a143d9dd6206443b833ec32c0641105e"
+  },
+  {
+    "checkpoint": "speed-attract",
+    "native": "08-table2-attract.png",
+    "oracle": "verified-x-speed-attract.png",
+    "sample_divisor": [
+      2,
+      1
+    ],
+    "logical_region": [
+      0,
+      317,
+      320,
+      350
+    ],
+    "matching_pixels": 10560,
+    "total_pixels": 10560,
+    "oracle_rgba_sha256": "a4c49450af051697ffb2c926354167f92fceeab2e40981cc8c77408132a035b9"
+  },
+  {
+    "checkpoint": "party-attract-name",
+    "native": "table1-attract-name.png",
+    "oracle": "fast-x-party-scroll.png",
+    "sample_divisor": [
+      2,
+      1
+    ],
+    "logical_region": [
+      0,
+      317,
+      320,
+      350
+    ],
+    "matching_pixels": 10560,
+    "total_pixels": 10560,
+    "oracle_rgba_sha256": "e7c34d94d02a7cc8e51f1d42cd50493b9c46673e335609846f8f20554ab8b720"
+  },
+  {
+    "checkpoint": "high-score-entry",
+    "native": "table2-high-score.png",
+    "oracle": "verified-x-ending-gameover.png",
+    "sample_divisor": [
+      2,
+      1
+    ],
+    "logical_region": [
+      0,
+      317,
+      320,
+      350
+    ],
+    "matching_pixels": 10560,
+    "total_pixels": 10560,
+    "oracle_rgba_sha256": "9b1f2a0dac94d33a1368c8e25fa5134f86fecab5738c4e48f5ac3252ef6c612e"
+  }
+]

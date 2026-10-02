@@ -1,0 +1,46 @@
+{
+  "file_sha256": "4d7a69e7dc95260ad2541c6981a11ab842e2f1f20e45447e5613688b86e38414",
+  "strips": [
+    {
+      "offset": 336944,
+      "form_size": 29220,
+      "width": 320,
+      "height": 144,
+      "body_size": 25803,
+      "indices_sha256": "143a76675bb38c9c095a29b4c601d8308baa34a548353114154e68915250ec6b",
+      "palette_sha256": "a4a47466427540d188856e79a3680eb54120e65e638c34cab113fb4034eb7c17"
+    },
+    {
+      "offset": 366176,
+      "form_size": 33594,
+      "width": 320,
+      "height": 144,
+      "body_size": 29875,
+      "indices_sha256": "7991db3dd694d13dd013a90d8401e754d8c7c38e934301a5eb8ab6aa663e8b44",
+      "palette_sha256": "a4a47466427540d188856e79a3680eb54120e65e638c34cab113fb4034eb7c17"
+    },
+    {
+      "offset": 399776,
+      "form_size": 37378,
+      "width": 320,
+      "height": 144,
+      "body_size": 33645,
+      "indices_sha256": "5b160f46d359e8c526e7ceecc52ab3ae654df45b38072a0d8cd07361dac5680e",
+      "palette_sha256": "a4a47466427540d188856e79a3680eb54120e65e638c34cab113fb4034eb7c17"
+    },
+    {
+      "offset": 437168,
+      "form_size": 28544,
+      "width": 320,
+      "height": 144,
+      "body_size": 24977,
+      "indices_sha256": "352f316bb84724e60fa9a71c4ab69b077e90813cdb12ff2c65808de867eaa5d8",
+      "palette_sha256": "5149bfa84c1a15890235dc4950620eae28b187183507af7569e0d9fae1aca063"
+    }
+  ],
+  "palettes_equal": false,
+  "width": 320,
+  "height": 576,
+  "indices_sha256": "019eceddf83fc318f193330418064267c5625ad1a630f7b44e29e4482842c8af",
+  "rgba_sha256": "2d90631a3348512de700102621e1da16c42eb844dd1eb3ea3382c7fa12775753"
+}

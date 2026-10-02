@@ -1,0 +1,41 @@
+{
+  "SBLASTER": {
+    "original_sha256": "c6c016f94f985c0f70d6bba7acb7e4572db8bbf88d99b2714aa150313be4b21f",
+    "static_image_sha256": "7db72bf9e4a5aef8f650f6ab27d8c4034767c6162766fca2feff14e0087c87e9",
+    "packets": 95,
+    "expanded_bytes": 35536,
+    "unchanged_prefix": 927,
+    "effect_dispatch": [
+      4318,
+      4437,
+      4457,
+      4475,
+      4641,
+      4745,
+      4746,
+      6303,
+      6303,
+      4758,
+      4774,
+      4836,
+      4874,
+      4893,
+      4901,
+      4946
+    ]
+  },
+  "SB16": {
+    "original_sha256": "81a7c4d41a14ae042a63899b38e88bc4d33a547053f44b17b3bd324ebe7bab17",
+    "static_image_sha256": "49f6966fbfa65adcbfc1af04ec74f3bd1bbd320244988244daa9d156e2729943",
+    "packets": 95,
+    "expanded_bytes": 36592,
+    "unchanged_prefix": 936
+  },
+  "NOSOUND": {
+    "original_sha256": "223fdd845fa8541e2801c3371f2f97a61244e4ea54bcd81f2a51d312c005366d",
+    "static_image_sha256": "2e803d51418a07510bd30aa8923f8d008996368f785f4a152921038d155eb6fc",
+    "packets": 15,
+    "expanded_bytes": 3312,
+    "unchanged_prefix": 645
+  }
+}

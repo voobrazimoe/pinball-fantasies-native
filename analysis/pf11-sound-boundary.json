@@ -1,0 +1,104 @@
+{
+  "size": 25,
+  "driver": "SBLASTER.SDR",
+  "raw": [
+    83,
+    66,
+    76,
+    65,
+    83,
+    84,
+    69,
+    82,
+    46,
+    83,
+    68,
+    82,
+    0,
+    0,
+    1,
+    0,
+    0,
+    3,
+    0,
+    0,
+    4,
+    0,
+    0,
+    254,
+    1
+  ],
+  "tail_cells": [
+    {
+      "offset": 13,
+      "tag": 0,
+      "word": 1
+    },
+    {
+      "offset": 16,
+      "tag": 0,
+      "word": 3
+    },
+    {
+      "offset": 19,
+      "tag": 0,
+      "word": 4
+    },
+    {
+      "offset": 22,
+      "tag": 0,
+      "word": 510
+    }
+  ],
+  "sblaster_reader": {
+    "config_offsets": [
+      14,
+      17,
+      20
+    ],
+    "base_ports": [
+      528,
+      544,
+      560,
+      576,
+      592,
+      608
+    ],
+    "irq_map": [
+      2,
+      3,
+      5,
+      7
+    ],
+    "rate_flags": [
+      12000,
+      0,
+      16000,
+      0,
+      20000,
+      0,
+      21000,
+      0,
+      21000,
+      255
+    ],
+    "configured_port": 544,
+    "configured_irq": 7,
+    "configured_rate": 21000,
+    "quality_extra_flag": 255
+  },
+  "driver_sha256": "c6c016f94f985c0f70d6bba7acb7e4572db8bbf88d99b2714aa150313be4b21f",
+  "expanded_sha256": "7db72bf9e4a5aef8f650f6ab27d8c4034767c6162766fca2feff14e0087c87e9",
+  "evidence_addresses": {
+    "reader": "18eb..1a33",
+    "data_segment_base": 7712,
+    "port_table": "DS:6b56",
+    "irq_table": "DS:6b62",
+    "quality_table": "DS:6ba2"
+  },
+  "opaque": [
+    "tail-cell tag bytes; ignored by this SDR reader",
+    "offset23 word: external SETSOUND calibration/metadata; not consumed by this reader"
+  ],
+  "boundary": "INTRO and FANTASIE read only filename13; SETSOUND creates record; F5 touches PINBALL.CFG only"
+}

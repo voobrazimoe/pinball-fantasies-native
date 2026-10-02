@@ -1,0 +1,30 @@
+{
+  "purpose": "External original ShowHighsTS data entry replaced by a copy of existing GEARTS (10 bytes). Original code, renderer, animation assets and callbacks unchanged. Controlled data fixture, not gameplay trigger validation.",
+  "source": "SDEV.ASM GEARTS / FANTASIE.ASM INIT_MATRIX",
+  "original_sha256": "6689dcef5fd051998bab990b5d243614c7dae2dcdcab9bffbe3c1936a76504b5",
+  "fixture_sha256": "d8c03c56ab47568af21a0d4306c343e2dc221b4b6919c752a2f97b79c81d74d8",
+  "patch": {
+    "file_offset": 108001,
+    "before": "9e452b3d01003443e51d",
+    "after": "4e46be3cd4024e460000"
+  },
+  "gear_program_file_offset": 106739,
+  "superseded_probe": {
+    "file_offset": 24242,
+    "before": "af12",
+    "after": "1312"
+  },
+  "superseded_result": "INIT_MATRIX probe produced no matching visible frame before normal init; replaced with visible DEMOMODE NODOT dispatch probe.",
+  "superseded_probes": [
+    {
+      "file_offset": 24242,
+      "before": "af12",
+      "after": "1312"
+    },
+    {
+      "file_offset": 20151,
+      "before": "b915",
+      "after": "1312"
+    }
+  ]
+}

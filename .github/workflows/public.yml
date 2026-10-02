@@ -1,0 +1,28 @@
+name: Asset-free source
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  source:
+    strategy:
+      matrix:
+        os: [ubuntu-24.04, windows-latest]
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.1'
+          cache: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libsdl2-dev
+      - if: runner.os == 'Linux'
+        run: echo "CGO_CFLAGS=$(pkg-config --cflags sdl2)" >> "$GITHUB_ENV"
+      - run: python tools/check_public_source.py
+      - run: go test -p=1 -count=1 ./...
+      - run: go build -buildvcs=false -trimpath -o pinballfantasies${{ runner.os == 'Windows' && '.exe' || '' }} ./cmd/pinballfantasies
+# No commercial fixtures, reference downloads, personal tags or artifact uploads.

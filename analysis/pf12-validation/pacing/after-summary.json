@@ -1,0 +1,102 @@
+[
+  {
+    "name": "linux-after-present",
+    "stages": {
+      "update": {
+        "count": 720,
+        "median_ms": 0.02513,
+        "p95_ms": 0.03524,
+        "max_ms": 0.516054
+      },
+      "frame": {
+        "count": 654,
+        "median_ms": 0.7311305,
+        "p95_ms": 1.050317,
+        "max_ms": 1.536532
+      },
+      "present": {
+        "count": 654,
+        "median_ms": 17.335617,
+        "p95_ms": 17.962911,
+        "max_ms": 56.030129
+      }
+    },
+    "queue_bytes_min": 8960,
+    "queue_bytes_median": 13312,
+    "queue_bytes_max": 17024,
+    "empty_observations": 0,
+    "queue_resets": 0
+  },
+  {
+    "name": "linux-after-no-present",
+    "stages": {
+      "update": {
+        "count": 720,
+        "median_ms": 0.03096,
+        "p95_ms": 0.04163,
+        "max_ms": 0.992158
+      },
+      "frame": {
+        "count": 720,
+        "median_ms": 0.838376,
+        "p95_ms": 1.094278,
+        "max_ms": 1.762233
+      }
+    },
+    "queue_bytes_min": 9472,
+    "queue_bytes_median": 11520.0,
+    "queue_bytes_max": 13696,
+    "empty_observations": 0,
+    "queue_resets": 0
+  },
+  {
+    "name": "wine-after-present",
+    "stages": {
+      "update": {
+        "count": 720,
+        "median_ms": 0.0,
+        "p95_ms": 0.7258,
+        "max_ms": 1.0803
+      },
+      "frame": {
+        "count": 314,
+        "median_ms": 0.0,
+        "p95_ms": 1.7994,
+        "max_ms": 5.7163
+      },
+      "present": {
+        "count": 314,
+        "median_ms": 32.4417,
+        "p95_ms": 34.6664,
+        "max_ms": 37.5602
+      }
+    },
+    "queue_bytes_min": 22400,
+    "queue_bytes_median": 25600,
+    "queue_bytes_max": 32000,
+    "empty_observations": 0,
+    "queue_resets": 0
+  },
+  {
+    "name": "wine-after-no-present",
+    "stages": {
+      "update": {
+        "count": 720,
+        "median_ms": 0.0,
+        "p95_ms": 0.0314,
+        "max_ms": 0.8476
+      },
+      "frame": {
+        "count": 718,
+        "median_ms": 0.0,
+        "p95_ms": 1.5439,
+        "max_ms": 2.4327
+      }
+    },
+    "queue_bytes_min": 12800,
+    "queue_bytes_median": 12800.0,
+    "queue_bytes_max": 12800,
+    "empty_observations": 0,
+    "queue_resets": 0
+  }
+]

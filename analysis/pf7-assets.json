@@ -1,0 +1,72 @@
+{
+  "file_sha256": "6689dcef5fd051998bab990b5d243614c7dae2dcdcab9bffbe3c1936a76504b5",
+  "strips": [
+    {
+      "offset": 329520,
+      "form_size": 31932,
+      "width": 320,
+      "height": 144,
+      "body_size": 28596,
+      "indices_sha256": "ee3e389640eb7388755a30aebc74865e8117550de072c084273733d322a6cf7a",
+      "palette_sha256": "ab73a3037b395dd5bca39ea5b08b0040a76a5b3af746f83340189aef6fbdff2c"
+    },
+    {
+      "offset": 361456,
+      "form_size": 31804,
+      "width": 320,
+      "height": 144,
+      "body_size": 28383,
+      "indices_sha256": "6f2a90389781c5186dfed92a5df03863e4cfa792916ccbaabfaabd1992d9cb8a",
+      "palette_sha256": "ab73a3037b395dd5bca39ea5b08b0040a76a5b3af746f83340189aef6fbdff2c"
+    },
+    {
+      "offset": 393264,
+      "form_size": 31428,
+      "width": 320,
+      "height": 144,
+      "body_size": 27875,
+      "indices_sha256": "cf902dcc16c1726db7589b3d8c0a1ea99f9a6c704567b9d451cf2e5f270f0bac",
+      "palette_sha256": "ab73a3037b395dd5bca39ea5b08b0040a76a5b3af746f83340189aef6fbdff2c"
+    },
+    {
+      "offset": 424704,
+      "form_size": 23742,
+      "width": 320,
+      "height": 144,
+      "body_size": 20406,
+      "indices_sha256": "5045648870ccbc941845803aa355b9c7737343a132af58077ebd9c0ab05f8468",
+      "palette_sha256": "ab73a3037b395dd5bca39ea5b08b0040a76a5b3af746f83340189aef6fbdff2c"
+    }
+  ],
+  "palettes_equal": true,
+  "width": 320,
+  "height": 576,
+  "indices_sha256": "e00981b8e502e8f3b81a7c4f370fafe4794c439d2f3797c0f47fc49ba2b38a32",
+  "rgba_sha256": "6920153e36c4e17c05294312708f85443bed9b3b2a7d8d3f365c46a6e8e8210f",
+  "initial_rgba_sha256": "549dd22d921750b134694f6b5b8124d0181a6a609f10d752fe9dd7c25c3e9db8",
+  "ball_sha256": "0f2883d2f407fde9e838162bc91faf33943dccc790a6e8bf299aef540cb16610",
+  "foreground_sha256": "d406a58992b290d1e0845d4ed93cfe08d73756e0cdf1ee06498a4dd1e8757459",
+  "tracker_effects": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    6,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15
+  ],
+  "start": [
+    300,
+    530
+  ],
+  "hidden_start": [
+    285,
+    530
+  ]
+}

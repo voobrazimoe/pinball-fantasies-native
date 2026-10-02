@@ -1,0 +1,48 @@
+.tools/
+.cache/
+bin/
+*.png
+*.deb
+
+# Temporary/audit worktrees
+/.matrix-audit/
+/.pf10.2-audit/
+
+# Supplied commercial DOS data stays local; never package it for distribution.
+/*.PRG
+/*.MOD
+/*.SDR
+/*.HI
+/*.EXE
+/*.COM
+/*.BIN
+/*.CFG
+/pinfant.txt
+
+# External commercial/reference copies stay local.
+/pinballf_amigacd32/
+/pinbllf_amiga/
+/analysis/amiga/cd32/
+/reference/original-dos-source/
+
+# Portable artifacts and writable state are local build/runtime output.
+/release/
+/userdata/
+
+# Personal builds contain original commercial data and remain local only.
+/release/personal/
+/.build-personal/
+/.personal-assets/
+/internal/platform/.personal-assets/
+/internal/platform/personal_payload_windows.go
+
+/tools/__pycache__/
+
+# Public source snapshots exclude local recorded audio and developer bytecode.
+/analysis/**/*.wav
+/analysis/**/*.pcm
+**/__pycache__/
+*.pyc
+
+/.public-preflight-originals/
+/.private-cleanup/

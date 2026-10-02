@@ -1,0 +1,9 @@
+{
+  "mode": "on",
+  "channels": 2,
+  "rate": 48000,
+  "frames": 2160690,
+  "left_rms": 1753.5305089114054,
+  "right_rms": 1979.0074674651803,
+  "different_frames": 1188591
+}

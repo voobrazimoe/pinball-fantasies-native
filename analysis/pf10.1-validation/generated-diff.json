@@ -1,0 +1,33 @@
+{
+  "1": {
+    "changed_fields": [],
+    "added_labels": []
+  },
+  "2": {
+    "changed_fields": [],
+    "added_labels": []
+  },
+  "3": {
+    "changed_fields": [
+      "commands",
+      "labels"
+    ],
+    "added_labels": [
+      "BEATEN_BH_TS"
+    ],
+    "command_index_delta": 1,
+    "existing_commands_identical": true,
+    "existing_labels_shifted_only": true
+  },
+  "4": {
+    "changed_fields": [
+      "positions"
+    ],
+    "added_labels": [],
+    "added_numeric_operands": {
+      "87-16+2": 73,
+      "61-16+2": 47,
+      "36-16": 20
+    }
+  }
+}
