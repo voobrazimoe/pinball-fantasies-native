@@ -2,6 +2,7 @@ package physics
 
 import (
 	"fmt"
+	"pinballfantasies/internal/gameplay"
 	"pinballfantasies/internal/settings"
 )
 
@@ -28,7 +29,7 @@ type Ball struct {
 	CollisionAngle                           uint16
 	ContactCount, Material                   uint8
 }
-type Inputs struct{ Left, Right, Down, Release, Tilt bool }
+type Inputs = gameplay.Controls
 type Game struct {
 	Configured   bool
 	TargetRaster int16 // SCREENFORCE2: desired viewport, still smoothed

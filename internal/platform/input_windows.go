@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"pinballfantasies/internal/gameplay"
 	"time"
 )
 
@@ -72,4 +73,10 @@ func (h *hostWindow) openInputLog() {
 		return
 	}
 	fmt.Fprintln(h.inputLog, "PF12 physical bits: 0=LShift 1=RShift 2=LCtrl 3=RCtrl 4=LAlt 5=RAlt 6=Down 7=Space; held: 1=Left 2=Right 4=Down 8=Space")
+}
+
+// Controls translates host held state into logical source controls.
+func (h *hostWindow) Controls() gameplay.Controls {
+	bits := h.Held()
+	return gameplay.Controls{Left: bits&1 != 0, Right: bits&2 != 0, Down: bits&4 != 0, Tilt: bits&8 != 0}
 }

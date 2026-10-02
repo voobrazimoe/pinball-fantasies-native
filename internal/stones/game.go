@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"pinballfantasies/internal/audio"
+	"pinballfantasies/internal/gameplay"
 	"pinballfantasies/internal/hotseat"
 	"pinballfantasies/internal/physics"
 	"pinballfantasies/internal/presentation"
@@ -258,12 +259,9 @@ func (g *Game) afterTargets(in physics.Inputs) {
 	}
 	g.previous = in
 	tablelogic.Run(g.tasks[:], g.ids[:])
-	if in.Release {
-		g.Release(g.Physics.SpringPosition, uint8(g.clock))
-		g.Physics.SpringPosition = 0
-	} else if in.Down && g.Physics.SpringPosition < 32 {
-		g.Physics.SpringPosition++
-	}
+	gameplay.Spring(&g.Physics.SpringPosition, g.Physics.SpringValid, in, func(charge uint8) {
+		g.Release(charge, uint8(g.clock))
+	})
 	g.flashTick()
 }
 func (g *Game) consume(e physics.Event) {

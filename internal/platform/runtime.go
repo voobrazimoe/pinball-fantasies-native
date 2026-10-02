@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"pinballfantasies/internal/frontend"
+	"pinballfantasies/internal/gameplay"
+	"pinballfantasies/internal/source"
 	"runtime"
 	"time"
 )
@@ -12,6 +14,7 @@ type PhysicsControls struct{ Left, Right, Down, Release, Tilt, MusicToggle bool 
 
 type hostEvent struct {
 	kind, key   int
+	mouseY      int
 	alt, repeat bool
 }
 
@@ -35,6 +38,7 @@ func showFrontend(r *frontend.Runtime, duration time.Duration, device *AudioDevi
 		return err
 	}
 	defer audit.Close()
+	runner := source.New(r, time.Now)
 	noPresent := os.Getenv("PF12_NO_PRESENT") == "1"
 	if os.Getenv("PF12_AUDIT_FULLSCREEN") == "1" {
 		if e := host.presentation.ToggleFullscreen(); e != nil {
@@ -43,7 +47,7 @@ func showFrontend(r *frontend.Runtime, duration time.Duration, device *AudioDevi
 	}
 	present := func() error {
 		start := time.Now()
-		frame := r.Frame()
+		frame := runner.Frame()
 		audit.mark("frame", start, host.presentation.IsFullscreen(), device)
 		if noPresent {
 			return nil
@@ -57,13 +61,24 @@ func showFrontend(r *frontend.Runtime, duration time.Duration, device *AudioDevi
 	suspended := false
 
 	deadline := time.Now().Add(duration)
-	nextSync := time.Now()
 
-	done := false
 	pendingFullscreen := 0
-	step := func() error {
-		start := time.Now()
-		defer func() { audit.mark("update", start, host.presentation.IsFullscreen(), device) }()
+	mouse := gameplay.Mouse{}
+	priorMouseActive := false
+	collect := func() {
+		if duration > 0 && time.Now().After(deadline) {
+			runner.Done = true
+			return
+		}
+		mouseActive := r.Model.Mode == frontend.Playing && !runner.Suspended
+		if chute, ok := r.Model.Session.(interface{ InChute() bool }); ok {
+			mouseActive = mouseActive && chute.InChute()
+		}
+		if mouseActive != priorMouseActive {
+			mouse.Clear()
+			priorMouseActive = mouseActive
+		}
+		host.MouseActive(mouseActive)
 		input := frontend.Input{}
 		for {
 			e := host.Event()
@@ -82,82 +97,78 @@ func showFrontend(r *frontend.Runtime, duration time.Duration, device *AudioDevi
 					pendingFullscreen++
 				}
 			case 3:
-				input.Release = true
+				input.Gameplay.Release = true
 			case 4:
 				keys.enterUp()
+			case 8:
+				runner.Resume()
+			case 6:
+				input.Gameplay.MouseY += e.mouseY
+			case 7:
+				input.Gameplay.MouseFire = true
 			case 5:
 				keys.enterUp()
-				input.FocusLost = true
+				mouse.Clear()
+				runner.Submit(frontend.Input{FocusLost: true})
+				input = frontend.Input{Close: input.Close}
 			}
 		}
-		bits := host.Held()
-		input.Left = bits&1 != 0
-		input.Right = bits&2 != 0
-		input.Down = bits&4 != 0
-		input.Tilt = bits&8 != 0
-		hz := r.Model.Hz()
-		priorSource := r.AudioSource()
-		priorMode := r.Model.Mode
-		priorTable := r.Model.Selected
-		if err := r.Update(input); err != nil {
-			return err
-		}
+		held := host.Controls()
+		input.Gameplay.Left = held.Left
+		input.Gameplay.Right = held.Right
+		input.Gameplay.Down = held.Down
+		input.Gameplay.Tilt = held.Tilt
+		input.Gameplay.MouseY = mouse.Motion(input.Gameplay.MouseY)
+		runner.Submit(input)
+	}
+	priorSource := r.AudioSource()
+	priorMode, priorTable := r.Model.Mode, r.Model.Selected
+	submitPCM := func(pcm []byte) error {
 		if priorMode != r.Model.Mode || priorTable != r.Model.Selected {
 			fmt.Printf("PF6: %s (table %d)\n", r.Model.Mode, r.Model.Selected)
 		}
-		if r.Model.Mode == frontend.Quit {
-			done = true
+		priorMode, priorTable = r.Model.Mode, r.Model.Selected
+		if runner.Done {
 			return nil
 		}
 		if device != nil {
 			if priorSource != r.AudioSource() && !r.Model.Suspended() {
 				device.Suspend(false)
 			}
-			if r.Model.Suspended() != suspended {
-				suspended = r.Model.Suspended()
+			if (r.Model.Suspended() || runner.Suspended) != suspended {
+				suspended = r.Model.Suspended() || runner.Suspended
 				device.Suspend(suspended)
 			}
-			if err := device.Queue(r.PCM); err != nil {
+			if err := device.Queue(pcm); err != nil {
 				return err
 			}
 		}
-
-		nextSync = nextSync.Add(time.Second / time.Duration(hz))
-
+		priorSource = r.AudioSource()
 		return nil
 	}
-
-	// Every overdue source sync produces its PCM before another host blit. A
-	// slow display may skip intermediate host frames; it never skips game ticks.
+	// All due PCM reaches the host before any blocking presentation transaction.
 	advance := func() error {
-		if done {
+		if duration > 0 && time.Now().After(deadline) {
+			runner.Done = true
 			return nil
 		}
-		for !time.Now().Before(nextSync) {
-			if duration > 0 && time.Now().After(deadline) {
-				done = true
-				return nil
-			}
-			if err := step(); err != nil {
-				return err
-			}
-			if done {
-				return nil
-			}
-		}
-		return nil
+		start := time.Now()
+		err := runner.Advance(collect, submitPCM)
+		audit.mark("update", start, host.presentation.IsFullscreen(), device)
+		return err
 	}
+
 	// GDI can block in multiple independent calls during a resized frame. Refill
 	// deadlines that elapsed between those calls without recursively presenting.
 	host.SetSourceTick(advance)
 	host.SetModalTick(func() error {
-		if done || time.Now().Before(nextSync) {
+		if runner.Done || time.Now().Before(runner.Next) {
 			return nil
 		}
 		if err := advance(); err != nil {
 			return err
 		}
-		if done {
+		if runner.Done {
 			return nil
 		}
 		return present()
@@ -167,10 +178,11 @@ func showFrontend(r *frontend.Runtime, duration time.Duration, device *AudioDevi
 		if pumpHook != nil {
 			pumpHook(host)
 		}
+		collect()
 		if err := advance(); err != nil {
 			return err
 		}
-		if done {
+		if runner.Done {
 			return nil
 		}
 		// Shortcut makes are consumed during input collection, but the blocking
@@ -180,7 +192,7 @@ func showFrontend(r *frontend.Runtime, duration time.Duration, device *AudioDevi
 			if err := advance(); err != nil {
 				return err
 			}
-			if done {
+			if runner.Done {
 				return nil
 			}
 			pendingFullscreen--
@@ -192,16 +204,18 @@ func showFrontend(r *frontend.Runtime, duration time.Duration, device *AudioDevi
 		if err := advance(); err != nil {
 			return err
 		}
-		if done {
+		if runner.Done {
 			return nil
 		}
 		if err := present(); err != nil {
 			return err
 		}
-		if done {
+		if runner.Done {
 			return nil
 		}
-		if remaining := time.Until(nextSync); remaining > 0 {
+		if runner.Suspended {
+			time.Sleep(time.Second / 60)
+		} else if remaining := time.Until(runner.Next); remaining > 0 {
 			time.Sleep(remaining)
 		}
 	}

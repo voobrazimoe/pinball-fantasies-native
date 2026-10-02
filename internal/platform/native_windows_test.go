@@ -487,3 +487,77 @@ func TestPF12PortableArtifactLaunch(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// Hardware-relative motion must reach the source without client/DPI scaling.
+func TestNativeWin32RelativeMouseSmoke(t *testing.T) {
+	if os.Getenv("PF12_WINDOW_SMOKE") != "1" {
+		t.Skip("set PF12_WINDOW_SMOKE=1 on a desktop")
+	}
+	if runtime.GOARCH != "amd64" {
+		t.Skip("AMD64 INPUT layout")
+	}
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+	h, err := openHost(image.NewRGBA(image.Rect(0, 0, 320, 240)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
+	up("SetForegroundWindow").Call(h.hwnd)
+	up("SetFocus").Call(h.hwnd)
+	h.MouseActive(true)
+	pump := func() {
+		for i := 0; i < 20; i++ {
+			h.Pump()
+			time.Sleep(5 * time.Millisecond)
+		}
+	}
+	pump()
+	h.events = nil
+	type mouseInput struct {
+		DX, DY                     int32
+		Data, Flags, Time, Padding uint32
+		Extra                      uintptr
+	}
+	type input struct {
+		Type, Padding uint32
+		Mouse         mouseInput
+	}
+	send := func(y int32, flags uint32) {
+		in := input{Mouse: mouseInput{DY: y, Flags: flags}}
+		if unsafe.Sizeof(in) != 40 {
+			t.Fatal("INPUT size", unsafe.Sizeof(in))
+		}
+		n, _, e := up("SendInput").Call(1, uintptr(unsafe.Pointer(&in)), unsafe.Sizeof(in))
+		if n != 1 {
+			t.Fatal("SendInput", e)
+		}
+		pump()
+	}
+	baselineY := 0
+	for _, size := range []image.Point{image.Pt(640, 480), image.Pt(800, 600)} {
+		up("SetWindowPos").Call(h.hwnd, 0, 0, 0, uintptr(size.X), uintptr(size.Y), 0x6)
+		pump()
+		h.events = nil
+		send(16, 1)
+		send(0, 2)
+		send(0, 4)
+		y, fires := 0, 0
+		for _, e := range h.events {
+			if e.kind == 6 {
+				y += e.mouseY
+			}
+			if e.kind == 7 {
+				fires++
+			}
+		}
+		// Compare raw-device units across sizes. Wine's synthetic SendInput
+		// path can apply its own acceleration before producing WM_INPUT.
+		if baselineY == 0 {
+			baselineY = y
+		}
+		if y <= 0 || y != baselineY || fires != 1 {
+			t.Fatalf("size %v: relative Y=%d fire edges=%d", size, y, fires)
+		}
+	}
+}

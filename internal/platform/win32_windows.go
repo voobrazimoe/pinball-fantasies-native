@@ -76,6 +76,7 @@ type hostWindow struct {
 	presentation                             WindowPresentation
 	input                                    windowsKeys
 	focused                                  bool
+	mouseActive, mouseDown                   bool
 	inputLog                                 *os.File
 	events                                   []hostEvent
 	pixels                                   []byte
@@ -148,6 +149,10 @@ func openHost(first *image.RGBA) (_ *hostWindow, err error) {
 	}
 	h.hwnd = hwnd
 	h.presentation.backend = h
+	if err := h.registerMouse(); err != nil {
+		h.Close()
+		return nil, err
+	}
 	up("ShowWindow").Call(hwnd, 5)
 	fmt.Printf("Win32 window opened HWND=%#x; %s\n", hwnd, dpiPolicy)
 	return h, nil
@@ -188,11 +193,16 @@ func windowProc(hwnd uintptr, msg uint32, w, l uintptr) uintptr {
 			h.refreshInput("key", uint32(w), l, msg == 0x100 || msg == 0x104)
 			h.events = append(h.events, h.input.key(uint32(w), l, msg == 0x100 || msg == 0x104)...)
 			return 0 // consume system keys too; Alt remains a flipper, Alt+Enter shared shortcut
+		case 0xff: // WM_INPUT: unscaled hardware-relative mouse motion.
+			h.rawMouse(l)
+			// DefWindowProc must clean up foreground raw-input resources.
 		case 0x7: // WM_SETFOCUS
 			h.focused = true
+			h.events = append(h.events, hostEvent{kind: 8})
 			return 0
 		case 0x8:
 			h.focused = false
+			h.mouseDown = false
 			h.input = windowsKeys{}
 			h.refreshInput("focus-loss", 0, 0, false)
 			keep := h.events[:0]

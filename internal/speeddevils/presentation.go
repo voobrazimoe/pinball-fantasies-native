@@ -1,6 +1,7 @@
 package speeddevils
 
 import (
+	"pinballfantasies/internal/gameplay"
 	"pinballfantasies/internal/physics"
 	"strconv"
 	"strings"
@@ -126,15 +127,9 @@ func (g *Game) tiltControl(in physics.Inputs) {
 
 // VBLANK_INT calls SPRINGTASK after DO_ELECTRONICS has run its task slots.
 func (g *Game) springControl(in physics.Inputs) {
-	if in.Release {
-		charge := g.Physics.SpringPosition
-		if charge > 0 {
-			g.Release(charge, uint8(g.clock))
-			g.Physics.SpringPosition = 0
-		}
-	} else if in.Down && g.Physics.SpringPosition < 32 {
-		g.Physics.SpringPosition++
-	}
+	gameplay.Spring(&g.Physics.SpringPosition, g.Physics.SpringValid, in, func(charge uint8) {
+		g.Release(charge, uint8(g.clock))
+	})
 }
 func (g *Game) presentationTick() { g.Display.Flash(); g.matrixTick() }
 

@@ -19,9 +19,12 @@ static int pf6_key(SDL_Scancode k) {
  // Other make codes must resume pause and answer quit prompts too.
  return 127;
 }
-static int pf6_event(int *key, int *alt, int *repeat) {
+static int pf6_event(int *key, int *alt, int *repeat, int *mouseY) {
  SDL_Event e;
  while(SDL_PollEvent(&e)) {
+  if(e.type==SDL_MOUSEMOTION) { *mouseY=e.motion.yrel; return 6; }
+  if(e.type==SDL_MOUSEBUTTONDOWN && e.button.button==SDL_BUTTON_LEFT) return 7;
+  if(e.type==SDL_WINDOWEVENT && e.window.event==SDL_WINDOWEVENT_FOCUS_GAINED) return 8;
   if(e.type==SDL_QUIT) return 1;
   if(e.type==SDL_WINDOWEVENT && e.window.event==SDL_WINDOWEVENT_FOCUS_LOST) return 5;
   if(e.type==SDL_KEYDOWN) {*key=pf6_key(e.key.keysym.scancode);*alt=(e.key.keysym.mod & KMOD_ALT)!=0;*repeat=e.key.repeat;return 2;}
@@ -37,6 +40,7 @@ import "C"
 import (
 	"fmt"
 	"image"
+	"pinballfantasies/internal/gameplay"
 	"runtime"
 	"unsafe"
 )
@@ -47,6 +51,7 @@ type hostWindow struct {
 	texture      *C.SDL_Texture
 	size         image.Point
 	presentation WindowPresentation
+	mouseActive  bool
 }
 
 func openHost(first *image.RGBA) (_ *hostWindow, err error) {
@@ -59,6 +64,11 @@ func openHost(first *image.RGBA) (_ *hostWindow, err error) {
 			C.SDL_QuitSubSystem(C.SDL_INIT_VIDEO)
 		}
 	}()
+	hint := C.CString("SDL_MOUSE_RELATIVE_SCALING")
+	value := C.CString("0")
+	C.SDL_SetHint(hint, value)
+	C.SDL_free(unsafe.Pointer(hint))
+	C.SDL_free(unsafe.Pointer(value))
 	title := C.CString("Pinball Fantasies")
 	defer C.SDL_free(unsafe.Pointer(title))
 	w, h := C.int(first.Rect.Dx()), C.int(first.Rect.Dy())
@@ -127,9 +137,14 @@ func (h *hostWindow) Present(frame *image.RGBA) error {
 	return nil
 }
 func (h *hostWindow) Event() hostEvent {
-	var key, alt, repeat C.int
-	kind := int(C.pf6_event(&key, &alt, &repeat))
-	return hostEvent{kind: kind, key: int(key), alt: alt != 0, repeat: repeat != 0}
+	for {
+		var key, alt, repeat, mouseY C.int
+		kind := int(C.pf6_event(&key, &alt, &repeat, &mouseY))
+		if (kind == 6 || kind == 7) && !h.mouseActive {
+			continue
+		}
+		return hostEvent{kind: kind, key: int(key), mouseY: int(mouseY), alt: alt != 0, repeat: repeat != 0}
+	}
 }
 func (h *hostWindow) Held() int {
 	if C.SDL_GetWindowFlags(h.window)&C.SDL_WINDOW_INPUT_FOCUS == 0 {
@@ -161,3 +176,21 @@ func (h *hostWindow) ToggleFullscreen(device *AudioDevice) error {
 }
 
 func (h *hostWindow) SetSourceTick(func() error) {}
+
+// SDL relative mode removes pointer bounds and logical-renderer scaling.
+func (h *hostWindow) MouseActive(active bool) {
+	enabled := C.SDL_bool(C.SDL_FALSE)
+	if active && C.SDL_GetWindowFlags(h.window)&C.SDL_WINDOW_INPUT_FOCUS != 0 {
+		enabled = C.SDL_TRUE
+	}
+	h.mouseActive = enabled == C.SDL_TRUE
+	if C.SDL_GetRelativeMouseMode() != enabled {
+		C.SDL_SetRelativeMouseMode(enabled)
+	}
+}
+
+// Controls translates host held state into logical source controls.
+func (h *hostWindow) Controls() gameplay.Controls {
+	bits := h.Held()
+	return gameplay.Controls{Left: bits&1 != 0, Right: bits&2 != 0, Down: bits&4 != 0, Tilt: bits&8 != 0}
+}

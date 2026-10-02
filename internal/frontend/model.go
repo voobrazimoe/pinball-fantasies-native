@@ -4,6 +4,7 @@ package frontend
 
 import (
 	"image"
+	"pinballfantasies/internal/gameplay"
 	"pinballfantasies/internal/physics"
 	"pinballfantasies/internal/settings"
 	"pinballfantasies/internal/tablelogic"
@@ -57,6 +58,7 @@ const (
 )
 
 type Input struct {
+	Gameplay                                gameplay.Controls
 	Keys                                    []Key
 	Left, Right, Down, Release, Tilt, Close bool
 	FocusLost                               bool
@@ -455,7 +457,7 @@ func (m *Model) Update(in Input) error {
 		if m.PauseDelay > 0 {
 			m.PauseDelay--
 		}
-		if e := m.Session.Sync(physics.Inputs{Left: in.Left, Right: in.Right, Down: in.Down, Release: in.Release, Tilt: in.Tilt}); e != nil {
+		if e := m.Session.Sync(in.controls()); e != nil {
 			return e
 		}
 		if d, done := m.Session.Result(); done {
