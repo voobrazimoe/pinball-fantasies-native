@@ -1,0 +1,241 @@
+{
+  "source_sha256": {
+    "INTRO.ASM": "615e7bd32c3cfcd808ca8a01a3887c0d1b2be141b22cc69cbc7237bae8151770",
+    "FANTASIE.ASM": "52500bf0a0f6f7dbf011cb4b456b04e0800cfb6387bb851e3c1dcbc51f4573b8",
+    "BALLCODE.ASM": "cbd10e711ece9374b560a99d8af703dc6f96db36a820bd647ebbd2827c3a864b",
+    "PLAND.ASM": "4c162a657f167f723c5c0deed3762bb3163a44673dadae1695531cc5d61e5422",
+    "SDEV.ASM": "4b2b95c26fb43e7c6f299060e4c54d06c249cdd0bd9d28e5d0cdd030729800ae",
+    "SHOW.ASM": "38479bb73a3db80bd62cf79a3526d7cd14a69f9859f1d2f6c11586ef3be9254f",
+    "STONES.ASM": "03533a4a0bbe7e0d43969ae040781153d99e7af27a2383ea0b3eac230f5b9278"
+  },
+  "record_order": [
+    "S_BALLS",
+    "S_ANGLE",
+    "S_SCROLLING",
+    "S_IM",
+    "S_RESOLUTION",
+    "S_MODE"
+  ],
+  "defaults": [
+    0,
+    0,
+    1,
+    0,
+    0,
+    0
+  ],
+  "installation": [
+    1,
+    1,
+    2,
+    1,
+    1,
+    0
+  ],
+  "choices": [
+    [
+      "3",
+      "5"
+    ],
+    [
+      "HIGH",
+      "LOW"
+    ],
+    [
+      "HARD",
+      "MEDIUM",
+      "SOFT"
+    ],
+    [
+      "ON",
+      "OFF"
+    ],
+    [
+      "NORMAL",
+      "HIGH"
+    ],
+    [
+      "COLOR",
+      "MONO"
+    ]
+  ],
+  "menu": {
+    "heading": "OPTIONS MENU",
+    "rows": [
+      "BALLS:",
+      "ANGLE:",
+      "SCROLLING:",
+      "INGAME MUSIC:",
+      "RESOLUTION:",
+      "COLOR MODE:",
+      "SAVE AND EXIT"
+    ],
+    "row_y": [
+      50,
+      68,
+      86,
+      104,
+      122,
+      140,
+      176
+    ],
+    "arrow_x": 175,
+    "controls": {
+      "up": 72,
+      "down": 80,
+      "toggle": [
+        28,
+        57
+      ],
+      "escape": 1
+    },
+    "help": [
+      "  USE THE   ",
+      "CURSOR KEYS ",
+      "TO SELECT AN",
+      "   OPTION   ",
+      "            ",
+      "TOGGLE WITH ",
+      "  ENTER OR  ",
+      "  SPACEBAR  ",
+      "            ",
+      "ESCAPE QUITS"
+    ]
+  },
+  "scroll": [
+    {
+      "height": 240,
+      "factor": 20,
+      "start_raster": 1600,
+      "ball_y": [
+        0,
+        100,
+        200,
+        450,
+        570
+      ],
+      "raster": [
+        1265,
+        1390,
+        1890,
+        4598,
+        4598
+      ]
+    },
+    {
+      "height": 240,
+      "factor": 11,
+      "start_raster": 1600,
+      "ball_y": [
+        0,
+        100,
+        200,
+        450,
+        570
+      ],
+      "raster": [
+        1415,
+        1484,
+        1759,
+        4606,
+        4606
+      ]
+    },
+    {
+      "height": 240,
+      "factor": 9,
+      "start_raster": 1600,
+      "ball_y": [
+        0,
+        100,
+        200,
+        450,
+        570
+      ],
+      "raster": [
+        1449,
+        1505,
+        1730,
+        4599,
+        4599
+      ]
+    },
+    {
+      "height": 350,
+      "factor": 20,
+      "start_raster": 1600,
+      "ball_y": [
+        0,
+        100,
+        200,
+        450,
+        570
+      ],
+      "raster": [
+        1265,
+        1265,
+        1615,
+        2560,
+        2560
+      ]
+    },
+    {
+      "height": 350,
+      "factor": 11,
+      "start_raster": 1600,
+      "ball_y": [
+        0,
+        100,
+        200,
+        450,
+        570
+      ],
+      "raster": [
+        1415,
+        1415,
+        1608,
+        2128,
+        2128
+      ]
+    },
+    {
+      "height": 350,
+      "factor": 9,
+      "start_raster": 1600,
+      "ball_y": [
+        0,
+        100,
+        200,
+        450,
+        570
+      ],
+      "raster": [
+        1449,
+        1449,
+        1606,
+        2032,
+        2032
+      ]
+    }
+  ],
+  "video": [
+    {
+      "logical": [
+        320,
+        240
+      ],
+      "field": 207,
+      "matrix": 33,
+      "line_compare": 413
+    },
+    {
+      "logical": [
+        320,
+        350
+      ],
+      "field": 317,
+      "matrix": 33,
+      "line_compare": 316
+    }
+  ]
+}

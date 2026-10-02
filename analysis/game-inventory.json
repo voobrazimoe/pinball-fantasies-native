@@ -1,0 +1,194 @@
+[
+  {
+    "name": "ADLIB.SDR",
+    "size": 10966,
+    "sha256": "19d2e5e7f6b4b0b11d9b6ae8070dc558a0303d56647142966ec2713b4a805724",
+    "purpose": "INFERRED: sound driver; INTRO.ASM INIT_SOUND loads configured SDR; hardware name from filename"
+  },
+  {
+    "name": "GUS.SDR",
+    "size": 10502,
+    "sha256": "b32e0306634bb9285ff402e2985eeebe66b2eff09a0c313b7fe5c9960e1d42ac",
+    "purpose": "INFERRED: sound driver; INTRO.ASM INIT_SOUND loads configured SDR; hardware name from filename"
+  },
+  {
+    "name": "INTERNAL.SDR",
+    "size": 10711,
+    "sha256": "281e62186567dbf3bc670d397ccf7fbfba37eee5844440796856c0e1d39a6fe8",
+    "purpose": "INFERRED: sound driver; INTRO.ASM INIT_SOUND loads configured SDR; hardware name from filename"
+  },
+  {
+    "name": "INTRO.MOD",
+    "size": 252870,
+    "sha256": "9ecb5813ba1a5f606b47f0dbb9cc65c5dc5c0f07596ccd23fdf019b0283f1dcc",
+    "purpose": "VERIFIED: ProTracker-compatible M.K. marker at byte 1080; INFERRED: music, corresponding MODUL names in ASM (MOD2 role UNKNOWN)"
+  },
+  {
+    "name": "INTRO.PRG",
+    "size": 345678,
+    "sha256": "f6b5590f88949174b8f530d5b2d5b59f329d9fde24bfa98a0154d74f19f06881",
+    "purpose": "VERIFIED: MZ executable container; INFERRED: intro/table program by START.ASM filenames"
+  },
+  {
+    "name": "MOD2.MOD",
+    "size": 55394,
+    "sha256": "aa5003c275b494062f37f44e8c77105b8a420555f4bd6ff53d7698f89c540f21",
+    "purpose": "VERIFIED: ProTracker-compatible M.K. marker at byte 1080; INFERRED: music, corresponding MODUL names in ASM (MOD2 role UNKNOWN)"
+  },
+  {
+    "name": "NOSOUND.SDR",
+    "size": 2883,
+    "sha256": "223fdd845fa8541e2801c3371f2f97a61244e4ea54bcd81f2a51d312c005366d",
+    "purpose": "INFERRED: sound driver; INTRO.ASM INIT_SOUND loads configured SDR; hardware name from filename"
+  },
+  {
+    "name": "PAS16.SDR",
+    "size": 10712,
+    "sha256": "e863cb16e9e30cc2506638b7f91a2a31e26d19c242429af065ad455554352fd2",
+    "purpose": "INFERRED: sound driver; INTRO.ASM INIT_SOUND loads configured SDR; hardware name from filename"
+  },
+  {
+    "name": "PINBALL.CFG",
+    "size": 6,
+    "sha256": "78697ddf9eded00d9aec73e53e9715178ec9c3560e87d6740ad61cef99600e30",
+    "purpose": "VERIFIED: options configuration name referenced by INTRO.ASM"
+  },
+  {
+    "name": "PINBALL.EXE",
+    "size": 1742,
+    "sha256": "e7acf53b1af353bd44805579f49a594bf33d243cb8c50a23f0d5c50bb75765ba",
+    "purpose": "INFERRED: DOS launcher corresponding to START.ASM (loads Intro.prg and TableN.Prg)"
+  },
+  {
+    "name": "SB16.SDR",
+    "size": 11349,
+    "sha256": "81a7c4d41a14ae042a63899b38e88bc4d33a547053f44b17b3bd324ebe7bab17",
+    "purpose": "INFERRED: sound driver; INTRO.ASM INIT_SOUND loads configured SDR; hardware name from filename"
+  },
+  {
+    "name": "SB20.SDR",
+    "size": 11814,
+    "sha256": "4cba5dff50926c9c2485d5242e935a4bc4d134b1d8b8fce4db0d5faa0e044e9c",
+    "purpose": "INFERRED: sound driver; INTRO.ASM INIT_SOUND loads configured SDR; hardware name from filename"
+  },
+  {
+    "name": "SBLASTER.SDR",
+    "size": 11421,
+    "sha256": "c6c016f94f985c0f70d6bba7acb7e4572db8bbf88d99b2714aa150313be4b21f",
+    "purpose": "INFERRED: sound driver; INTRO.ASM INIT_SOUND loads configured SDR; hardware name from filename"
+  },
+  {
+    "name": "SBPRO.SDR",
+    "size": 11886,
+    "sha256": "3dfdea95cd3cd7c2096a4bf59fcf0af4802e20ca1879e149c9f1f39f57e27f20",
+    "purpose": "INFERRED: sound driver; INTRO.ASM INIT_SOUND loads configured SDR; hardware name from filename"
+  },
+  {
+    "name": "SETSOUND.EXE",
+    "size": 5652,
+    "sha256": "21f3e5477299f4bcedce7dea2d9a7d7c940dcade9e183b4b38ee5ad2e1c37a34",
+    "purpose": "INFERRED: sound setup utility from filename; implementation absent"
+  },
+  {
+    "name": "SM2.SDR",
+    "size": 11348,
+    "sha256": "d305e3401899af6d4938c09f85d0a1dc0aec0361b6ce8cb434933bdd298208b8",
+    "purpose": "INFERRED: sound driver; INTRO.ASM INIT_SOUND loads configured SDR; hardware name from filename"
+  },
+  {
+    "name": "SOUND.CFG",
+    "size": 25,
+    "sha256": "a6f2570f3535e40ab2a78c267249ac2e3d431e50fb33020e708dc013cdbb1b37",
+    "purpose": "VERIFIED: sound configuration name referenced by INTRO.ASM/FANTASIE.ASM"
+  },
+  {
+    "name": "TABLE1.HI",
+    "size": 64,
+    "sha256": "e7799bb471a403066b549c00510764a0c810ac8d8ba7b298ad523684b36d08a6",
+    "purpose": "VERIFIED: pristine factory high scores from INTRO.ASM HI_SCORE_LIST; optional seed only, local mutable files are not runtime/build inputs"
+  },
+  {
+    "name": "TABLE1.MOD",
+    "size": 210760,
+    "sha256": "a0877e4372abe64b70d9e361bf257ea5a84c948771f0eace3433d5f6399060b5",
+    "purpose": "VERIFIED: ProTracker-compatible M.K. marker at byte 1080; INFERRED: music, corresponding MODUL names in ASM (MOD2 role UNKNOWN)"
+  },
+  {
+    "name": "TABLE1.PRG",
+    "size": 536822,
+    "sha256": "4d7a69e7dc95260ad2541c6981a11ab842e2f1f20e45447e5613688b86e38414",
+    "purpose": "VERIFIED: MZ executable container with four embedded PBM playfield strips; PLAND.ASM names Party Land"
+  },
+  {
+    "name": "TABLE2.HI",
+    "size": 64,
+    "sha256": "1ac4483008d5df2c24adc8b9379d5678be8322caf3d0538227c33a4eb29020b5",
+    "purpose": "VERIFIED: pristine factory high scores from INTRO.ASM HI_SCORE_LIST; optional seed only, local mutable files are not runtime/build inputs"
+  },
+  {
+    "name": "TABLE2.MOD",
+    "size": 211912,
+    "sha256": "728629c54311386781271308e181ac0435f0582e90870accff0a42270d467529",
+    "purpose": "VERIFIED: ProTracker-compatible M.K. marker at byte 1080; INFERRED: music, corresponding MODUL names in ASM (MOD2 role UNKNOWN)"
+  },
+  {
+    "name": "TABLE2.PRG",
+    "size": 517974,
+    "sha256": "6689dcef5fd051998bab990b5d243614c7dae2dcdcab9bffbe3c1936a76504b5",
+    "purpose": "VERIFIED: MZ executable container; INFERRED: intro/table program by START.ASM filenames"
+  },
+  {
+    "name": "TABLE3.HI",
+    "size": 64,
+    "sha256": "9bdf105135ccc9a7adcde54449c9e86607f00590bcabaaa5d2a8a0a38f2aa94f",
+    "purpose": "VERIFIED: pristine factory high scores from INTRO.ASM HI_SCORE_LIST; optional seed only, local mutable files are not runtime/build inputs"
+  },
+  {
+    "name": "TABLE3.MOD",
+    "size": 219668,
+    "sha256": "fb7bfd1c96a462cb03999d2e6f843a20d3de69ba05fcbd384a9f1c131b9a563a",
+    "purpose": "VERIFIED: ProTracker-compatible M.K. marker at byte 1080; INFERRED: music, corresponding MODUL names in ASM (MOD2 role UNKNOWN)"
+  },
+  {
+    "name": "TABLE3.PRG",
+    "size": 504758,
+    "sha256": "da83ef5a7a471e6a6ad759126907076c81e92ffde6dec8e3de8e6052c6a98858",
+    "purpose": "VERIFIED: MZ executable container; INFERRED: intro/table program by START.ASM filenames"
+  },
+  {
+    "name": "TABLE4.HI",
+    "size": 64,
+    "sha256": "6f9f7631b1932a121fe006f90cdf766a9bcb9ec91a3bfc7ecec0c229a00b8c97",
+    "purpose": "VERIFIED: pristine factory high scores from INTRO.ASM HI_SCORE_LIST; optional seed only, local mutable files are not runtime/build inputs"
+  },
+  {
+    "name": "TABLE4.MOD",
+    "size": 216418,
+    "sha256": "31ad7e671ae77c07c3d075e2f1fecd3d918fd921fa23acd9a1b0b6fc07fbbcea",
+    "purpose": "VERIFIED: ProTracker-compatible M.K. marker at byte 1080; INFERRED: music, corresponding MODUL names in ASM (MOD2 role UNKNOWN)"
+  },
+  {
+    "name": "TABLE4.PRG",
+    "size": 522198,
+    "sha256": "88f63edd4c7b50bd057397016d7aa962f0ed1c858f4a746f1ccf976f67494ebf",
+    "purpose": "VERIFIED: MZ executable container; INFERRED: intro/table program by START.ASM filenames"
+  },
+  {
+    "name": "THING.SDR",
+    "size": 10369,
+    "sha256": "c9cd962aae321ce1e2637287a559a7d2aa6032c468ae6d794c3a7f4e3e491836",
+    "purpose": "INFERRED: sound driver; INTRO.ASM INIT_SOUND loads configured SDR; hardware name from filename"
+  },
+  {
+    "name": "TIMER.BIN",
+    "size": 253,
+    "sha256": "783f88891a760b3fab648a7ae64ad8998e1349737df07a1e765329f7a6787d0c",
+    "purpose": "UNKNOWN: small binary; no verified consumer in PF1 dependency cone"
+  },
+  {
+    "name": "pinfant.txt",
+    "size": 16081,
+    "sha256": "9e9579193883cfa94f9e6c08b8e28f4106b2742faa623912556be2a1bc397760",
+    "purpose": "INFERRED: user-facing game documentation from text contents"
+  }
+]
