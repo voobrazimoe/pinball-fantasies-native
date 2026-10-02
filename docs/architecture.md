@@ -1,22 +1,15 @@
 # Architecture
 
-`cmd/pinballfantasies` selects the frontend or one of four tables.
-`internal/platform` owns windows, input, audio queues, timing and writable storage.
-Linux uses SDL2; Windows uses native operating-system APIs.
+The project has one shared native game implementation with platform-specific host backends.
 
-`internal/assets` and `internal/physics` validate and decode user-supplied data.
-`internal/partyland`, `speeddevils`, `gameshow` and `stones` implement table rules
-and cooperative tasks as native Go. `internal/tablelogic` shares decimal scoring,
-tracker cue clocks and task scheduling. `internal/audio` decodes and renders tracker
-modules. `internal/presentation` draws matrix pixels from typed commands and
-external text, fonts and animation records. Mutable buffers belong to each game.
+`cmd/pinballfantasies` starts the frontend and table runtime. `internal/platform` owns windowing, input, timing, audio-device queues and writable storage. Linux uses SDL2; Windows uses native Win32, GDI and waveOut APIs.
 
-Deterministic simulation advances by table syncs, independently of the host audio
-queue. Private validation compares original-derived records, reachable commands,
-operands, writers, state and frame hashes. Public validation exercises bounded
-synthetic records and native algorithms without committing original payloads.
+`internal/assets` and `internal/physics` validate and decode the user-supplied DOS data. `internal/partyland`, `internal/speeddevils`, `internal/gameshow` and `internal/stones` implement table-specific rules and state machines in Go. Shared scoring, task scheduling and timing helpers live under `internal/tablelogic`.
 
-Five generated program/effect declarations remain outside the completed runtime
-boundary. Their presence currently prevents approval of the proposed public source
-snapshot. Excluding development reports alone cannot resolve a runtime dependency.
-See `runtime-data.md` and the private preflight report for the remaining work.
+`internal/audio` decodes and renders the original tracker/module data and effects. `internal/presentation` renders the matrix display and table presentation from typed native state plus records decoded from the supplied PRG data.
+
+Multiplayer is implemented as a hot-seat session around a single active table engine. Up to eight player records preserve the source-persistent per-player fields; ball-local and transient table state is reset at the same lifecycle boundaries as the original game. Player handoff loads the incoming record before the next launch, including its pre-launch matrix presentation.
+
+Deterministic simulation advances from source-time ticks independently of the host audio queue and window refresh. Platform presentation and audio buffering therefore do not define gameplay time.
+
+The public repository contains no DOS/x86 execution path. Original game files are read only as data containers and are never executed.
