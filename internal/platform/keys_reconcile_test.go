@@ -22,11 +22,22 @@ func TestWin32LostBreakReconciliation(t *testing.T) {
 }
 
 func TestWin32PhysicalModifierCombinations(t *testing.T) {
-	// Exhaust every combination, including sided, simultaneous and controls
-	// pressed without a make being received by this window.
+	// Exhaust every message-authoritative combination while physical polling
+	// confirms the same keys. Polling may clear lost breaks, but must not invent
+	// makes that were never delivered to this window.
 	for mask := 0; mask < 256; mask++ {
 		k := windowsKeys{}
 		want := 0
+		for i, vk := range windowsHeldVKs {
+			if mask&(1<<i) == 0 {
+				continue
+			}
+			l := uintptr(0)
+			if vk == 40 {
+				l = 1 << 24
+			}
+			k.key(vk, l, true)
+		}
 		if mask&0x15 != 0 {
 			want |= 1
 		}
@@ -60,6 +71,29 @@ func TestWin32PhysicalModifierCombinations(t *testing.T) {
 	}
 	if got := k.reconcile(true, 0); got != 0 {
 		t.Fatal("focus regain resurrected stale input")
+	}
+}
+
+func TestWin32PhysicalPollCannotAliasAltSides(t *testing.T) {
+	// Left Alt make from WM_SYSKEYDOWN. Even if GetAsyncKeyState reports both
+	// sided Alt VKs down, polling must not invent a right-flipper make.
+	k := windowsKeys{}
+	k.key(0x12, 0x38<<16, true)
+	if got := k.reconcile(true, 1<<4|1<<5); got != 1 {
+		t.Fatalf("left Alt alias activated wrong flippers: held=%d", got)
+	}
+
+	// Same regression in the opposite direction.
+	k = windowsKeys{}
+	k.key(0x12, 1<<24|0x38<<16, true)
+	if got := k.reconcile(true, 1<<4|1<<5); got != 2 {
+		t.Fatalf("right Alt alias activated wrong flippers: held=%d", got)
+	}
+
+	// A physical snapshot by itself is never a gameplay make.
+	k = windowsKeys{}
+	if got := k.reconcile(true, 1<<4|1<<5); got != 0 {
+		t.Fatalf("physical poll invented Alt make: held=%d", got)
 	}
 }
 

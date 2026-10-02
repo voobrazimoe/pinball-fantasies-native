@@ -5,28 +5,27 @@ package platform
 type windowsKeys struct{ down [256]bool }
 
 // Query the sided VKs, never VK_SHIFT/VK_CONTROL/VK_MENU. Each index in the
-// snapshot has its own bit, so overlapping modifiers cannot release each other.
+// snapshot has its own bit, so overlapping modifiers can be reconciled
+// independently.
 var windowsHeldVKs = [...]uint32{0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 40, 32}
 
-// reconcile returns current gameplay controls and repairs lost breaks in the
-// message history. It never invents makes/repeats or Enter/Down release events.
-// Physical presses must not populate down: a make still waiting in the queue
-// must be delivered as a first make, not incorrectly classified as a repeat.
+// reconcile repairs lost breaks in the message history, then returns the
+// message-authoritative gameplay controls. Physical polling is deliberately
+// release-only: GetAsyncKeyState must never invent a make for the opposite side
+// (or activate a control before its queued make message is decoded).
 func (k *windowsKeys) reconcile(focused bool, physical uint8) int {
 	if !focused {
 		*k = windowsKeys{}
 		return 0
 	}
-	var current windowsKeys
 	for i, vk := range windowsHeldVKs {
-		current.down[vk] = physical&(1<<i) != 0
-		if !current.down[vk] {
+		if physical&(1<<i) == 0 {
 			k.down[vk] = false
 		}
 	}
 	// Only the sided identities are stored by key().
 	k.down[0x10], k.down[0x11], k.down[0x12] = false, false, false
-	return current.held()
+	return k.held()
 }
 
 func (k *windowsKeys) key(vk uint32, l uintptr, makeKey bool) []hostEvent {
