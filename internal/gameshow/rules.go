@@ -106,6 +106,7 @@ func (g *Game) area(label string) {
 		if g.lastArea == "OPEN1" {
 			g.gate(2, false)
 			g.inChute = false
+			g.Session.SelectionOpen = false // CLOSE1 writes ADDPLAYERS=FALSE.
 			g.Cue("S_MAIN")
 			g.music.ReturnPosition = 1
 			g.beginMatrix("PARTY_OFFTS")

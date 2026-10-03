@@ -6,6 +6,7 @@ import re,json,struct,hashlib,subprocess
 from pathlib import Path
 import matrix_operand_schema as schema
 allout={}
+common=Path('reference/original-dos-source/FANTASIE.ASM').read_bytes().decode('latin1').upper().splitlines()
 for table,source,dsbase,font13,animbase,animbound in [(1,'PLAND',0x19d40,0x1ff40,0x20750,0x30000),(2,'SDEV',0x18ee0,0x1f170,0x1f8d0,0x2d000),(3,'SHOW',0x18b60,0x1e640,0x41ac0,0x4cb60),(4,'STONES',0x166d0,0x1cec0,0x1daf0,0x289b0)]:
  b=Path(f'TABLE{table}.PRG').read_bytes()
  s=Path(f'reference/original-dos-source/{source}.ASM').read_bytes().decode('latin1').upper().splitlines()
@@ -45,6 +46,17 @@ for table,source,dsbase,font13,animbase,animbound in [(1,'PLAND',0x19d40,0x1ff40
   try:texts[cur]+=schema.db_bytes(m[2],constants)
   except (schema.OperandError,KeyError,ValueError,SyntaxError):cur=None
  texts={k:v for k,v in texts.items() if all(0<=x<=255 for x in v)}
+ # Common matrix text is linked into every table. Export addresses, never
+ # copy the developer scrolls or rank artwork into the public runtime.
+ cur=None
+ for l in common:
+  l=l.split(';')[0].strip();m=re.match(r'(?:(\w+)\s+)?DB\s+(.+)',l)
+  if not m:cur=None;continue
+  if m[1]:
+   label=m[1]
+   cur=label if label.endswith('SCROLL') or label in ('HI_1','HI_2','HI_3','HI_4') else None
+   if cur:texts[cur]=[]
+  if cur:texts[cur]+=schema.db_bytes(m[2],constants)
  # Matrix commands (native data identifiers, never machine code pointers).
  commands=[];labels={};a,z={1:(1280,2007),2:(1187,1935),3:(1030,1766),4:(1286,2259)}[table]
  for l in s[a:z]:
@@ -92,6 +104,25 @@ for table,source,dsbase,font13,animbase,animbound in [(1,'PLAND',0x19d40,0x1ff40
     elif table in (3,4) and line=='CLEARIT':attract.append({'op':'_ANIMATION','args':['_CLEAR']})
     elif re.fullmatch(r'CLEARIT[234]?',line):attract.append({'op':'_CLEAR'+(line[-1] if line[-1].isdigit() else ('4' if table==1 else '1')),'args':[]})
  attach_numbers(attract)
+ # The source ShowHiTHi macro was previously expanded only in frontend
+ # replay. CHEATED enters this same looping program from gameplay NODOT.
+ labels['SHOWHIGHSTS']=len(commands)
+ commands+=attract+[{'op':'_JMP','args':['SHOWHIGHSTS']},{'op':'0','args':[]}]
+ # Original common cheat programs; CLEARIT uses each table's own macro.
+ inside=False
+ for l in common:
+  t=l.split(';')[0].strip()
+  if t.startswith('TECHTS') and 'LABEL' in t:inside=True
+  if inside and t.startswith('NEWPLAYERTS'):break
+  if not inside:continue
+  m=re.match(r'(\w+)\s+LABEL\s+WORD',t)
+  if m:labels[m[1]]=len(commands);continue
+  if t=='CLEARIT':
+   commands.append({'op':'_ANIMATION','args':['_CLEAR']} if table in (3,4) else {'op':'_CLEAR'+('4' if table==1 else '1'),'args':[]})
+  m=re.match(r'DW\s+(.+)',t)
+  if m:
+   args=[x.strip() for x in m[1].split(',')]
+   commands.append({'op':args[0],'args':args[1:]})
  # Locate animation tables by headers and ALL durations, in declaration order.
  animations={};headers=[];cur=None;names={};a,z={1:(2155,2495),2:(1940,2210),3:(4197,4456),4:(2261,2479)}[table]
  for l in s[a:z]:

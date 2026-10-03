@@ -35,12 +35,6 @@ func (g *Game) Palette() [768]byte { return g.palette }
 func (g *Game) Frame() *image.RGBA {
 	p := g.palette
 	d := *g.Display
-	if !g.matrix.active {
-		d.Clear()
-		d.Text("PLAYER "+strconv.Itoa(g.Session.CurrentPlayer), 8, 1, 5)
-		d.Text("BALL "+strconv.Itoa(int(g.BallNumber)), 8, 9, 5)
-		d.Score(g.Score.String())
-	}
 	return presentation.ComposeNative(g.Physics.FramePalette(p), &d, p, 231, 79, g.Physics.Settings, g.Physics.ScreenOffset)
 }
 func (g *Game) AttractFrame(tick int) *image.RGBA {

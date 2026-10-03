@@ -538,6 +538,15 @@ func TestNativeWin32RelativeMouseSmoke(t *testing.T) {
 	for _, size := range []image.Point{image.Pt(640, 480), image.Pt(800, 600)} {
 		up("SetWindowPos").Call(h.hwnd, 0, 0, 0, uintptr(size.X), uintptr(size.Y), 0x6)
 		pump()
+		// X11/Wine can transfer focus on a resize when the pointer lies over
+		// its desktop window. Raw Input is foreground-only: establish an
+		// actual client/foreground hit before injecting hardware test input.
+		p := point{X: 100, Y: 100}
+		up("ClientToScreen").Call(h.hwnd, uintptr(unsafe.Pointer(&p)))
+		up("SetCursorPos").Call(uintptr(p.X), uintptr(p.Y))
+		up("SetForegroundWindow").Call(h.hwnd)
+		up("SetFocus").Call(h.hwnd)
+		pump()
 		h.events = nil
 		send(16, 1)
 		send(0, 2)
@@ -557,7 +566,82 @@ func TestNativeWin32RelativeMouseSmoke(t *testing.T) {
 			baselineY = y
 		}
 		if y <= 0 || y != baselineY || fires != 1 {
-			t.Fatalf("size %v: relative Y=%d fire edges=%d", size, y, fires)
+			foreground, _, _ := up("GetForegroundWindow").Call()
+			focus, _, _ := up("GetFocus").Call()
+			t.Fatalf("size %v: relative Y=%d fire edges=%d; focused=%v hwnd=%#x foreground=%#x focus=%#x events=%v", size, y, fires, h.focused, h.hwnd, foreground, focus, h.events)
 		}
+	}
+}
+
+func TestWin32MouseCursorSelection(t *testing.T) {
+	if os.Getenv("PF12_WINDOW_SMOKE") != "1" {
+		t.Skip("set PF12_WINDOW_SMOKE=1 on a desktop")
+	}
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+	h, err := openHost(image.NewRGBA(image.Rect(0, 0, 320, 240)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
+	up("SetForegroundWindow").Call(h.hwnd)
+	up("SetFocus").Call(h.hwnd)
+	h.Pump()
+	arrow, _, _ := up("LoadCursorW").Call(0, 32512)
+	cursor := func() uintptr { c, _, _ := up("GetCursor").Call(); return c }
+	var originalClip rect
+	up("GetClipCursor").Call(uintptr(unsafe.Pointer(&originalClip)))
+	// The test alone positions the pointer; production never warps it.
+	place := func() {
+		p := point{X: 30, Y: 30}
+		up("ClientToScreen").Call(h.hwnd, uintptr(unsafe.Pointer(&p)))
+		up("SetCursorPos").Call(uintptr(p.X), uintptr(p.Y))
+		h.Pump()
+	}
+	place()
+	h.MouseActive(true)
+	if cursor() != 0 {
+		t.Fatal("stationary client cursor remained visible")
+	}
+	up("SendMessageW").Call(h.hwnd, 0x20, h.hwnd, 1)
+	if cursor() != 0 {
+		t.Fatal("WM_SETCURSOR client selection")
+	}
+	up("SendMessageW").Call(h.hwnd, 0x20, h.hwnd, 2)
+	if cursor() != arrow {
+		t.Fatal("nonclient cursor not restored")
+	}
+	place()
+	h.MouseActive(false)
+	if cursor() != arrow {
+		t.Fatal("pause/chute exit failed to restore stationary cursor")
+	}
+	h.MouseActive(true)
+	windowProc(h.hwnd, 0x8, 0, 0)
+	if cursor() != arrow {
+		t.Fatal("focus loss failed to restore cursor")
+	}
+	windowProc(h.hwnd, 0x7, 0, 0)
+	if cursor() != 0 {
+		t.Fatal("focus restoration did not select client cursor")
+	}
+	h.MouseActive(false)
+	if err := h.presentation.ToggleFullscreen(); err != nil {
+		t.Fatal(err)
+	}
+	place()
+	h.MouseActive(true)
+	if cursor() != 0 {
+		t.Fatal("fullscreen client cursor remained visible")
+	}
+	h.MouseActive(false)
+	if cursor() != arrow {
+		t.Fatal("fullscreen mode exit failed to restore cursor")
+	}
+	var clip rect
+	up("GetClipCursor").Call(uintptr(unsafe.Pointer(&clip)))
+	capture, _, _ := up("GetCapture").Call()
+	if clip != originalClip || capture != 0 {
+		t.Fatal("cursor mode confined/captured pointer", clip, capture)
 	}
 }

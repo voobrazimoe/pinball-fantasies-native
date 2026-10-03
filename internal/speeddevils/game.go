@@ -119,6 +119,7 @@ type Game struct {
 	top                                                                             *Decimal
 	matchBall                                                                       bool
 	clock, matchLast                                                                uint16
+	partyFlash                                                                      bool
 	inChute                                                                         bool
 	posSync, scrollPhase                                                            uint8
 	inhibitCountdown                                                                bool
@@ -267,8 +268,12 @@ func (g *Game) Sync(in physics.Inputs) error {
 		return nil
 	}
 	if g.Phase == BallLost {
+		g.Display.Flash() // MATRIX_BLINKOR precedes DO_TASKS.
 		g.runTasks()
 		g.flashTick()
+		if g.Phase == GameOver {
+			return nil // Frontend continues DEMOMODE NODOT in this sync.
+		}
 		g.matrixTick()
 		return nil
 	}
@@ -330,6 +335,7 @@ func (g *Game) afterTargets(in physics.Inputs) {
 		}
 	}
 	g.previous = in
+	g.Display.Flash() // MATRIX_BLINKOR precedes DO_TASKS.
 	g.runTasks()
 	g.springControl(in)
 	g.flashTick()

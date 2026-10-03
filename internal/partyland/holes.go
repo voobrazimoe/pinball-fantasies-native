@@ -227,6 +227,7 @@ func (g *Game) arcade() {
 	g.off(7)
 	g.off(55)
 	g.savedJingle = g.Audio.ReturnPosition
+	g.Display.SetJingleCountdown(25) // PLAND GROPB sets DECCOR before EFFECT MYSTERY.
 	g.effect("MYSTERY", 0, 0)
 	g.Physics.SetBall(15, 47, 0, 0, false)
 	g.Physics.Ball.Hold = true

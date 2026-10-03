@@ -75,6 +75,7 @@ func (g *Game) area(l string) {
 		g.award(l, 10000, 1000)
 	case "PARTYOFFAREA":
 		g.inChute = false
+		g.Session.SelectionOpen = false // CLOSE1 writes ADDPLAYERS=FALSE.
 		g.partyFlash = false
 		g.Physics.Ball.High = false
 		g.beginMatrix("PARTY_OFFTS")
@@ -210,6 +211,7 @@ func (g *Game) captureTower() {
 	g.inhibit = true
 	g.wasSpecial = g.Special
 	g.grimBackup = g.Grim
+	g.towerHuntOrig = g.TowerHunt // GROPA captures TOWERHUNTMODEORIG.
 	g.gate("GATE3", false)
 	g.gate("GATE2", true)
 	g.towerOpen = false

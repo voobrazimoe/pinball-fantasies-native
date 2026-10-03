@@ -131,7 +131,7 @@ func (g *Game) springControl(in physics.Inputs) {
 		g.Release(charge, uint8(g.clock))
 	})
 }
-func (g *Game) presentationTick() { g.Display.Flash(); g.matrixTick() }
+func (g *Game) presentationTick() { g.matrixTick() }
 
 // MUSIC_TOGGLE mutates only the source main/spring entries; jingles remain active.
 func (g *Game) ToggleMusic() {

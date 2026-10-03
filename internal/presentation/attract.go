@@ -13,7 +13,7 @@ func (d *Display) Attract(tick int, names [4]string, scores [4]string) *Display 
 	out := *d
 	out.Clear()
 	out.On = true
-	out.flashSpeed = 0
+	out.KillFlash()
 	out.Content.Texts = make(map[string][]byte, len(d.Content.Texts)+4)
 	for k, v := range d.Content.Texts {
 		out.Content.Texts[k] = v
@@ -50,9 +50,9 @@ func (d *Display) Attract(tick int, names [4]string, scores [4]string) *Display 
 				}
 			}
 		case "_WAIT":
-			duration = c.Num(0) + 1
+			duration = WordWaitTicks(c.Num(0))
 		case "_CLEAR1":
-			duration = 5
+			duration = 1
 		case "_CLEAR2":
 			duration = 17
 		case "_CLEAR3":
@@ -62,9 +62,9 @@ func (d *Display) Attract(tick int, names [4]string, scores [4]string) *Display 
 		case "_SCROLL":
 			duration = (len(out.Content.Texts[c.Args[0]])-21)*4 + 1
 		case "_RULLGARDIN_UPP":
-			duration = 17 - c.Num(1)
+			duration = 16 - c.Num(1)
 		case "_RULLGARDIN_NED":
-			duration = 14 + c.Num(1)
+			duration = 13 + c.Num(1)
 		}
 		return duration
 	}
@@ -77,28 +77,10 @@ func (d *Display) Attract(tick int, names [4]string, scores [4]string) *Display 
 	if cycle > 0 {
 		tick %= cycle
 	}
-	pc, left := 0, 0
-	var frame, loops, frameTime uint16
-	var anim Animation
-	for t := 0; t <= tick; t++ {
-		out.Flash()
-		if left == 0 {
-			c := out.Content.Attract[pc]
-			pc = (pc + 1) % len(out.Content.Attract)
-			out.BeginCommand(c)
-			left = duration(c)
-			if c.Op == "_ANIMATION" {
-				anim = out.Content.Animations[c.Args[0]]
-				frame = 0
-				loops = anim.Header[1]
-				frameTime = 1
-			}
-		}
-		out.Visit(frame, 2, number)
-		if out.op == "_ANIMATION" {
-			tablelogic.Animation(anim.Header, anim.Durations, &frame, &loops, &frameTime)
-		}
-		left--
+	r := replay{d: &out, commands: append(append([]Command{}, out.Content.Attract...), Command{Op: "0"}), active: true, numberFunc: number}
+	r.dispatch()
+	for t := 1; t <= tick; t++ {
+		r.step()
 	}
 	return &out
 }

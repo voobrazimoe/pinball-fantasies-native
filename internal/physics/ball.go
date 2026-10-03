@@ -32,6 +32,8 @@ type Ball struct {
 type Inputs = gameplay.Controls
 type Game struct {
 	Configured   bool
+	TiltDisabled bool  // FANTASIE/TILTDISABLED; physical TILT0 push still runs.
+	FastBall     bool  // FAIRPLAY clears SHIFTKEYS bit2; HI_RES initially sets it.
 	TargetRaster int16 // SCREENFORCE2: desired viewport, still smoothed
 
 	Settings      settings.Config
@@ -136,8 +138,14 @@ func (g *Game) Sync(input Inputs) error {
 		g.BeforeLate()
 	}
 	g.scroll()
-	if err := g.step(input); err != nil {
-		return err
+	lateSteps := 1
+	if g.FastBall {
+		lateSteps = 2
+	}
+	for i := 0; i < lateSteps; i++ {
+		if err := g.step(input); err != nil {
+			return err
+		}
 	}
 	g.Syncs++
 	return nil

@@ -6,6 +6,7 @@ import (
 	"image"
 	"pinballfantasies/internal/gameplay"
 	"pinballfantasies/internal/physics"
+	"pinballfantasies/internal/presentation"
 	"pinballfantasies/internal/settings"
 	"pinballfantasies/internal/tablelogic"
 )
@@ -73,13 +74,21 @@ type Session interface {
 }
 type Factory func(top tablelogic.Decimal) (Session, error)
 type Model struct {
-	scoreQueue      []tablelogic.Decimal
-	highscorePlayed bool
-	scorePlayer     int
-	selectionOpen   bool
-	selectionDelay  int
-	OptionsPending  bool
-	OptionsOrigin   Mode
+	sessionSynced                    bool
+	sourceScoreStage                 int // 1: SPINTSEL/get/read/wait; 2: source completion tasks.
+	entrySetup                       bool
+	gameOverTimeline                 *presentation.Timeline
+	cheatDecoder                     gameplay.CheatDecoder
+	cheatTimeline                    *presentation.CheatTimeline
+	cheatTiltDisabled, cheatFastBall bool
+	cheatBalls                       int
+	scoreQueue                       []tablelogic.Decimal
+	highscorePlayed                  bool
+	scorePlayer                      int
+	selectionOpen                    bool
+	selectionDelay                   int
+	OptionsPending                   bool
+	OptionsOrigin                    Mode
 
 	Settings                             settings.Config
 	SettingsStore                        *settings.Store
@@ -160,7 +169,41 @@ func (m *Model) startPlayers(count int) error {
 	if g, ok := s.(interface{ CarryLoadedTableState(any) }); ok {
 		g.CarryLoadedTableState(m.Session)
 	}
+	// LATE_RASTER_INTERRUPT_DEMO starts FIRST_NO_OF_PLAYERSTS in the same
+	// loaded VGA memory. NEW_BALL's VISAKEYS branch retains this program.
+	if next, ok := s.(interface{ MatrixDisplay() *presentation.Display }); ok {
+		if old, ok := m.Session.(interface{ MatrixDisplay() *presentation.Display }); ok {
+			var names, scores [4]string
+			for i, e := range m.Scores[m.Selected-1] {
+				names[i], scores[i] = string(e.Name[:]), e.Digits.String()
+			}
+			matrix := old.MatrixDisplay().Attract(m.Counter, names, scores)
+			if m.cheatTimeline != nil {
+				matrix = m.cheatTimeline.Display()
+			}
+			if m.End == Completed && m.cheatTimeline == nil && m.gameOverTimeline == nil {
+				players := []string{m.Final.String()}
+				if len(m.scoreQueue) > 0 {
+					players = make([]string, len(m.scoreQueue))
+					for i, score := range m.scoreQueue {
+						players[i] = score.String()
+					}
+				}
+				matrix = old.MatrixDisplay().GameOverPlayers(m.Counter, players, names, scores)
+			}
+			if m.gameOverTimeline != nil && m.cheatTimeline == nil {
+				matrix = m.gameOverTimeline.Display()
+			}
+			next.MatrixDisplay().CarryMemory(matrix)
+		}
+	}
 	m.Session = s
+	if g, ok := s.(interface{ SetCheatRules(bool, bool, int) }); ok {
+		g.SetCheatRules(m.cheatTiltDisabled, m.cheatFastBall, m.cheatBalls)
+	}
+	m.cheatTimeline = nil
+	m.gameOverTimeline = nil
+	m.sourceScoreStage = 0
 	if g, ok := s.(interface{ StartPlayers(int) }); ok {
 		g.StartPlayers(count)
 	}
@@ -177,7 +220,12 @@ func (m *Model) loadTable(table int) error {
 		return e
 	}
 	m.Selected = table
+	m.cheatDecoder = gameplay.CheatDecoder{}
+	m.cheatTimeline = nil
+	m.cheatTiltDisabled, m.cheatFastBall, m.cheatBalls = false, false, 0
 	m.Session = nil
+	m.gameOverTimeline = nil
+	m.sourceScoreStage = 0
 	if m.tableFactory() == nil {
 		return nil
 	} // Original choice is retained; unavailable program never loads another table.
@@ -205,6 +253,10 @@ func (m *Model) finish(d tablelogic.Decimal) {
 	m.Entered = 0
 	if m.Rank >= 0 {
 		m.Mode = Initials
+		if m.sourceScoreStage == 1 {
+			m.entrySetup = true
+			m.sourceEntry(false)
+		}
 		if !m.highscorePlayed {
 			m.Session.Cue("S_GAMEOVER2")
 			m.highscorePlayed = true
@@ -232,6 +284,7 @@ func Initial(k Key) byte {
 }
 func (m *Model) Update(in Input) error {
 	m.Tick++
+	m.sessionSynced = false
 	if in.Close {
 		if e := m.saveSettings(); e != nil {
 			return e
@@ -248,8 +301,28 @@ func (m *Model) Update(in Input) error {
 		}
 		return nil
 	}
+	// READ_KEYBOARD observes CLOSE1's ADDPLAYERS write before accepting F1..F8.
+	if m.Mode == Playing {
+		if g, ok := m.Session.(interface{ PlayerSelectionReady() bool }); ok && !g.PlayerSelectionReady() {
+			m.selectionOpen = false
+		}
+	}
 	initialMode := m.Mode
-	for _, k := range in.Keys {
+	if m.sourceScoreStage == 1 {
+		if d, ok := m.Session.(interface{ MatrixDisplay() *presentation.Display }); ok {
+			d.MatrixDisplay().Flash()
+		}
+		if m.Mode == Initials && m.entrySetup {
+			// GET_IT_FROM_KEYBOARD inserts the row and clears SCAN_CODE.
+			m.entrySetup = false
+			return nil
+		}
+	}
+	keys := in.Keys
+	if m.sourceScoreStage == 1 && m.Mode == Initials && len(keys) > 1 {
+		keys = keys[len(keys)-1:]
+	} // SCAN_CODE is one byte.
+	for _, k := range keys {
 		keyMode := m.Mode
 		switch m.Mode {
 		case Startup:
@@ -337,8 +410,13 @@ func (m *Model) Update(in Input) error {
 				if e := m.startPlayers(count); e != nil {
 					return e
 				}
+			} else if program := m.cheatDecoder.Make(uint8(k)); program != "" {
+				m.originalCheat(program)
 			}
 		case Playing:
+			if matrixTestCheat(m, k) {
+				continue
+			}
 			if m.selectionOpen && m.selectionDelay == 0 && ((k >= F1 && k <= F8) || k == Enter) {
 				if g, ok := m.Session.(interface {
 					SelectPlayers(int)
@@ -388,6 +466,9 @@ func (m *Model) Update(in Input) error {
 			if c := Initial(k); c != 0 {
 				m.Entry[m.Entered] = c
 				m.Entered++
+				if m.sourceScoreStage == 1 {
+					m.sourceEntry(false)
+				}
 				if m.Entered == 3 {
 					scores := m.Scores[m.Selected-1]
 					scores.Insert(m.Rank, m.Final, m.Entry)
@@ -457,33 +538,60 @@ func (m *Model) Update(in Input) error {
 		if m.PauseDelay > 0 {
 			m.PauseDelay--
 		}
+		m.sessionSynced = true
 		if e := m.Session.Sync(in.controls()); e != nil {
 			return e
 		}
+		matrixTestTrace(m)
 		if d, done := m.Session.Result(); done {
 			m.Final = d
 			m.End = Completed
 			m.Mode = GameEnd
 			m.Counter = 5
+			if src, ok := m.Session.(interface{ ScoreEntryPending() bool }); ok && src.ScoreEntryPending() {
+				m.sourceScoreStage = 1
+				m.loadScoreQueue()
+				m.Counter = 1 // First SPINTSEL_IN_HIGH visit is next sync.
+			}
 		}
 	case GameEnd:
+		if m.sourceScoreStage == 2 {
+			m.sessionSynced = true
+			if e := m.Session.Sync(physics.Inputs{}); e != nil {
+				return e
+			}
+			if _, done := m.Session.Result(); done {
+				m.startGameOverTimeline()
+			}
+			break
+		}
 		m.Counter--
 		if m.Counter == 0 {
-			if s, ok := m.Session.(interface{ PlayerScores() []tablelogic.Decimal }); ok {
-				m.scoreQueue = s.PlayerScores()
-			} else {
-				m.scoreQueue = []tablelogic.Decimal{m.Final}
+			if m.sourceScoreStage == 0 {
+				m.loadScoreQueue()
 			}
-			m.scorePlayer = 0
-			m.highscorePlayed = false
 			m.nextScore()
 		}
 	case TableAttract:
 		m.Counter++
+		if m.cheatTimeline != nil {
+			m.cheatTimeline.Tick()
+		}
+		if m.gameOverTimeline != nil {
+			m.gameOverTimeline.Tick()
+		}
 	case EntryWait:
 		m.Counter--
+		if m.sourceScoreStage == 1 && m.Counter == 30 {
+			m.sourceEntry(true)
+		}
 		if m.Counter <= 2 {
-			m.nextScore()
+			if m.sourceScoreStage == 1 {
+				m.Mode = GameEnd
+				m.Counter = 1
+			} else {
+				m.nextScore()
+			}
 		}
 	}
 	return nil
@@ -593,9 +701,57 @@ func (m *Model) nextScore() {
 			m.finish(d)
 			return
 		}
+		if m.sourceScoreStage == 1 {
+			m.Mode = GameEnd
+			m.Counter = 1
+			return
+		}
+	}
+	if m.sourceScoreStage == 1 {
+		if !m.highscorePlayed {
+			m.Session.Cue("S_GAMEOVER")
+		}
+		m.Session.(interface{ FinishScoreEntry() }).FinishScoreEntry()
+		m.sourceScoreStage = 2
+		m.Mode = GameEnd
+		return
 	}
 	m.attract()
 	if !m.highscorePlayed {
 		m.Session.Cue("S_GAMEOVER")
 	}
+}
+
+func (m *Model) loadScoreQueue() {
+	if s, ok := m.Session.(interface{ PlayerScores() []tablelogic.Decimal }); ok {
+		m.scoreQueue = s.PlayerScores()
+	} else {
+		m.scoreQueue = []tablelogic.Decimal{m.Final}
+	}
+	m.scorePlayer = 0
+	m.highscorePlayed = false
+}
+func (m *Model) sourceEntry(stars bool) {
+	if d, ok := m.Session.(interface{ MatrixDisplay() *presentation.Display }); ok {
+		d.MatrixDisplay().ScoreEntry(m.scorePlayer, m.Entry, stars)
+	}
+}
+func (m *Model) startGameOverTimeline() {
+	var names, scores [4]string
+	for i, e := range m.Scores[m.Selected-1] {
+		names[i], scores[i] = string(e.Name[:]), e.Digits.String()
+	}
+	players := make([]string, len(m.scoreQueue))
+	for i, d := range m.scoreQueue {
+		players[i] = d.String()
+	}
+	if s, ok := m.Session.(interface {
+		GameOverTimeline([]string, [4]string, [4]string) *presentation.Timeline
+	}); ok {
+		m.gameOverTimeline = s.GameOverTimeline(players, names, scores)
+		m.gameOverTimeline.Tick() // Demo task precedes NODOT in this source sync.
+	}
+	m.sourceScoreStage = 0
+	m.Mode = TableAttract
+	m.Counter = 0
 }

@@ -158,6 +158,7 @@ func openHost(first *image.RGBA) (_ *hostWindow, err error) {
 	return h, nil
 }
 func (h *hostWindow) Close() {
+	h.MouseActive(false)
 	if h.inputLog != nil {
 		defer h.inputLog.Close()
 	}
@@ -184,6 +185,10 @@ func windowProc(hwnd uintptr, msg uint32, w, l uintptr) uintptr {
 			}
 		}
 		switch msg {
+		case 0x20: // WM_SETCURSOR: low word is the hit-test result.
+			if w == hwnd && h.selectMouseCursor(uint16(l)) {
+				return 1
+			}
 		case 0x10:
 			h.events = append(h.events, hostEvent{kind: 1})
 			return 0 // WM_CLOSE: shared lifecycle owns shutdown
@@ -198,10 +203,12 @@ func windowProc(hwnd uintptr, msg uint32, w, l uintptr) uintptr {
 			// DefWindowProc must clean up foreground raw-input resources.
 		case 0x7: // WM_SETFOCUS
 			h.focused = true
+			h.refreshMouseCursor()
 			h.events = append(h.events, hostEvent{kind: 8})
 			return 0
 		case 0x8:
 			h.focused = false
+			h.refreshMouseCursor()
 			h.mouseDown = false
 			h.input = windowsKeys{}
 			h.refreshInput("focus-loss", 0, 0, false)

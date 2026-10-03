@@ -15,26 +15,26 @@ func (g *Game) drain() {
 	g.effect("LOSTBALL")
 	g.wait("SOUNDRINNER", 5, func() { g.sound("SRINNER") })
 }
-func (g *Game) changeBall() {
+func (g *Game) changeBall() bool {
 	if g.HoldBonus {
 		g.Bonus = g.matrix.held
 	}
 	g.savePlayer() // VARS_2_P_STRUC runs before earned-extra-ball selection.
 	if g.Lights[55] {
 		g.emit("ShootAgain", "LET_HIM_SHOOT_AGAIN", 0)
-		g.beginMatrix("SHOOT_AGAIN_ONTS")
-		return
+		g.startMatrix("SHOOT_AGAIN_ONTS", false)
+		return false
 	}
 	if g.matchBall {
-		g.Phase = GameOver
-		g.emit("GameOver", "AFTER_XXBALLTS", 0)
-		return
+		g.startMatrix("AFTER_XXBALLTS", false)
+		return false
 	}
 	if !g.advancePlayer() {
-		g.beginMatrix("OUT_OF_BALLSTS")
-		return
+		g.startMatrix("OUT_OF_BALLSTS", false)
+		return false
 	}
 	g.wait("NEW_BALL_TASK", 60, g.newBall)
+	return true // HU_ tail-calls the following matrix handler on this sync.
 }
 func (g *Game) newBall() {
 	if g.Session.PlayerCount > 1 {
@@ -50,7 +50,9 @@ func (g *Game) newBall() {
 	g.flashes = [64]flash{}
 	g.tasks = [20]func() bool{}
 	g.waits = map[string]uint16{}
-	g.matrix = matrix{}
+	if !g.partyFlash {
+		g.matrix = matrix{}
+	}
 	for _, n := range []int{9, 10, 11, 12, 13, 14, 22, 23, 24, 25, 50, 51, 52, 53, 54} {
 		g.light(n, keep[n])
 	}
@@ -95,7 +97,9 @@ func (g *Game) newBall() {
 	g.wait("SOUNDBRICKUPP", 5, func() { g.sound("SBRICKUPP") })
 	g.wait("SETBALL", 80, func() { g.Physics.SetBall(300, 530, 10, 0, false); g.Physics.Ball.Hold = false; g.Phase = Playing })
 	g.playerText()
-	g.Display.ShowPlayerBall(g.Score.String())
+	if !g.partyFlash {
+		g.beginMatrix("SHOWPLAYERSTS") // WHEN_NEW_BALL_RESET calls DO_MATRIX.
+	}
 	g.emit("NewBall", "NEW_BALL", uint64(g.BallNumber))
 }
 func (g *Game) checkHighScore() bool {

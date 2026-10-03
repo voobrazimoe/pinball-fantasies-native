@@ -172,6 +172,7 @@ func TestSHOWMoneyManiaMultiplierAndExtraBall(t *testing.T) {
 		t.Fatal("target variant")
 	}
 	g.ModeTime = 1
+	g.Display.StartCountdown(0, 0) // Original SEC_ASC=01, SYNC_LEFT=1, next visit shows zero.
 	g.matrix.op = "_COUNTDOWN"
 	g.matrixTick()
 	if g.MoneyMania || g.music.ReturnPosition != 3 || !g.Special {

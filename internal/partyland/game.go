@@ -95,6 +95,7 @@ type Game struct {
 	totalBalls                                                                     uint8
 	clock                                                                          uint16
 	matchBall                                                                      bool
+	partyFlash                                                                     bool
 	inChute                                                                        bool
 	touchDisabled                                                                  bool
 	duckDisabled                                                                   [3]bool
@@ -270,8 +271,12 @@ func (g *Game) SyncWithMatrixBudget(input physics.Inputs, timeLeft bool) error {
 	}
 	if g.Phase == BallLost {
 
+		g.Display.Flash() // MATRIX_BLINKOR precedes DO_TASKS.
 		g.runTasks()
 		g.flashTick()
+		if g.Phase == GameOver {
+			return nil // Frontend continues DEMOMODE NODOT in this sync.
+		}
 		g.matrixTick()
 		if g.ScreenForce >= 0 {
 			g.Physics.Raster = (g.ScreenForce + 33) * 16
@@ -281,8 +286,12 @@ func (g *Game) SyncWithMatrixBudget(input physics.Inputs, timeLeft bool) error {
 	err := g.Physics.Sync(input)
 	// Drain bypasses electronics in PF3. Continue the ball-loss display tasks.
 	if g.Phase == BallLost {
+		g.Display.Flash() // MATRIX_BLINKOR precedes DO_TASKS.
 		g.runTasks()
 		g.flashTick()
+		if g.Phase == GameOver {
+			return nil // Frontend continues DEMOMODE NODOT in this sync.
+		}
 		g.matrixTick()
 	}
 	if g.ScreenForce >= 0 {
@@ -368,6 +377,7 @@ func (g *Game) afterTargets(input physics.Inputs) {
 		}
 	}
 	g.previousInput = input
+	g.Display.Flash() // MATRIX_BLINKOR precedes DO_TASKS.
 	g.runTasks()
 	g.springControl(input)
 	g.flashTick()
@@ -383,7 +393,9 @@ func (g *Game) resetBall() {
 	g.flashes = [15]flash{}
 	g.tasks = [50]func() bool{}
 	g.waitCounters = make(map[string]uint16)
-	g.matrix = matrixState{}
+	if !g.partyFlash {
+		g.matrix = matrixState{}
+	}
 	g.Audio.ReadyAnim = true
 	g.Audio.ReadyLogic = true
 	g.inhibitEffect = false

@@ -610,13 +610,13 @@ def main() -> int:
     # appending their programs, rather than treating their PCs as timing PCs.
     t1["labels"] = dict(t1["labels"])
     t1["commands"] = list(t1["commands"])
-    for label in ("FIRST_NO_OF_PLAYERSTS", "NO_OF_PLAYERSTS", "SHOWPLAYERSTS"):
+    for label in ("FIRST_NO_OF_PLAYERSTS", "NO_OF_PLAYERSTS", "SHOWPLAYERSTS", "AFTER_XXBALLTS"):
         start = pres["1"]["labels"][label]
         t1["labels"][label] = len(t1["commands"])
         for command in pres["1"]["commands"][start:]:
             t1["commands"].append(command)
-            if command["op"] == "0": break
-    t1["ported_ops"].add("_WAIT_GAME_ON")
+            if command["op"] == "0" or (label == "AFTER_XXBALLTS" and command["op"] == "_2_DEMO_MODE"): break
+    t1["ported_ops"].update({"_WAIT_GAME_ON", "_CHECK_HIGH", "_2_DEMO_MODE"})
     t2 = {"labels": sd["labels"], "commands": sd["commands"],
           "effects": sd["effects"], "animations": sd["animations"],
           "scrolls": sd["scrolls"], "jingles": sd["jingles"],
@@ -629,7 +629,7 @@ def main() -> int:
               "_WAIT_GAME_ON", "_CHANGE_PLAYER", "_NEW_BALL2", "_SHOOT_AGAIN_ONN", "_KNACKET",
               "_CHECK_XXBALLS", "_DOBEATEN", "_TURNOFFSPECIALMODE",
               "_RETURN_OF_THE_EVIL_SUPERMODE", "_TURNONTURBO", "_ADD50MILLION",
-              "_SOUND_EFFECT"}}
+              "_SOUND_EFFECT", "_CHECK_HIGH", "_2_DEMO_MODE"}}
     gs_eff = {k: {"matrix": v["matrix"]} for k, v in gs["effects"].items()}
     show_src = (ROOT / "reference/original-dos-source/SHOW.ASM").read_bytes().decode("latin1").upper()
     m = re.search(r"BONUSTABLE\s+DB\s+([\d, ]+)", show_src)

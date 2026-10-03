@@ -152,6 +152,7 @@ func TestSourcePrintNumberAndGameOver(t *testing.T) {
 		// PRINT_NUMBER's SCASB counts seven bytes for six visible digits;
 		// DI=336+16 - 7*2, then skips six 4-byte source glyph cells.
 		want.Text("500000", 52, 1, 13)
+		linkedNumberCommaStores(want, "000000500000", 352-7*2, 13)
 		if d.Dots != want.Dots {
 			t.Fatal("centered BCD address/leading zero conversion")
 		}
@@ -166,7 +167,7 @@ func TestSourcePrintNumberAndGameOver(t *testing.T) {
 		if a.Dots != b.Dots || a.Dots == ([2560]bool{}) {
 			t.Fatal("single-player ShowIt score/frozen counter")
 		}
-		if d.GameOver(305, "123456", names, scores).Dots != d.Attract(0, names, scores).Dots {
+		if d.GameOver(map[int]int{1: 298, 2: 278}[n], "123456", names, scores).Dots != d.Attract(0, names, scores).Dots {
 			t.Fatal("UrbanOverTS did not transition to ShowHighsTS")
 		}
 	}
@@ -195,8 +196,8 @@ func TestSourceMatchWinningFlash(t *testing.T) {
 
 func TestSourceTableGameOverClearVariants(t *testing.T) {
 	var names, scores [4]string
-	party := original(t, 1).GameOver(63, "123456", names, scores)
-	speed := original(t, 2).GameOver(63, "123456", names, scores)
+	party := original(t, 1).GameOver(62, "123456", names, scores)
+	speed := original(t, 2).GameOver(58, "123456", names, scores)
 	// UrbanOverTS expands CLEARIT to _CLEAR4 on Party Land and _CLEAR1 on
 	// Speed Devils: the first removes interleaved rows, the second clears at once.
 	if party.Dots == ([2560]bool{}) || speed.Dots != ([2560]bool{}) {

@@ -1,6 +1,9 @@
 package speeddevils
 
-import "pinballfantasies/internal/tablelogic"
+import (
+	"pinballfantasies/internal/presentation"
+	"pinballfantasies/internal/tablelogic"
+)
 
 // PlayerState contains only values written by VARS_2_P_STRUC.
 // The engine, jackpot, matrix, audio, physics and tasks remain shared.
@@ -37,10 +40,9 @@ func (g *Game) LoadPlayerState(s PlayerState) {
 func (g *Game) StartPlayers(count int) {
 	g.Session.Initialize(count, g.SavePlayerState())
 	g.playerText()
-	if count > 1 {
-		g.beginMatrix("FIRST_NO_OF_PLAYERSTS")
-		g.sound("S_ADDPLAYER2")
-	}
+	// LATE_RASTER_INTERRUPT_DEMO dispatches this for every F1..F8 count.
+	g.beginMatrix("FIRST_NO_OF_PLAYERSTS")
+	g.sound("S_ADDPLAYER2")
 }
 func (g *Game) SelectPlayers(count int) {
 	g.Session.Select(count)
@@ -66,7 +68,6 @@ func (g *Game) advancePlayer() bool {
 		g.LoadPlayerState(g.Session.Load())
 	}
 	g.playerText()
-	g.Display.ShowPlayerBall(g.Score.String())
 	return true
 }
 func (g *Game) selectMatch(digit uint8) bool {
@@ -121,3 +122,5 @@ func (g *Game) matchWin(digit uint8) {
 }
 
 func (g *Game) PlayerSelectionReady() bool { return g.Session.SelectionOpen && g.inChute }
+
+func (g *Game) MatrixDisplay() *presentation.Display { return g.Display }

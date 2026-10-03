@@ -78,6 +78,8 @@ func (g *Game) trigger(label string) {
 	case "CLOSE1":
 		if g.lastArea == "BYGEL12" {
 			g.inChute = false
+			g.Session.SelectionOpen = false // CLOSE1 writes ADDPLAYERS=FALSE.
+			g.partyFlash = false
 			g.music("S_MAIN")
 			g.Audio.ReturnPosition = 1
 			g.beginMatrix("PARTY_OFFTS")

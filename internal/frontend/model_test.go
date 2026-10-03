@@ -412,7 +412,7 @@ func TestNativeGameOverAndRestart(t *testing.T) {
 			t.Fatal(e)
 		}
 	}
-	for i := 0; i < 58; i++ {
+	for i := 0; i < 62; i++ {
 		if e := r.Update(Input{}); e != nil {
 			t.Fatal(e)
 		}

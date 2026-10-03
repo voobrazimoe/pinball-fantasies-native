@@ -66,6 +66,30 @@ with open(out/'dosbox.log','w') as log:
    key('F1');sample('party-initial-attract',8,True,.04)
    key('Escape');time.sleep(.4);key('y');time.sleep(1.5)
    key('F2');sample('speed-initial-attract',8,True,.04)
+  elif mode.startswith('interrupt-table'):
+   table=int(mode.removeprefix('interrupt-table'))
+   assert 1<=table<=4
+   sample('startup',48,period=.5);key('space');time.sleep(3);key('F'+str(table))
+   # Original table attract reaches its long scroll after the high-score
+   # panels. Starting gameplay cancels it through DO_MATRIX, rather than
+   # a fabricated shortened stream; Escape/Y returns the loaded table.
+   sample('before-interruption',24,True,.04)
+   key('F1');sample('first-player-start',2,True,.025)
+   key('Escape');time.sleep(.25);key('y')
+   sample('after-interruption',30,True,.04)
+  elif mode=='ending-stones-control':
+   xt=C.CDLL('libXtst.so.6')
+   xt.XTestFakeKeyEvent.argtypes=[C.c_void_p,C.c_uint,C.c_int,C.c_ulong]
+   def key(k,hold='.03'):
+    events.append({'kind':'physical-input','key':k,'seconds':time.monotonic()-start})
+    x.XRaiseWindow(d,w);x.XSetInputFocus(d,w,1,0)
+    code=x.XKeysymToKeycode(d,x.XStringToKeysym(k.encode()));assert code
+    assert xt.XTestFakeKeyEvent(d,code,1,0);x.XSync(d,0);time.sleep(float(hold))
+    assert xt.XTestFakeKeyEvent(d,code,0,0);x.XSync(d,0);time.sleep(.1)
+   sample('startup',48,period=.5);key('space');time.sleep(3);key('F4')
+   sample('table-attract',3,True,.08);key('F1');sample('player-start',2,True,.08)
+   sample('controlled-ending',45,True,.04)
+   sample('controlled-full',.2,False,.1)
   else:
    time.sleep(7);key('space');time.sleep(3);key('F2' if mode in ['bitmap','attract-speed','ending-speed','ending-real'] else 'F1')
    if mode=='ending-real':

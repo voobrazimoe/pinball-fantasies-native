@@ -9,7 +9,15 @@ import (
 // the pre-PF6 branch disabled unless explicitly supplied, preserving its oracle.
 func (g *Game) SetHighScore(top Decimal) { g.highScore = &top }
 func (g *Game) checkHighScore() bool {
-	if g.highScore == nil || g.alreadyBeaten || g.Physics.SpringValid || g.special() || g.Score.Uint64() <= g.highScore.Uint64() {
+	if g.inChute || g.special() {
+		return false
+	}
+	return g.beatHighScore()
+}
+
+// PLAND/FANTASIE _BEATEN_MATRIX omits CHECKHIGHSCORE's chute/mode guards.
+func (g *Game) beatHighScore() bool {
+	if g.highScore == nil || g.alreadyBeaten || g.Score.Uint64() <= g.highScore.Uint64() {
 		return false
 	}
 	g.alreadyBeaten = true

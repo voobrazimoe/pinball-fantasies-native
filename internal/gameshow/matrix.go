@@ -3,6 +3,7 @@ package gameshow
 import (
 	"pinballfantasies/internal/presentation"
 	"pinballfantasies/internal/tablelogic"
+
 	"strings"
 )
 
@@ -21,13 +22,16 @@ type matrix struct {
 	matchRemaining, matchTimer                   uint16
 }
 
-func (g *Game) beginMatrix(label string) {
+func (g *Game) beginMatrix(label string) { g.startMatrix(label, true) }
+
+func (g *Game) startMatrix(label string, reset bool) {
 	p, ok := g.Display.Content.Labels[strings.ToUpper(label)]
 	if !ok {
 		panic("missing SHOW matrix " + label)
 	}
-	g.Display.Begin("_FLASHOFF", nil)
-	g.Display.Visit(0, 0, g.matrixNumber)
+	if reset {
+		g.Display.StartMatrix()
+	} // DO_MATRIX, after effect acceptance.
 	g.matrix = matrix{active: true, next: p, scrollPhase: 8}
 	g.emit("MatrixStarted", label, 0)
 	g.matrixDispatch()
@@ -49,9 +53,6 @@ func (g *Game) matrixDispatch() {
 		m.nums = c.Nums
 		m.remaining = 1
 		g.Display.BeginCommand(c)
-		if strings.HasPrefix(c.Op, "_PRINT") {
-			g.Display.Visit(0, 0, g.matrixNumber)
-		}
 		g.emit("MatrixCommand", c.Op, 0)
 		arg := func(i int) string { return c.Arg(i) }
 		num := func(i int) int { return c.Num(i) }
@@ -96,7 +97,8 @@ func (g *Game) matrixDispatch() {
 			g.music.ReturnPosition = uint8(num(0))
 		case "_WAITJINGLE2":
 		case "_COUNTDOWN":
-			g.ModeTime = 25*71 + 1
+			g.Display.StartCountdown(num(0), num(1))
+			g.ModeTime = g.Display.CountdownRemaining()
 		case "_TURNOFFSPECIALMODE":
 			g.Special = false
 			g.music.Priority = 0
@@ -130,6 +132,11 @@ func (g *Game) matrixDispatch() {
 		case "_DOBEATEN":
 			g.light(31, true)
 		case "_KOLLA_XXBALL":
+			if g.matchBall && g.Lights[31] {
+				g.savePlayer() // VARS_2_P_STRUC precedes earned shoot-again.
+				g.matrixJump("SHOOT_AGAIN_ONTS")
+				continue
+			}
 			if g.Session.PlayerCount > 1 && g.matchBall && !(g.Lights[31]) {
 
 				if g.nextMatch() {
@@ -143,6 +150,8 @@ func (g *Game) matrixDispatch() {
 				g.matrixJump("AFTER_XXBALLTS")
 				continue
 			}
+			continue // XXBALLE=false uses HU_ on this sync.
+
 		case "_WAITIFMULTI":
 			m.remaining = 2
 			if g.Session.PlayerCount > 1 {
@@ -150,7 +159,10 @@ func (g *Game) matrixDispatch() {
 			}
 		case "_CHANGE_PLAYER":
 			m.active = false
-			g.changeBall()
+			if g.changeBall() {
+				m.active = true
+				continue
+			}
 			return
 		case "_NEW_BALL2":
 			g.wait("NEW_BALL_TASK", 60, g.newBall)
@@ -174,16 +186,24 @@ func (g *Game) matrixDispatch() {
 			}
 			g.matrixJump("AFTER_XXBALLTS")
 			continue
-		case "_CHECK_HIGH": // Qualification/storage are owned by the frontend.
+		case "_CHECK_HIGH":
+			g.Phase = GameOver // Frontend visits SPINTSEL_IN_HIGH on subsequent syncs.
 		case "_2_DEMO_MODE":
-			g.endGame()
+			// DOADDTASK clobbers BX. HU_ reads the following TASKLIST
+			// slot, not the adjacent matrix stream (whose long wait is
+			// unreachable here). DUMRET leaves the installed NODOT idle.
+			slot := tablelogic.Add(g.tasks[:], g.ids[:], &g.nextID, func() bool { g.enterDemo(); return true })
+			m.active = false
+			if slot+1 < len(g.tasks) && g.tasks[slot+1] != nil {
+				g.tasks[slot+1]() // HU_ tail call; this is not a task scan.
+			}
 			return
 		case "_SOUND_EFFECT":
 			g.sound(arg(0))
 		case "_PARTYON":
 			g.partyFlash = true
 		case "_PARTYOFF":
-			g.partyFlash = false
+			// Source only installs WAITRUT1; CLOSE1 owns PARTYFLASH.
 		case "_PARTYONN": // Dynamic player digit encoded for PRINT_TEXT.
 			for _, label := range []string{"PARTY_ON_TEXT", "SHOOTTHEBALLTEXT"} {
 				b := append([]byte(nil), g.Display.Content.Texts[label]...)
@@ -214,38 +234,51 @@ func (g *Game) matrixDispatch() {
 }
 func (g *Game) matrixTick() {
 	m := &g.matrix
+	defer g.Display.FlushPrint(g.matrixNumber)
 	if !m.active {
+		panel := g.Display.TakeIdlePanel(g.inChute)
+		if panel {
+			g.startMatrix("SHOWPLAYERSTS", false) // NODOT calls DO_SPEC_MATRIX.
+		}
 		if g.Phase == Playing && !g.inChute && !g.Special && g.beatHighScore() {
 			g.beginMatrix("BEATENTS")
 		}
+		g.Display.Score(g.Score.String()) // ONLY_SCORE also runs after installing the panel.
+		if m.active {
+			// NODOT returns SI=0 even after DO_SPEC_MATRIX installed a
+			// routine. DO_THE_ANIMATIONS overwrites SISA with that zero,
+			// sets DOTRUT=NODOT and dispatches NEXT_A in this same sync.
+			g.matrixDispatch()
+		}
 		return
 	}
-	g.Display.Visit(m.frame, 2, g.matrixNumber)
+	if m.op != "_ANIMATION" && m.op != "_SCROLL" && !strings.HasPrefix(m.op, "_PRINT") {
+		g.Display.Visit(m.frame, 0, g.matrixNumber)
+	}
 	done := false
 	switch m.op {
 	case "_ANIMATION":
-		done = tablelogic.Animation(m.anim.Header, m.anim.Durations, &m.frame, &m.loops, &m.frameTime)
+		done = g.Display.StepAnimation(m.anim, &m.frame, &m.loops, &m.frameTime)
 	case "_SCROLL":
-		done = tablelogic.Scroll(&m.textLeft, &m.scrollPhase)
+		done = g.Display.StepScroll(&m.textLeft)
 	case "_WAITJINGLE2":
-		done = g.music.ReadyAnim
+		done = g.Display.JingleDone(g.music.ReadyAnim, m.op == "_WAITJINGLE2")
 	case "_PARTYON":
 		done = false
 	case "_WAIT_GAME_ON":
-		done = !g.inChute
+		done = !g.Session.SelectionOpen // GONRUT tests ADDPLAYERS, not I_UTSKJUT.
 	case "_COUNTDOWN":
-		if g.ModeTime > 0 {
-			g.ModeTime--
-		}
-		g.Display.Countdown(g.MoneyTotal.String(), int(g.ModeTime/71))
-		done = g.ModeTime == 0
-		if done {
+		done = g.Display.StepCountdown(g.Display.Argument(2), false, func(seconds int) {
+			if seconds != 0 {
+				return
+			}
 			g.Cue("SJINGLE10")
 			g.music.ReturnPosition = 3
 			g.MoneyMania = false
 			g.music.Priority = 0
 			g.music.JumpCount = 1
-		}
+		})
+		g.ModeTime = g.Display.CountdownRemaining()
 	case "_KNACKET":
 		if m.matchTimer == 0 {
 			g.matchStart()
@@ -285,6 +318,7 @@ func (g *Game) matrixTick() {
 			m.unit *= 10
 		}
 		if m.digit < 0 {
+			g.Display.FinishBonusField()
 			done = true
 			break
 		}
@@ -301,6 +335,8 @@ func (g *Game) matrixTick() {
 		done = m.remaining == 0
 	}
 	if done {
+		nextOp := g.Display.Content.Commands[m.next].Op
+		g.Display.FinishRoutine(nextOp != "0")
 		g.matrixDispatch()
 	}
 }

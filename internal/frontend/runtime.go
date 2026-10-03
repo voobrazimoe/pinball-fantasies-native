@@ -195,6 +195,10 @@ func (r *Runtime) Update(in Input) error {
 	if m.Suspended() || m.Mode == Quit {
 		return nil
 	}
+	if m.sessionSynced {
+		r.PCM = m.Session.PCM()
+		return nil
+	}
 	if m.Mode == Playing {
 		if before == Playing {
 			r.PCM = m.Session.PCM()

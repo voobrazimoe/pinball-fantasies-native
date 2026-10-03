@@ -11,6 +11,7 @@ import (
 	"image/draw"
 	"pinballfantasies/internal/assets"
 	"pinballfantasies/internal/settings"
+	"pinballfantasies/internal/tablelogic"
 	"strconv"
 	"strings"
 )
@@ -56,6 +57,15 @@ func (c Command) Num(i int) int {
 	return v
 }
 
+// WordWaitTicks represents WAITRUT's wrapping SI word as a visit count.
+func WordWaitTicks(n int) int {
+	word := uint16(n)
+	if word == 0 {
+		return 65536
+	}
+	return int(word)
+}
+
 type Content struct {
 	TextRefs                 map[string][2]int `json:"text_refs"`
 	AnimationRefs            map[string][4]int `json:"animation_refs"`
@@ -81,10 +91,23 @@ var contents = func() map[string]Content {
 
 type Display struct {
 	Content                Content
+	table                  int
 	data                   []byte
 	Dots                   [DotWidth * DotHeight]bool
 	On                     bool
+	NoSound                bool // Original INT66 function21 bit3, distinct from muted PCM.
+	scoreCache             [12]byte
+	scoreCommas            int
+	jingleCountdown        uint16
+	countdown              countdown
 	flashSpeed, flashCount uint16
+	flashing, flashPhase   bool
+	idlePanelPending       bool
+	pendingPrint           *Command
+	scrollPhase            uint8
+	scrollChar             int
+	scrollBase             [2]int
+	scrollPlane            [2]int
 	args                   []string
 	nums                   map[int]int
 	op                     string
@@ -103,8 +126,18 @@ func New(table int, data []byte) *Display {
 	}
 	c.Texts = texts
 	c.decodeRecords(data)
-	return &Display{Content: c, data: data, On: true}
+	d := &Display{Content: c, table: table, data: data, On: true, scrollPhase: 8, scrollPlane: [2]int{0, 1}}
+	d.InvalidateScore()
+	return d
 }
+
+// CarryMemory retains VGA dots and SCROLLE's self-modifying phase/selectors
+// when frontend ownership hands the same loaded table back to gameplay.
+func (d *Display) CarryMemory(previous *Display) {
+	d.Dots, d.On = previous.Dots, previous.On
+	d.scrollPhase, d.scrollPlane = previous.scrollPhase, previous.scrollPlane
+}
+
 func (d *Display) Clear() { d.Dots = [DotWidth * DotHeight]bool{} }
 
 // ShowPlayerBall commits the idle panel at a player/new-ball boundary, before
@@ -123,13 +156,13 @@ func (d *Display) ShowPlayerBall(score string) {
 		panic("unexpected source player/ball transition")
 	}
 	panel := *d
+	panel.InvalidateScore() // DO_MATRIX / DO_SPEC_MATRIX at panel entry.
 	panel.Clear()
 	for _, c := range d.Content.Commands[start+1:] {
 		if c.Op == "0" {
 			panel.Score(score)
 			d.Dots = panel.Dots
-			d.flashSpeed = 0
-			d.On = true
+			d.KillFlash()
 			return
 		}
 		if !strings.HasPrefix(c.Op, "_PRINT") {
@@ -149,18 +182,17 @@ func (d *Display) ShowPlayerBall(score string) {
 // MatchStart/MatchStep are KNACKRUT's drawing operations. The table retains
 // the 11/13-sync cadence, random counter, awards and completion authority.
 func (d *Display) MatchStart(scoreDigit byte) {
-	d.Clear()
-	d.Text(strconv.Itoa(int(scoreDigit)), 0, 0, 5)
+	d.MatchPlayers([]byte{scoreDigit}, nil)
 }
 
 // MatchWin is gladgnu's MATRIX_SPEED/MATRIX_CNT=3 and flashlast repaint.
 func (d *Display) MatchWin(scoreDigit byte) {
-	d.Text(strconv.Itoa(int(scoreDigit)), 0, 0, 5)
-	d.flashSpeed, d.flashCount, d.On = 3, 3, true
+	d.MatchPlayers([]byte{scoreDigit}, &scoreDigit)
 }
 func (d *Display) MatchStep(previous, next uint16) {
 	d.Text("*", int(previous)*16, 7, 5)
-	d.Text(strconv.Itoa(int(next)), int(next)*16, 7, 5)
+	d.Content.Texts["SLUTSIFFRA"] = []byte{byte(next) + '7', 0}
+	d.pendingPrint = &Command{Op: "_PRINT5", Args: []string{"SLUTSIFFRA", strconv.Itoa(1344 + int(next)*8)}, Nums: map[int]int{1: 1344 + int(next)*8}}
 }
 func (d *Display) Text(s string, x, y, height int) {
 	font := d.Content.Fonts[strconv.Itoa(height)]
@@ -300,12 +332,33 @@ func (d *Display) BeginResolved(op string, args []string, nums map[int]int) {
 }
 
 func (d *Display) begin(op string, args []string, nums map[int]int) {
+	if op != "0" {
+		d.InvalidateScore() // DO_SPEC_MATRIX invokes UPDAT_SCORE before each handler.
+	}
 	d.op = op
 	d.args = args
 	d.nums = nums
 	d.elapsed = 0
 	d.scrollOffset = 0
+	if op == "_SCROLL" {
+		d.scrollChar = 0
+		d.scrollBase = [2]int{168, 168} // STARTSCROLL resets both bases, not selectors/phase.
+	}
+	if strings.HasPrefix(op, "_PRINT") {
+		d.pendingPrint = &Command{Op: op, Args: args, Nums: nums}
+	}
 	d.anim = ""
+	// FANTASIE command handlers write illumination at dispatch, before WAITRUT.
+	switch op {
+	case "_FLASHON":
+		d.startFlash(uint16(d.Num(0)))
+	case "_FLASHOFF":
+		d.KillFlash()
+	case "_MATRIXLGT":
+		d.On = d.Num(0) != 0
+	case "_SETDECCOR":
+		d.SetJingleCountdown(uint16(d.Num(0)))
+	}
 	if op == "_ANIMATION" {
 		if _, ok := d.Content.Animations[args[0]]; !ok {
 			panic("unknown source matrix animation " + args[0])
@@ -344,6 +397,21 @@ func (d *Display) WriteBonusMultiplier(multiplier uint8) {
 	}
 }
 
+// FlushPrint is DO_THE_DOTMATRIX's PRINTTASK call after DO_THE_ANIMATIONS.
+// Dispatch replaces the single task slot; it does not draw on an external
+// gameplay request. A same-sync tail dispatch may replace an earlier print.
+func (d *Display) FlushPrint(number func(string) string) {
+	if d.pendingPrint == nil {
+		return
+	}
+	c := *d.pendingPrint
+	d.pendingPrint = nil
+	print := *d
+	print.op, print.args, print.nums, print.elapsed = c.Op, c.Args, c.Nums, 0
+	print.Visit(0, 0, number)
+	d.Dots = print.Dots
+}
+
 func (d *Display) Visit(frame uint16, scrollAdvance int, number func(string) string) {
 	d.elapsed++
 	a := d.args
@@ -365,6 +433,7 @@ func (d *Display) Visit(frame uint16, scrollAdvance int, number func(string) str
 		d.Text(s, x, y, h)
 	case op == "_NUMBER":
 		d.ScoreAt(number(a[0]), 80)
+		d.InvalidateScore() // SIFFRORRUT invokes UPDAT_SCORE after CODE2.
 	case op == "_SHOW_SCORE":
 		d.Text(strings.TrimRight(d.SourceText("PLAYERSTEXT"), "\x00"), 0, 1, 5)
 		d.Score(number("SIFFRORNA"))
@@ -383,11 +452,21 @@ func (d *Display) Visit(frame uint16, scrollAdvance int, number func(string) str
 		if op == "_RULLGARDIN_UPP" && y < stop || op == "_RULLGARDIN_NED" && y > stop {
 			y = stop
 		}
-		d.Clear()
+		// RULLGARDIN only erases the one trailing row; unrelated pixels
+		// outside the moving glyph rectangle retain their source contents.
+		row := y + 13
+		if op == "_RULLGARDIN_NED" {
+			row = y - 1
+		}
+		if row >= 0 && row < 16 {
+			for x := 0; x < 160; x++ {
+				d.Dots[row*160+x] = false
+			}
+		}
 		d.Text(strings.TrimRight(d.SourceText(a[0]), "\x00"), 0, y, 13)
 	case op == "_ANIMATION":
 		anim := d.Content.Animations[d.anim]
-		i := int(frame)/4 - 1
+		i := int(frame) / 4
 		if i < 0 {
 			i = 0
 		}
@@ -423,27 +502,107 @@ func (d *Display) Visit(frame uint16, scrollAdvance int, number func(string) str
 				d.Dots[y*160+(d.elapsed-1)*2+1] = false
 			}
 		}
-	case op == "_FLASHON" && d.elapsed == 1:
-		n := d.Num(0)
-		d.flashSpeed = uint16(n)
-		d.flashCount = uint16(n)
-		d.On = true
-	case op == "_FLASHOFF" && d.elapsed == 1:
-		d.flashSpeed = 0
-		d.On = true
-	case op == "_MATRIXLGT" && d.elapsed == 1:
-		d.On = d.Num(0) != 0
+
 	}
 }
+
+// KillFlash is FANTASIE KILL_FLASHOR: stop the blink routine and emit
+// MATRIXON. The speed/count/phase words are deliberately left untouched.
+func (d *Display) KillFlash() { d.flashing = false; d.On = true }
+
+func (d *Display) SetJingleCountdown(n uint16) { d.jingleCountdown = n }
+
+// JingleDone is WAITJINGLE/WAITJINGLE2. Muting samples does not select NOSOUND;
+// the alternate branch is explicitly the original sound-driver capability.
+func (d *Display) JingleDone(ready, alternate bool) bool {
+	if !alternate || !d.NoSound {
+		return ready
+	}
+	d.jingleCountdown--
+	return d.jingleCountdown == 0
+}
+
+// StartMatrix is DO_MATRIX before its DO_SPEC_MATRIX tail call: KILL_FLASHOR
+// and BEHOVS_PROVAD=true. DO_SPEC_MATRIX itself performs neither write.
+func (d *Display) StartMatrix() {
+	d.KillFlash()
+	d.idlePanelPending = true
+}
+
+// TakeIdlePanel is NODOT's first BEHOVS_PROVAD visit outside I_UTSKJUT.
+// It requests SHOWPLAYERSTS via DO_SPEC_MATRIX and also renders score on
+// that visit. The installed clear routine first runs on the next sync.
+func (d *Display) TakeIdlePanel(inChute bool) bool {
+	if inChute || !d.idlePanelPending {
+		return false
+	}
+	d.idlePanelPending = false
+	return true
+}
+
+// FinishRoutine is DO_THE_ANIMATIONS after DOTRUT returns SI=0. A zero
+// NEXT_A invokes ts_slut/KILL_FLASHOR; a following command inherits flash.
+// The zero data word itself is not a command handler and performs no writes.
+func (d *Display) FinishRoutine(hasNext bool) {
+	if !hasNext {
+		d.KillFlash()
+	}
+}
+
+func (d *Display) startFlash(speed uint16) {
+	d.flashSpeed, d.flashCount = speed, speed
+	d.flashing, d.flashPhase = true, true
+	// _FLASHON writes MATRIX_ONOFF, but emits no palette packet.
+}
 func (d *Display) Flash() {
-	if d.flashSpeed > 0 {
+	if d.flashing {
 		d.flashCount--
 		if d.flashCount == 0 {
 			d.flashCount = d.flashSpeed
-			d.On = !d.On
+			d.flashPhase = !d.flashPhase
+			d.On = d.flashPhase
 		}
 	}
 }
+
+// StepAnimation follows the linked ANIM routine (TABLE1.PRG 72be..738f).
+// It draws old BX only when the timer expires, before storing the next index.
+// The length boundary ends without drawing; loop restart preserves old BX.
+func (d *Display) StepAnimation(a Animation, frame, loops, timer *uint16) bool {
+	if *timer == 1 && !(*frame == a.Header[2] && *loops == 1) {
+		d.Bitmap(a.Offsets[int(*frame)/4])
+	}
+	return tablelogic.Animation(a.Header, a.Durations, frame, loops, timer)
+}
+
+// StepScroll is linked SCROLLE (TABLE1.PRG 7197..729e): two calls per
+// sync, test SI+20 before drawing, then shift/advance. The phase byte is shared
+// across replacement streams. A terminator visit preserves the final pixels.
+func (d *Display) StepScroll(left *uint16) bool {
+	for i := 0; i < 2; i++ {
+		if *left == 0 {
+			return true
+		}
+		d.scrollStores()
+		d.scrollOffset++
+		d.scrollPlane[0] ^= 1
+		d.scrollPlane[1] ^= 1
+		if d.scrollPlane[1] == 0 {
+			d.scrollBase[0]--
+		} else {
+			d.scrollBase[1]--
+		}
+		d.scrollPhase--
+		if d.scrollPhase == 0 {
+			d.scrollPhase = 8
+			*left--
+			d.scrollChar++
+			d.scrollBase = [2]int{168, 168}
+		}
+	}
+	return false
+}
+
 func (d *Display) Draw(out *image.RGBA, p [768]byte, off, on byte) {
 	d.DrawAt(out, p, off, on, out.Rect.Dy()-33)
 }
@@ -533,27 +692,49 @@ func (d *Display) GlyphText(s string, x, y int, font map[string][]byte) {
 	}
 }
 func (d *Display) Score(s string) { d.ScoreAt(s, 160) }
+
+// InvalidateScore is FANTASIE.MAC UPDAT_SCORE: oldbuf=12h, lastcommas=0.
+func (d *Display) InvalidateScore() {
+	for i := range d.scoreCache {
+		d.scoreCache[i] = 0x12
+	}
+	d.scoreCommas = 0
+}
 func (d *Display) ScoreAt(s string, end int) {
 	s = strings.TrimLeft(s, "0")
 	if s == "" {
 		s = "0"
 	}
-	d.GlyphText(s, end-8*len(s), 0, d.Content.ScoreFont)
-	// CODE2 puts each comma below the digit's final blank column.
-	for i := len(s) - 3; i > 0; i -= 3 {
-		x := end - 8*(len(s)-i) - 1
-		for y := 13; y < 15; y++ {
-			d.Dots[y*160+x] = true
+	// Linked CODE2 starts BP at oldbuf after skipping leading zeros. Cache
+	// indices therefore follow visible digits, rather than their BCD cells.
+	for i, c := range []byte(s) {
+		digit := c - '0'
+		if d.scoreCache[i] != digit {
+			d.scoreGlyph(c, end-8*len(s)+8*i)
+			d.scoreCache[i] = digit
 		}
-		d.Dots[15*160+x-1] = true
+	}
+	commas := (len(s) - 1) / 3
+	if commas == 0 || commas == d.scoreCommas {
+		return // CODE2's all-zero-group exit does not write lastcommas.
+	}
+	d.scoreCommas = commas
+	// CODE2 restores the caller's BX before comma scanning. SI=BX+0a1bh
+	// -200; plane4 writes SI/SI+168, plane1 writes SI+1/SI+168.
+	// BX=168+(end-96)/2, so each comma occupies four retained dots.
+	for i := 1; i <= commas; i++ {
+		x := end - 24*i - 1
+		for _, point := range [][2]int{{x, 14}, {x, 15}, {x + 1, 14}, {x - 1, 15}} {
+			if point[0] >= 0 && point[0] < DotWidth {
+				d.Dots[point[1]*DotWidth+point[0]] = true
+			}
+		}
 	}
 }
 
 func (d *Display) Number(s string, x, y, height int) {
-	// The table-local bonus/countdown field is repainted in place. Erase its
-	// twelve BCD cells before suppressing leading zeros, including all-zero
-	// values; otherwise the previous first nonzero digit remains on screen.
-	d.Text("            ", x, y, height)
+	// PRINT*_TASK resets NUMBERBUF, but PRINT_NUMBER skips leading zero
+	// cells without writing VGA memory. Source callers own any later clear.
 	d.printNumber(s, x, y, height, false)
 }
 
@@ -570,10 +751,29 @@ func (d *Display) printNumber(s string, x, y, height int, centered bool) {
 		x += 8 * (12 - len(s))
 	}
 	d.Text(s, x, y, height)
+	// Linked PRINT_NUMBER -> 706a (TABLE1.PRG): the three leading BCD
+	// groups select comma count. SI=DI+height*168+35; plane4 writes SI
+	// and SI+168, plane1 writes SI+1 and SI+168. These stores differ from
+	// CODE2 SCORE's three-dot comma and do not erase skipped leading cells.
+	end := x + 8*len(s)
+	for i := 1; i <= (len(s)-1)/3; i++ {
+		left, top := end-24*i-1, y+height
+		for _, point := range [][2]int{{left, top}, {left + 1, top}, {left, top + 1}, {left - 1, top + 1}} {
+			if point[0] >= 0 && point[0] < DotWidth && point[1] >= 0 && point[1] < DotHeight {
+				d.Dots[point[1]*DotWidth+point[0]] = true
+			}
+		}
+	}
 }
-func (d *Display) Countdown(value string, seconds int) {
-	d.Number(value, 16, 1, 13)
-	d.Text(fmt.Sprintf("%2d", seconds), 144, 2, 11)
+
+// FinishBonusField is each table's NO_MORE_NUFFROR -> CLEAR_BOX2.
+// DI=7*2*SW/4, width=16*(12-1)/4-16*4/4 bytes, height=10.
+func (d *Display) FinishBonusField() {
+	for y := 6; y < 16; y++ {
+		for x := 0; x < 56; x++ {
+			d.Dots[y*DotWidth+x] = false
+		}
+	}
 }
 
 func (d *Display) Argument(n int) string {
@@ -638,20 +838,29 @@ func (d *Display) SetPlayers(player, count, ball int) {
 	}
 }
 func (d *Display) MatchPlayers(scores []byte, winner *byte) bool {
-	if winner == nil {
-		d.Clear()
+	label := "LAST_TEXT"
+	if winner != nil {
+		label = "FLASHLAST"
 	}
+	buf := d.MutableText(label, 18)
 	any := false
 	for i, digit := range scores {
-		text := "*"
-		if winner == nil || digit == *winner {
-			text = strconv.Itoa(int(digit))
+		if winner == nil {
+			buf[2*i], buf[2*i+1] = digit+'7', ' '
+			flash := d.MutableText("FLASHLAST", 18)
+			flash[2*i], flash[2*i+1] = buf[2*i], buf[2*i+1]
+		} else if digit == *winner {
 			any = true
+		} else {
+			buf[2*i], buf[2*i+1] = '*', '*'
 		}
-		d.Text(text, i*16, 0, 5)
 	}
+	d.Text(strings.TrimRight(d.SourceText(label), "\x00"), 0, 0, 5)
 	if winner != nil && any {
-		d.flashSpeed, d.flashCount, d.On = 3, 3, true
+		d.startFlash(3)
 	}
 	return any
 }
+
+// CurrentOperation exposes the source handler for temporal diagnostics.
+func (d *Display) CurrentOperation() string { return d.op }

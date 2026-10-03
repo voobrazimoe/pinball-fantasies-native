@@ -3,6 +3,9 @@ package physics
 // TILTLOGIC is a make-edge latch distinct from TILT0's held physical push.
 // DO_PHYSICS decays TILTCOUNTER once per sync before electronics/key tasks.
 func (g *Game) TiltInput(held, inChute bool) (warning, tilted bool) {
+	if g.TiltDisabled {
+		return
+	}
 	edge := held && !g.tiltLatched
 	g.tiltLatched = held
 	if !edge || inChute || g.Tilted || g.Ball.Lost {

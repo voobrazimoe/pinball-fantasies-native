@@ -18,10 +18,20 @@ The desktop adapter still drains due ticks before fullscreen transactions and be
 
 The mouse plunger restores original MS-DOS behaviour, rather than adding a new gameplay feature. The behavioural oracle is `FANTASIE.ASM`: `INIT_MOUSE`, `SPRINGSTEEN`, `SPRINGIT`, `SPRINGUP`, `SPRINGPOS`, `SPRING_VALID`, `MOUSETOTAL=2` and `MOUSEMIDDLE=1`. The host adapter translates relative counts using the original vertical ratio (64 mickeys per eight positions); `SPRINGSTEEN` adjusts spring position by at most one per source task, down to pull and up to relax, bounded to 0..32. A left-button press schedules `SPRINGUP` on the following source task, using an edge so holding the button cannot repeatedly fire. Both devices use the same `physics.Game.SpringPosition`; the shared spring helper calls each table's existing `Release` callback, preserving canonical `physics.Game.Release(charge, jitter)` arithmetic, spring reset and sound. Mouse controls have no effect outside a valid plunger; keyboard timing remains unchanged.
 
-Linux consumes unscaled SDL relative Y motion and left-button presses. Relative mode is enabled only during active gameplay in the chute, and released on focus loss or leaving that context. Windows registers a native raw mouse device and consumes foreground `WM_INPUT`, excluding absolute pointer devices; it does not capture, warp or draw the cursor. Neither backend derives sensitivity from client coordinates, DPI, scrolling, framebuffer size or window size. No cursor is added to the framebuffer.
+Linux consumes unscaled SDL relative Y motion and left-button presses. Relative mode is enabled only during active gameplay in the chute, and released on focus loss or leaving that context. Windows registers a native raw mouse device and consumes foreground `WM_INPUT`, excluding absolute pointer devices; it hides the normal pointer only on client hits during active mouse-plunger play, using `WM_SETCURSOR` and `SetCursor`. Mode/focus transitions refresh a stationary client pointer. It does not capture, confine, warp or recenter the pointer and does not use the global `ShowCursor` counter. Neither backend derives sensitivity from client coordinates, DPI, scrolling, framebuffer size or window size. No cursor is added to the framebuffer.
 
 `Suspend` clears held controls, queued gameplay edges and pending mouse fire without updating the game or tracker. `Advance` does nothing while suspended; a close request can still complete shutdown. `Resume` clears input and re-anchors the next deadline to the current monotonic time, so elapsed suspended wall time never causes catch-up. Desktop focus loss additionally submits the existing frontend focus-loss pause request and suspends source advancement. Focus gain re-anchors the clock but leaves the game's pause in place until the existing resume key. Hosts may suspend/flush their audio devices independently. No game/tracker state is rewritten merely to implement suspension.
 
 This boundary is intended for future lifecycle-driven hosts. No macOS, Android, rendering API, touch, gamepad, save-state or controls-settings implementation is included.
 
 The public repository contains no DOS/x86 execution path. Original game files are read only as data containers and are never executed.
+Matrix pixels belong to source scheduling. The shared presentation layer retains
+VGA dot memory, CODE2 digit/comma caches, countdown seconds/phase and scroll
+phase. Routine completion, accepted replacement and idle score restoration have
+separate source ownership. A lost match reaches the table's source clear and
+`_CHECK_HIGH`; the frontend visits high-score qualification one player per sync,
+then resumes the installed matrix program and demo task. Game-over presentation
+continues DEMOMODE NODOT with retained memory. DOADDTASK clobbers BX in
+`_2_DEMO_MODE`, so HU_ reads the following task slot instead of installing
+the adjacent long wait. The source AFTERDEMOMODETS program then presents the game-over text and
+player scores on their original source visits.

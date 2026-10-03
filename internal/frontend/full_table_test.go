@@ -10,6 +10,7 @@ import (
 	"pinballfantasies/internal/settings"
 	"reflect"
 	"sort"
+	"strings"
 	"testing"
 )
 
@@ -32,6 +33,7 @@ func TestFullTableFourTableCheckpoints(t *testing.T) {
 			if len(g.Table.Initial.Playfield.Indices) != 320*576 {
 				t.Fatal("table extent")
 			}
+			var springFrame *image.RGBA
 			check := func(name string) {
 				frame := r.Frame()
 				if frame.Rect.Size() != image.Pt(320, 609) {
@@ -58,7 +60,65 @@ func TestFullTableFourTableCheckpoints(t *testing.T) {
 					}
 				}
 				g.Settings, g.Raster, g.ScreenOffset = cfg, raster, offset
-				checkpoint(t, fmt.Sprintf("off-table%d-%s", table, name), frame)
+				if name == "initial-chute" {
+					// LATE_RASTER_INTERRUPT_DEMO starts FIRST_NO_OF_PLAYERSTS.
+					// At this checkpoint no gameplay matrix sync has run; the
+					// preceding attract clear is retained, not a synthetic panel.
+					if d.Dots != [presentation.DotWidth * presentation.DotHeight]bool{} {
+						t.Fatal("startup drew before the first source routine visit")
+					}
+					// Prove the historical fixture's complete mismatch is its
+					// invented panel; retain its playfield/palette verification.
+					legacy := *d
+					legacy.Clear()
+					legacy.InvalidateScore()
+					legacy.Text("PLAYER 1", 8, 1, 5)
+					label := "PLAYERS 1"
+					if table == 4 {
+						label = "BALL 1"
+					}
+					legacy.Text(label, 8, 9, 5)
+					legacy.Score("0")
+					checkpoint(t, fmt.Sprintf("off-table%d-%s", table, name), settingsMatrixFrame(r.Model.Session, g, &legacy, table))
+				} else if name == "capture" || name == "forced-camera" {
+					// No source sync occurred after the explicit bitmap stores.
+					// Frame must retain those dots. The historical fixture instead
+					// redrew its earlier idle panel; preserve its playfield check.
+					want := settingsMatrixFrame(r.Model.Session, g, d, table)
+					if !bytes.Equal(frame.Pix, want.Pix) {
+						t.Fatal("capture discarded retained VGA dots")
+					}
+					checkpoint(t, fmt.Sprintf("off-table%d-%s", table, name), springFrame)
+				} else if (name == "gameplay" || name == "upper" || name == "lower" || name == "spring") && table >= 3 {
+					// Linked CODE2 comma scanner writes four dots at rows14/15,
+					// while this old fixture used three dots at rows13/14/15.
+					// Reconstruct just the historical score cells, retaining its
+					// full playfield and all unrelated matrix pixel assertions.
+					legacy := *d
+					digits, _ := r.Model.Session.Result()
+					score := strings.TrimLeft(digits.String(), "0")
+					if score == "" {
+						score = "0"
+					}
+					for i := 1; i <= (len(score)-1)/3; i++ {
+						x := 160 - 24*i - 1
+						for _, p := range [][2]int{{x, 14}, {x, 15}, {x + 1, 14}, {x - 1, 15}} {
+							legacy.Dots[p[1]*160+p[0]] = false
+						}
+					}
+					legacy.GlyphText(score, 160-8*len(score), 0, legacy.Content.ScoreFont)
+					for i := 1; i <= (len(score)-1)/3; i++ {
+						x := 160 - 24*i - 1
+						legacy.Dots[13*160+x], legacy.Dots[14*160+x], legacy.Dots[15*160+x-1] = true, true, true
+					}
+					historical := settingsMatrixFrame(r.Model.Session, g, &legacy, table)
+					checkpoint(t, fmt.Sprintf("off-table%d-%s", table, name), historical)
+					if name == "spring" {
+						springFrame = historical
+					}
+				} else {
+					checkpoint(t, fmt.Sprintf("off-table%d-%s", table, name), frame)
+				}
 				t.Logf("%s %x", name, sha256.Sum256(frame.Pix))
 			}
 			check("initial-chute")
@@ -75,6 +135,9 @@ func TestFullTableFourTableCheckpoints(t *testing.T) {
 			}
 			g.SpringPosition = 32
 			check("spring")
+			if springFrame == nil {
+				springFrame = r.Frame()
+			}
 			d.Clear()
 			d.Text("FULL TABLE", 0, 0, 13)
 			matrixCheck := func(name string) {

@@ -47,12 +47,18 @@ func (v *View) Frame(m *Model) *image.RGBA {
 	case Playing:
 		return m.Session.Frame()
 	case GameEnd:
+		if m.sourceScoreStage != 0 {
+			return m.Session.Frame()
+		}
 		// end_gamen's six-sync handoff clears the display before score entry.
 	case Paused:
 		v.matrixText(out, "GAME PAUSED", 72, 2, m.Selected, m.Settings.MatrixY())
 	case QuitQuestion:
 		v.matrixText(out, "REALLY QUIT (Y OR N)", 0, 2, m.Selected, m.Settings.MatrixY())
 	case Initials, EntryWait:
+		if m.sourceScoreStage != 0 {
+			return m.Session.Frame()
+		}
 		text := "HIGHSCORE PL " + strconv.Itoa(max(1, m.scorePlayer)) + " (" + string(m.Entry[:]) + ")"
 		if m.Mode == EntryWait && m.Counter <= 30 {
 			text = "********************"
@@ -84,7 +90,10 @@ func (v *View) Frame(m *Model) *image.RGBA {
 			scores[i] = e.Digits.String()
 		}
 		matrix := d.Attract(m.Counter, names, scores)
-		if m.End == Completed {
+		if m.cheatTimeline != nil {
+			matrix = m.cheatTimeline.Display()
+		}
+		if m.End == Completed && m.cheatTimeline == nil && m.gameOverTimeline == nil {
 			players := []string{m.Final.String()}
 			if len(m.scoreQueue) > 0 {
 				players = make([]string, len(m.scoreQueue))
@@ -93,6 +102,9 @@ func (v *View) Frame(m *Model) *image.RGBA {
 				}
 			}
 			matrix = d.GameOverPlayers(m.Counter, players, names, scores)
+		}
+		if m.gameOverTimeline != nil && m.cheatTimeline == nil {
+			matrix = m.gameOverTimeline.Display()
 		}
 		var p [768]byte
 		// Both table palettes use 20-DAC gray for their unlit lattice.

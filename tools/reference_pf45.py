@@ -160,6 +160,7 @@ def matrix_trace(name):
   c=commands[index];index+=1;op=c['op'];trace.append({'tick':now,'op':op})
   if op=='0' or op=='_COUNTDOWN':break
   if op=='_WAIT':d=c['ticks']
+  elif op=='_WAITIFMULTI':d=2 # FANTASIE _WAITifmulti single-player MOV SISA,2
   elif op=='_CLEAR4':d=5
   elif op=='_ANIMATION':d=animation_calls(anims[c['args'][0]])
   elif op=='_SCROLL':
@@ -204,6 +205,8 @@ out['jingles']={k:v for k,v in jingles.items() if k in used_jingles}
 # Native uses explicit zero entries, rather than interpreting machine addresses.
 # Hand-derived control-flow checkpoints, separate from native execution:
 # ball_lostTS; bonus1000, multiplier2, cyclones2, no mode totals, no extra ball.
+# FANTASIE _WAITifmulti installs SISA=2 even for a single player.
+# The old hand trace incorrectly skipped these two scans before CHANGE_PLAYER.
 out['ball_trace']=[
  {'tick':0,'kind':'BallLost','label':'LOOSE_BALL'},
  {'tick':160,'kind':'BonusMultiplied','label':'_BONUS_X_CALCS'},
@@ -212,10 +215,10 @@ out['ball_trace']=[
  {'tick':436,'kind':'ScoreAwarded','label':'DO_FLORPA'},
  {'tick':440,'kind':'ScoreAwarded','label':'DO_FLORPA'},
  {'tick':444,'kind':'ScoreAwarded','label':'DO_FLORPA'},
- {'tick':520,'kind':'NewBall','label':'NEW_BALL'},
- {'tick':525,'kind':'Sound','label':'SBRICKUPP'},
- {'tick':571,'kind':'Sound','label':'SNEWBALL'},
- {'tick':600,'kind':'TaskReady','label':'SETBALL'},
+ {'tick':522,'kind':'NewBall','label':'NEW_BALL'},
+ {'tick':527,'kind':'Sound','label':'SBRICKUPP'},
+ {'tick':573,'kind':'Sound','label':'SNEWBALL'},
+ {'tick':602,'kind':'TaskReady','label':'SETBALL'},
 ]
 Path('.private-cleanup/generated').mkdir(parents=True,exist_ok=True)
 Path(os.environ.get('PF_REFERENCE_OUTPUT', '.private-cleanup/generated/pf45-timing-fixtures.json')).write_text(json.dumps(out,indent=2)+'\n')

@@ -88,25 +88,26 @@ func (g *Game) drain() {
 	g.wait("SOUNDRINNER", 5, func() { g.sound("SRINNER") })
 	g.emit("BallLost", "LOOSE_BALL", 0)
 }
-func (g *Game) changeBall() {
+func (g *Game) changeBall() bool {
 	if g.holdBonus {
 		g.Bonus = g.heldBonus
 	}
 	g.savePlayer() // VARS_2_P_STRUC runs before earned-extra-ball selection.
 	if g.ExtraBalls > 0 {
 		g.ExtraBalls--
-		g.beginMatrix("SHOOT_AGAIN_ONTS")
-		return
+		g.startMatrix("SHOOT_AGAIN_ONTS", false)
+		return false
 	}
 	if g.matchBall {
-		g.endGame()
-		return
+		g.startMatrix("AFTER_XXBALLSTS", false)
+		return false
 	}
 	if !g.advancePlayer() {
-		g.beginMatrix("OUT_OF_BALLSTS")
-		return
+		g.startMatrix("OUT_OF_BALLSTS", false)
+		return false
 	}
 	g.wait("NEW_BALL_TASK", 30, g.newBall)
+	return true // HU_ tail-calls the following matrix handler on this sync.
 }
 func (g *Game) newBall() {
 	g.resetBall()
@@ -135,13 +136,12 @@ func (g *Game) newBall() {
 	g.playerText()
 	// WHEN_NEW_BALL_RESET keeps the source shoot-again/party message.
 	if !g.partyFlash {
-		g.Display.ShowPlayerBall(g.Score.String())
+		g.beginMatrix("SHOWPLAYERSTS") // WHEN_NEW_BALL_RESET calls DO_MATRIX.
 	}
 	g.emit("NewBall", "NEW_BALL", uint64(g.BallNumber))
 }
 func (g *Game) endGame() {
 	g.Phase = GameOver
-	g.matrix.active = false
 	g.emit("GameOver", "_2_DEMO_MODE", g.Score.Uint64())
 }
 func (g *Game) runTasks() { tablelogic.Run(g.tasks[:], g.ids[:]) }

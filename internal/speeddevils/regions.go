@@ -38,6 +38,8 @@ func (g *Game) area(label string) {
 	case "CLOSE1":
 		if g.lastArea == "NEDSLAPP" {
 			g.inChute = false
+			g.Session.SelectionOpen = false // CLOSE1 writes ADDPLAYERS=FALSE.
+			g.partyFlash = false
 			g.Cue("S_MAIN")
 			g.music.ReturnPosition = 2
 			g.Physics.SpringValid = false

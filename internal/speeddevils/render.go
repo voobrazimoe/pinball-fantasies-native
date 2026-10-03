@@ -46,16 +46,6 @@ func (g *Game) applyLamp(p *[768]byte, n int, on bool) {
 func (g *Game) Frame() *image.RGBA {
 	p := presentation.MatrixPaletteMode(g.Palette(), g.Physics.ReferenceMode, 128)
 	d := *g.Display
-	if !g.matrix.active {
-		d.Clear()
-		d.Text("PLAYER "+strconv.Itoa(g.Session.CurrentPlayer), 8, 1, 5)
-		if g.inChute && (g.Session.PlayerCount == 1 || g.Session.SelectionOpen) {
-			d.Text("PLAYERS "+strconv.Itoa(g.Session.PlayerCount), 8, 9, 5)
-		} else {
-			d.Text("BALL "+strconv.Itoa(int(g.BallNumber)), 8, 9, 5)
-		}
-		d.Score(g.Score.String())
-	}
 	return presentation.ComposeNative(g.Physics.FramePalette(p), &d, p, 98, 128, g.Physics.Settings, g.Physics.ScreenOffset)
 }
 func (g *Game) text(out *image.RGBA, s string, x, y, h, scale int) {

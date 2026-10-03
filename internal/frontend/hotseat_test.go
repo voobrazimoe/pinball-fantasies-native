@@ -3,6 +3,7 @@ package frontend
 import (
 	"pinballfantasies/internal/gameshow"
 	"pinballfantasies/internal/partyland"
+	"pinballfantasies/internal/presentation"
 	"pinballfantasies/internal/speeddevils"
 	"pinballfantasies/internal/stones"
 	"pinballfantasies/internal/tablelogic"
@@ -194,6 +195,42 @@ func TestHotseatHighScoreJingleOnce(t *testing.T) {
 		}
 		if len(s.cues) != 1 || s.cues[0] != want {
 			t.Fatalf("qualify=%t cues=%v", qualify, s.cues)
+		}
+	}
+}
+
+func TestSourceStartupRetainsAttractMemoryForEveryPlayerCount(t *testing.T) {
+	// FANTASIE LATE_RASTER_INTERRUPT_DEMO calls DO_MATRIX
+	// FIRST_NO_OF_PLAYERSTS for all F1..F8. NEW_BALL's VISAKEYS branch
+	// does not draw SHOWPLAYERSTS or clear VGA dots at that dispatch.
+	for table := 1; table <= 4; table++ {
+		for count := 1; count <= 8; count++ {
+			r := hotseatRuntime(t)
+			m := r.Model
+			key(t, m, Key(int(F1)+table-1))
+			m.Counter = 317
+			old := m.Session.(interface{ MatrixDisplay() *presentation.Display }).MatrixDisplay()
+			var names, scores [4]string
+			for i, e := range m.Scores[table-1] {
+				names[i], scores[i] = string(e.Name[:]), e.Digits.String()
+			}
+			want := old.Attract(m.Counter, names, scores)
+			key(t, m, Key(int(F1)+count-1))
+			got := m.Session.(interface{ MatrixDisplay() *presentation.Display }).MatrixDisplay()
+			if got.Dots != want.Dots || !got.On {
+				t.Fatalf("table%d players%d startup discarded VGA memory", table, count)
+			}
+			if got.Argument(0) != got.Content.Commands[got.Content.Labels["FIRST_NO_OF_PLAYERSTS"]].Arg(0) {
+				t.Fatal("wrong initial matrix program")
+			}
+			// The original source's selection program must eventually reach
+			// WAIT_GAME_ON even for one player; it is not an idle score panel.
+			for tick := 0; tick < 20; tick++ {
+				update(t, m, Input{})
+			}
+			if got.CurrentOperation() != "_WAIT_GAME_ON" {
+				t.Fatalf("table%d players%d source selection not held", table, count)
+			}
 		}
 	}
 }

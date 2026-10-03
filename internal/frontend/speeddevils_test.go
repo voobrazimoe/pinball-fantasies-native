@@ -83,6 +83,7 @@ func TestNativeSpeedDevilsLifecycleAndPersistence(t *testing.T) {
 	if m.Mode != Initials || m.Selected != 2 {
 		t.Fatal("Speed Devils high score", m.Mode, g.Phase)
 	}
+	update(t, m, Input{}) // GET_IT_FROM_KEYBOARD clears any queued make.
 	key(t, m, Key(30))
 	key(t, m, Key(48))
 	key(t, m, Key(46))
@@ -100,7 +101,7 @@ func TestNativeSpeedDevilsLifecycleAndPersistence(t *testing.T) {
 	if _, e = os.Stat(filepath.Join(dir, "TABLE1.HI")); !os.IsNotExist(e) {
 		t.Fatal("table identity crossed")
 	}
-	for i := 0; i < 60; i++ {
+	for i := 0; i < 62; i++ {
 		update(t, m, Input{})
 	}
 	if m.Mode != TableAttract || m.Selected != 2 {

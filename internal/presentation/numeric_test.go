@@ -31,6 +31,11 @@ func TestAllTablesSourceNumericFormats(t *testing.T) {
 							x -= 4 * (13 - len(tc.visible))
 						}
 						want.Text(tc.visible, x, 1, height)
+						di := 340
+						if centered {
+							di -= 2 * (13 - len(tc.visible))
+						}
+						linkedNumberCommaStores(want, tc.bcd, di, height)
 						if d.Dots != want.Dots {
 							t.Fatal("source BCD suppression/alignment differs")
 						}
@@ -48,6 +53,31 @@ func TestAllTablesSourceNumericFormats(t *testing.T) {
 	}
 }
 
+// Independent projection of TABLE1.PRG/706a..70e8 (the lost PRINT.ASM).
+// LODSW + ADD AL,[SI] scans three BCD bytes per group; CX starts at four.
+// DS numeric cells and literal ES VGA stores establish the expectation.
+func linkedNumberCommaStores(d *Display, bcd string, di, height int) {
+	bcd = strings.Repeat("0", 12-len(bcd)) + bcd
+	cx := 4
+	for index := 0; index < 9; index += 3 {
+		cx--
+		if bcd[index] == '0' && bcd[index+1] == '0' && bcd[index+2] == '0' {
+			continue
+		}
+		si := di - (4 - height*168) + int(int16(-2348)) + 2587 - 200
+		for ; cx > 0; cx-- {
+			for _, store := range [][2]int{{si, 1}, {si + 168, 1}, {si + 1, 0}, {si + 168, 0}} {
+				x, y := store[0]%84*2+store[1], store[0]/168-1
+				if x >= 0 && x < 160 && y >= 0 && y < 16 {
+					d.Dots[y*160+x] = true
+				}
+			}
+			si -= 12
+		}
+		return
+	}
+}
+
 func TestNumberOpcodeUsesGeneratedScoreRules(t *testing.T) {
 	for table := 1; table <= 4; table++ {
 		for _, value := range []string{"000000000002", "000000000010", "000000000100", "123456789012", "000000000000"} {
@@ -60,16 +90,14 @@ func TestNumberOpcodeUsesGeneratedScoreRules(t *testing.T) {
 				s = "0"
 			}
 			want.GlyphText(s, 80-8*len(s), 0, want.Content.ScoreFont)
-			// Independent CODE2 comma positions (including large BCD scores).
+			// Independent CODE2 comma stores: restored BX=160 at this
+			// SIFFRORRUT site, then SI=BX+0a1bh-200.
 			for i := len(s) - 3; i > 0; i -= 3 {
 				x := 80 - 8*(len(s)-i) - 1
-				for y := 13; y < 15; y++ {
-					if x >= 0 && x < 160 {
-						want.Dots[y*160+x] = true
+				for _, p := range [][2]int{{x, 14}, {x, 15}, {x + 1, 14}, {x - 1, 15}} {
+					if p[0] >= 0 && p[0] < 160 {
+						want.Dots[p[1]*160+p[0]] = true
 					}
-				}
-				if x > 0 && x < 160 {
-					want.Dots[15*160+x-1] = true
 				}
 			}
 			if d.Dots != want.Dots {
@@ -97,7 +125,11 @@ func TestCountdownSourceZeroAndSeconds(t *testing.T) {
 	for table := 1; table <= 4; table++ {
 		for _, seconds := range []int{0, 2, 10, 25, 50} {
 			d := original(t, table)
-			d.Countdown("000000000000", seconds)
+			d.StartCountdown(seconds/10, seconds%10)
+			d.StepCountdown("BCD", false, nil)
+			d.FlushPrint(func(string) string { return "000000000000" })
+			d.StepCountdown("BCD", false, nil)
+			d.FlushPrint(func(string) string { return "000000000000" })
 			want := original(t, table)
 			// FANTASIE countdown blanks SEC_ASC's zero tens; zero numeric value
 			// follows PRINT_NUMBER and contributes no large-font zero glyph.

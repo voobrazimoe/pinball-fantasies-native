@@ -33,7 +33,46 @@ func (h *hostWindow) registerMouse() error {
 	}
 	return nil
 }
-func (h *hostWindow) MouseActive(active bool) { h.mouseActive = active }
+func (h *hostWindow) MouseActive(active bool) {
+	if h.mouseActive == active {
+		return
+	}
+	h.mouseActive = active
+	h.refreshMouseCursor()
+}
+
+// WM_SETCURSOR selects a cursor locally; it neither captures the mouse nor
+// changes ShowCursor's process display counter. Mode changes also refresh a
+// stationary pointer, but only when this window owns its client hit.
+func (h *hostWindow) selectMouseCursor(hit uint16) bool {
+	if hit != 1 || !h.focused || !h.mouseActive {
+		return false
+	}
+	up("SetCursor").Call(0)
+	return true
+}
+
+func (h *hostWindow) refreshMouseCursor() {
+	var p point
+	if ok, _, _ := up("GetCursorPos").Call(uintptr(unsafe.Pointer(&p))); ok == 0 {
+		return
+	}
+	packed := uintptr(uint64(uint32(p.X)) | uint64(uint32(p.Y))<<32)
+	owner, _, _ := up("WindowFromPoint").Call(packed)
+	if owner != h.hwnd {
+		return
+	}
+	up("ScreenToClient").Call(h.hwnd, uintptr(unsafe.Pointer(&p)))
+	var r rect
+	up("GetClientRect").Call(h.hwnd, uintptr(unsafe.Pointer(&r)))
+	if p.X < r.Left || p.X >= r.Right || p.Y < r.Top || p.Y >= r.Bottom {
+		return
+	}
+	if !h.selectMouseCursor(1) {
+		cursor, _, _ := up("LoadCursorW").Call(0, 32512)
+		up("SetCursor").Call(cursor)
+	}
+}
 func (h *hostWindow) rawMouse(handle uintptr) {
 	var packet struct {
 		Header rawInputHeader

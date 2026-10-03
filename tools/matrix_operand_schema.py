@@ -111,7 +111,7 @@ OPCODES: dict[str, tuple[tuple[str, ...], str]] = {
     "_RULLGARDIN_NED": ((TXT, NUM), "FANTASIE.ASM:_RULLGARDIN_NED (source text, stop row)"),
     "_RULLGARDIN_UPP": ((TXT, NUM), "FANTASIE.ASM:_RULLGARDIN_UPP (source text, stop row)"),
     "_SCROLL": ((TXT,), "FANTASIE.ASM:_SCROLL STARTSCROLL [BX+2]"),
-    "_SETDECCOR": ((IGN,), "FANTASIE.ASM:_SETDECCOR MOVE DECCOR,[BX+2]"),
+    "_SETDECCOR": ((NUM,), "FANTASIE.ASM:_SETDECCOR MOVE DECCOR,[BX+2]"),
     "_SETLOOP": ((NUM, IGN), "table-local _setloop [BX+2], print_end filler"),
     "_SHOOT_AGAIN_ONN": ((IGN,), "table-local _SHOOT_AGAIN_ONN, NORMAL_END filler"),
     "_SHOW_SCORE": ((LBL,), "table-local _SHOW_SCORE MOV BX,[BX+2]"),

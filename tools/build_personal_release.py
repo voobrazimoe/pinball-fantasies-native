@@ -13,9 +13,12 @@ from personal_assets import ROOT, inventory
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('data_dir', type=Path)
 parser.add_argument('--windows-only', action='store_true', help='build only the portable Windows EXE; no AppImage tools required')
+parser.add_argument('--test-cheats', action='store_true', help='build a separately named Windows matrix diagnostic EXE')
 parser.add_argument('--tool', type=Path, help='offline pinned appimagetool')
 parser.add_argument('--runtime', type=Path, help='offline pinned AppImage runtime')
 args = parser.parse_args()
+if args.test_cheats and not args.windows_only:
+    parser.error('--test-cheats requires --windows-only')
 metadata = ROOT/'.build-personal'
 metadata.mkdir(exist_ok=True)
 with (metadata/'build.lock').open('w') as lock:
@@ -23,7 +26,7 @@ with (metadata/'build.lock').open('w') as lock:
     data, records = inventory(args.data_dir)
     generated = ROOT/'internal/platform/personal_payload_windows.go'
     bundle = ROOT/'internal/platform/.personal-assets/data.zip'
-    artifact = ROOT/'release/personal/windows/pinballfantasies.exe'
+    artifact = ROOT/('release/personal/windows/pinballfantasies-matrix-test.exe' if args.test_cheats else 'release/personal/windows/pinballfantasies.exe')
     # Refuse to copy originals unless every commercial destination is ignored.
     for path in [generated, bundle, artifact, ROOT/'release/personal/linux/PinballFantasies-x86_64.AppImage']:
         subprocess.run(['git', 'check-ignore', '-q', str(path)], cwd=ROOT, check=True)
@@ -39,7 +42,8 @@ with (metadata/'build.lock').open('w') as lock:
                 info.compress_type = zipfile.ZIP_DEFLATED
                 archive.writestr(info, contents)
         generated.write_text('//go:build windows && personal\n\npackage platform\n\nimport _ "embed"\n\n//go:embed .personal-assets/data.zip\nvar personalPayload []byte\n')
-        subprocess.run([str(ROOT/'tools/go.sh'), 'build', '-tags=personal', '-buildvcs=false',
+        tags = 'personal,matrixdebug' if args.test_cheats else 'personal'
+        subprocess.run([str(ROOT/'tools/go.sh'), 'build', '-tags='+tags, '-buildvcs=false',
                         '-trimpath', '-p=1', '-ldflags=-H=windowsgui -X pinballfantasies/internal/platform.GUIMode=1',
                         '-o', str(artifact), './cmd/pinballfantasies'], cwd=ROOT, check=True,
                        env=dict(os.environ, GOOS='windows', GOARCH='amd64', CGO_ENABLED='0'))

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"hash"
 	"os"
+	"pinballfantasies/internal/gameplay"
 	"regexp"
 	"sort"
 	"strconv"
@@ -77,15 +78,29 @@ func TestPRGRecordBaselineParity(t *testing.T) {
 	for n := 1; n <= 4; n++ {
 		t.Run(strconv.Itoa(n), func(t *testing.T) {
 			d := New(n, prg(t, n))
+			// Keep the historical table-local record fingerprint intact. The
+			// previously omitted FANTASIE records are tested independently.
+			baseline := d.Content
+			baseline.Texts = make(map[string][]byte, len(d.Content.Texts))
+			for k, v := range d.Content.Texts {
+				baseline.Texts[k] = v
+			}
+			for _, cheat := range gameplay.OriginalCheats {
+				first := d.Content.Labels[cheat.Program]
+				delete(baseline.Texts, d.Content.Commands[first+1].Arg(0))
+			}
+			for rank := 1; rank <= 4; rank++ {
+				delete(baseline.Texts, "HI_"+strconv.Itoa(rank))
+			}
 			for category, p := range proof[strconv.Itoa(n)] {
-				count := len(d.Content.Texts)
+				count := len(baseline.Texts)
 				if category == "animations" {
 					count = len(d.Content.Animations)
 				}
 				if category == "lampflash" {
 					count = len(d.Content.LampFlash)
 				}
-				if count != p.Count || fingerprintRecords(d.Content, category) != p.SHA256 {
+				if count != p.Count || fingerprintRecords(baseline, category) != p.SHA256 {
 					t.Fatalf("table %d %s baseline parity", n, category)
 				}
 			}

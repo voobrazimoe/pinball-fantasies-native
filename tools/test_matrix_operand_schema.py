@@ -3,6 +3,11 @@
 import unittest
 import matrix_operand_schema as s
 class SourceExpressions(unittest.TestCase):
+ def test_jingle_fallback_counter_is_read(self):
+  # FANTASIE _SETDECCOR copies [BX+2]; WAITJINGLE2 decrements it
+  # under INT66 function21's no-sound bit. It is not a filler word.
+  self.assertEqual(s.numeric_values('_SETDECCOR',['70'],{}),{0:70})
+  with self.assertRaises(s.OperandError):s.numeric_values('_SETDECCOR',['?'],{})
  def test_arithmetic(self):
   for expr,want in [('2*60',120),('10*2*15',300),('10*2*5',100),('-(7/2)',-3),('-7/2',-3),('0FFh+1',256),('(SW*4)/4+16',352)]:
    self.assertEqual(s.resolve_expression(expr,{'SW':336}),want)

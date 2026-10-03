@@ -7,9 +7,11 @@ import (
 	"fmt"
 	"os"
 	"pinballfantasies/internal/physics"
+	"pinballfantasies/internal/presentation"
 	"pinballfantasies/internal/settings"
 	"pinballfantasies/internal/testinputs"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -417,12 +419,32 @@ func TestDeterministicNativeScript(t *testing.T) {
 	if a.Score.Uint64() != 2_300_000 || a.BallNumber != 2 {
 		t.Fatalf("accepted1200-tick oracle changed: score=%s ball=%d", a.Score, a.BallNumber)
 	}
-	// The old frame oracle captured MATRIXLGT=0 at the Ball 2 plunger.
-	// The corrected idle illumination changes pixels, never score/ball/physics.
-	hash := fmt.Sprintf("%x", sha256.Sum256(a.Frame().Pix))
-	if hash != "f9b5160b3173c35f2798dd5e270e7ded40c33642605e21c0935cd083ff231a5e" {
-		t.Fatalf("accepted Party RGBA oracle changed: %s", hash)
+	// PLAND SHOWPLAYERSTS prints BALL at y=10. The historical aggregate
+	// fixture instead synthesized PLAYERS at y=9 whenever in the chute,
+	// even after selection closed. Prove that these matrix pixels account
+	// for the entire old fixture difference before accepting source output.
+	legacy := *a.Display
+	legacy.Clear()
+	legacy.InvalidateScore()
+	legacy.Text(fmt.Sprintf("PLAYER %d", a.Session.CurrentPlayer), 8, 1, 5)
+	legacy.Text(fmt.Sprintf("PLAYERS %d", a.Session.PlayerCount), 8, 9, 5)
+	legacy.GlyphText(strings.TrimLeft(a.Score.String(), "0"), 160-8*len(strings.TrimLeft(a.Score.String(), "0")), 0, legacy.Content.ScoreFont)
+	for i := 1; i <= (len(strings.TrimLeft(a.Score.String(), "0"))-1)/3; i++ {
+		x := 160 - 24*i - 1
+		legacy.Dots[13*160+x], legacy.Dots[14*160+x], legacy.Dots[15*160+x-1] = true, true, true
 	}
+	p := presentation.MatrixPaletteMode(a.Palette(), a.Physics.ReferenceMode, 242)
+	old := presentation.ComposeNative(a.Physics.FramePalette(p), &legacy, p, 96, 242, a.Physics.Settings, a.Physics.ScreenOffset)
+	if fmt.Sprintf("%x", sha256.Sum256(old.Pix)) != "f9b5160b3173c35f2798dd5e270e7ded40c33642605e21c0935cd083ff231a5e" {
+		t.Fatal("historical fixture changed outside the proven synthetic panel")
+	}
+	source := *a.Display
+	source.InvalidateScore()
+	source.ShowPlayerBall(a.Score.String())
+	if a.Display.Dots != source.Dots || !a.Display.On {
+		t.Fatal("retained matrix differs from source SHOWPLAYERSTS / KILL_FLASHOR")
+	}
+	hash := fmt.Sprintf("%x", sha256.Sum256(a.Frame().Pix))
 	t.Logf("script score=%s ball=%d frame=%s", a.Score, a.BallNumber, hash)
 }
 func TestContentAgainstIndependentExtraction(t *testing.T) {

@@ -17,7 +17,7 @@ func TestPlayerBallPreservesLiveCommand(t *testing.T) {
 		after := *d
 		after.Dots = before.Dots
 		after.On = before.On
-		after.flashSpeed = before.flashSpeed
+		after.flashing = before.flashing
 		if !reflect.DeepEqual(before, after) {
 			t.Fatalf("table %d idle handoff mutated live command state", table)
 		}

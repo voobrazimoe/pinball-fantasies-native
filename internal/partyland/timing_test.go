@@ -389,7 +389,8 @@ func TestPF45IndependentDrainToNextBallTrace(t *testing.T) {
 		}
 	}
 	appendEvents()
-	for i := 0; i < 600; i++ {
+	// _WAITifmulti single-player SISA=2 moves SETBALL from 600 to 602.
+	for i := 0; i < 602; i++ {
 		ticks(t, g, 1)
 		appendEvents()
 	}
@@ -450,6 +451,7 @@ func TestPF45MatrixBeforeLatePhysics(t *testing.T) {
 	// Source matrix expires during VBLANK, before the third physics pass.
 	g.matrix.op = "_COUNTDOWN"
 	g.ModeTime = 1
+	g.Display.StartCountdown(0, 0) // Original SEC_ASC=01, SYNC_LEFT=1, next visit shows zero.
 	g.Physics.BeforeLate = func() {
 		g.matrixTick()
 		if g.Happy {
@@ -483,6 +485,7 @@ func TestPF45PendingModeStartsAfterNextTaskScan(t *testing.T) {
 	g.startHappy()
 	g.MegaPending = true
 	g.ModeTime = 1
+	g.Display.StartCountdown(0, 0) // Original SEC_ASC=01, SYNC_LEFT=1, next visit shows zero.
 	g.matrix.op = "_COUNTDOWN"
 	ticks(t, g, 1)
 	if g.Happy || g.Mega || g.MegaPending {

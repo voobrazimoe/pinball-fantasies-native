@@ -22,26 +22,26 @@ func (g *Game) drain() {
 	g.Audio.ReturnPosition = 62
 	g.waitAt("SOUNDRINNER", 5, func() { g.sound("SRINNER") })
 }
-func (g *Game) changeBall() {
+func (g *Game) changeBall() bool {
 	g.savePlayer() // VARS_2_P_STRUC runs before earned-extra-ball selection.
 	if g.Lights[51] {
 		g.ExtraBalls--
 		g.emit("ShootAgain", "LET_HIM_SHOOT_AGAIN", 0)
-		g.beginMatrix("SHOOT_AGAIN_ONTS")
-		return
+		g.startMatrix("SHOOT_AGAIN_ONTS", false)
+		return false
 	}
 	if g.matchBall {
-		g.Phase = GameOver
-		g.emit("GameOver", "AFTER_XXBALLTS", 0)
-		return
+		g.startMatrix("AFTER_XXBALLTS", false)
+		return false
 	}
 	if !g.advancePlayer() {
 		g.endGameMatch()
-		return
+		return false
 	}
 	g.waitAt("NEW_BALL_TASK", 30, g.newBall)
+	return true // HU_ tail-calls the following matrix handler on this sync.
 }
-func (g *Game) endGameMatch() { g.beginMatrix("OUT_OF_BALLSTS") }
+func (g *Game) endGameMatch() { g.startMatrix("OUT_OF_BALLSTS", false) }
 func (g *Game) newBall() {
 	// NEW_BALL does not reset flipper angles, spin or ramp gravity.
 	g.Physics.Stopped = false
@@ -62,7 +62,9 @@ func (g *Game) newBall() {
 	g.ScreenForce = -1
 	g.Physics.TargetRaster = -1
 	g.playerText()
-	g.Display.ShowPlayerBall(g.Score.String())
+	if !g.partyFlash {
+		g.beginMatrix("SHOWPLAYERSTS") // WHEN_NEW_BALL_RESET calls DO_MATRIX.
+	}
 	g.emit("NewBall", "NEW_BALL", uint64(g.BallNumber))
 	g.waitAt("SOUNDNEWBALL", 50, func() { g.sound("SNEWBALL") })
 	g.waitAt("SETBALL", 80, func() { g.Physics.SetBall(297, 530, 10, 0, false); g.Physics.Ball.Hold = false; g.Phase = Playing })

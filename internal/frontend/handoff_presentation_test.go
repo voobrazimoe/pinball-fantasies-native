@@ -144,6 +144,7 @@ func sourceIdleDots(d *presentation.Display, score tablelogic.Decimal) [presenta
 			}
 		}
 	}
+	expected.InvalidateScore() // Independent redraw starts with UPDAT_SCORE.
 	expected.Score(score.String())
 	return expected.Dots
 }
@@ -263,17 +264,18 @@ func TestPlayerHandoffMatrixBeforeLaunch(t *testing.T) {
 								t.Fatal("loss/bonus did not commit handoff")
 							}
 							expectedScores[outgoing-1] = h.PlayerScores()[outgoing-1]
-							// Assert on the exact sync where identity changes, still before the
-							// NEW_BALL_TASK delay and SETBALL, with no plunger input or Release call.
-							assertIdleHandoff(t, h, next, ball, expectedScores[next-1])
-							assertVisibleHandoff(t, h)
+							// PLAND/STONES NEW_BALL_TASK waits 30; SDEV/SHOW wait 60.
+							// WHEN_NEW_BALL_RESET then executes SHOWPLAYERSTS before
+							// NODOT paints score. Identity alone does not repaint dots.
 							if !h.physics.Ball.Hold {
 								t.Fatal("incoming physical ball launched during handoff")
 							}
 							for wait := 0; wait < 710; wait++ { // ten seconds at the source 71 Hz clock
 								syncHandoff(t, h)
-								assertIdleHandoff(t, h, next, ball, expectedScores[next-1])
-								if wait == 0 || wait == 150 || wait == 709 {
+								if wait >= 150 {
+									assertIdleHandoff(t, h, next, ball, expectedScores[next-1])
+								}
+								if wait == 150 || wait == 709 {
 									assertVisibleHandoff(t, h)
 								}
 								if (wait >= 150 && !h.chute()) || h.physics.SpringPosition != 0 {
@@ -317,10 +319,10 @@ func TestExtraBallMatrixBeforeLaunch(t *testing.T) {
 						t.Fatal("extra-ball new-ball task did not run")
 					}
 					score := h.score()
-					// Gameshow/Stones intentionally retain their source shoot-again message
-					// (PARTYFLASH); Party/Speed restore the idle source player/ball panel.
+					// FANTASIE WHEN_NEW_BALL_RESET preserves PARTYFLASH on all tables;
+					// each shoot-again program installs persistent PARTYRUT.
 					expected := sourceIdleDots(h.display, score)
-					if table == 3 || table == 4 {
+					if table >= 1 && table <= 4 {
 						d := *h.display
 						d.Clear()
 						for _, c := range d.Content.Commands[d.Content.Labels["SHOOT_AGAIN_ONTS"]:] {
@@ -347,7 +349,7 @@ func TestExtraBallMatrixBeforeLaunch(t *testing.T) {
 						for _, dot := range h.display.Dots {
 							nonblank = nonblank || dot
 						}
-						if (table <= 2 && !h.display.On) || !nonblank || (wait >= 150 && !h.chute()) || h.physics.SpringPosition != 0 {
+						if !nonblank || (wait >= 150 && !h.chute()) || h.physics.SpringPosition != 0 {
 							t.Fatal("extra-ball wait blank or launched")
 						}
 						if h.display.On && (wait < 10 || wait == 150 || wait == 709) {

@@ -10,10 +10,13 @@ func TestHighScoreBranchExtraBall(t *testing.T) {
 		g := newTestGame(t)
 		quiet(g)
 		g.Physics.SpringValid = false
+		g.inChute = false
 		g.SetHighScore(Number(50_000_000))
 		g.Score = Number(50_000_001)
 		g.ScoreChanged = true
 		if duringDrain {
+			// PLAND JBCDZ skips _BEATEN_MATRIX when the total bonus is zero.
+			g.Bonus = Number(1000)
 			g.drain()
 			for i := 0; i < 2000 && g.ExtraBalls == 0; i++ {
 				ticks(t, g, 1)
@@ -35,6 +38,7 @@ func TestHighScoreStrictAndOptIn(t *testing.T) {
 	g := newTestGame(t)
 	quiet(g)
 	g.Physics.SpringValid = false
+	g.inChute = false
 	g.Score = Number(50_000_000)
 	g.SetHighScore(Number(50_000_000))
 	if g.checkHighScore() {
@@ -42,10 +46,12 @@ func TestHighScoreStrictAndOptIn(t *testing.T) {
 	}
 	g.Score = Number(50_000_001)
 	g.Physics.SpringValid = true
+	g.inChute = true
 	if g.checkHighScore() {
 		t.Fatal("chute triggered beat")
 	}
 	g.Physics.SpringValid = false
+	g.inChute = false
 	if !g.checkHighScore() {
 		t.Fatal("greater score did not beat")
 	}
@@ -64,5 +70,19 @@ func TestAttractRenderDoesNotMutateSession(t *testing.T) {
 	}
 	if g.Tick != 0 || g.Physics.Syncs != 0 || g.Physics.Raster != (259+33)*16 {
 		t.Fatal("attract render mutated game")
+	}
+}
+
+func TestHighScoreGuardUsesSourceChuteFlag(t *testing.T) {
+	g := newTestGame(t)
+	g.SetHighScore(Number(0))
+	g.Score = Number(1)
+	g.Physics.SpringValid = false
+	if g.checkHighScore() {
+		t.Fatal("SPRING_VALID substituted for I_UTSKJUT")
+	}
+	g.Happy = true
+	if !g.beatHighScore() {
+		t.Fatal("_BEATEN_MATRIX incorrectly inherited idle chute/mode guards")
 	}
 }

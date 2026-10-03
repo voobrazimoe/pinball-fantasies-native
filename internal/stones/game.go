@@ -106,6 +106,7 @@ type Game struct {
 	matrixOn                                                                                                          bool
 	syncSulp, syncTower                                                                                               uint8
 	towerOpen, highVault                                                                                              bool
+	towerHuntOrig                                                                                                     bool
 	captured                                                                                                          string
 	towerNext                                                                                                         int
 	bonusPointer                                                                                                      uint8
@@ -125,7 +126,7 @@ func New(t *physics.Table, data []byte) *Game {
 	g.Physics.OnEvent = g.consume
 	g.Physics.BeforeTargets = func() { g.updateCounters(); g.checkAreas() }
 	g.Physics.AfterTargets = g.afterTargets
-	g.Physics.BeforeLate = func() { g.Display.Flash(); g.matrixTick(); g.matrixPalette(false) }
+	g.Physics.BeforeLate = func() { g.matrixTick(); g.matrixPalette(false) }
 	g.Physics.ScrollForce = func() int16 { return g.ScreenForce }
 	g.Cue("S_SPRING1")
 	g.music.ReturnPosition = 0
@@ -230,9 +231,12 @@ func (g *Game) Sync(in physics.Inputs) error {
 		return nil
 	}
 	if g.Phase == BallLost {
+		g.Display.Flash() // MATRIX_BLINKOR precedes DO_TASKS.
 		tablelogic.Run(g.tasks[:], g.ids[:])
 		g.flashTick()
-		g.Display.Flash()
+		if g.Phase == GameOver {
+			return nil // Frontend continues DEMOMODE NODOT in this sync.
+		}
 		g.matrixTick()
 		g.matrixPalette(false)
 		return nil
@@ -258,6 +262,7 @@ func (g *Game) afterTargets(in physics.Inputs) {
 		g.beginMatrix("TILTTS")
 	}
 	g.previous = in
+	g.Display.Flash() // MATRIX_BLINKOR precedes DO_TASKS.
 	tablelogic.Run(g.tasks[:], g.ids[:])
 	gameplay.Spring(&g.Physics.SpringPosition, g.Physics.SpringValid, in, func(charge uint8) {
 		g.Release(charge, uint8(g.clock))

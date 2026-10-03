@@ -57,22 +57,23 @@ func (g *Game) drain() {
 	g.wait("SOUNDRINNER", 5, func() { g.sound("SRINNER") })
 	g.emit("BallLost", "LOOSE_BALL", 0)
 }
-func (g *Game) changeBall() {
+func (g *Game) changeBall() bool {
 	g.savePlayer() // VARS_2_P_STRUC runs before earned-extra-ball selection.
 	if g.Lights[31] {
-		g.beginMatrix("SHOOT_AGAIN_ONTS")
+		g.startMatrix("SHOOT_AGAIN_ONTS", false)
 		g.emit("ShootAgain", "LET_HIM_SHOOT_AGAIN", 0)
-		return
+		return false
 	}
 	if g.matchBall {
-		g.endGame()
-		return
+		g.startMatrix("AFTER_XXBALLTS", false)
+		return false
 	}
 	if !g.advancePlayer() {
-		g.beginMatrix("OUT_OF_BALLSTS")
-		return
+		g.startMatrix("OUT_OF_BALLSTS", false)
+		return false
 	}
 	g.wait("NEW_BALL_TASK", 60, g.newBall)
+	return true // HU_ tail-calls the following matrix handler on this sync.
 }
 func (g *Game) newBall() {
 	g.resetTable()
@@ -105,12 +106,11 @@ func (g *Game) newBall() {
 	g.playerText()
 	// WHEN_NEW_BALL_RESET keeps the source shoot-again/party message.
 	if !g.partyFlash {
-		g.Display.ShowPlayerBall(g.Score.String())
+		g.beginMatrix("SHOWPLAYERSTS") // WHEN_NEW_BALL_RESET calls DO_MATRIX.
 	}
 	g.emit("NewBall", "NEW_BALL", uint64(g.BallNumber))
 }
 func (g *Game) endGame() {
 	g.Phase = GameOver
-	g.matrix.active = false
 	g.emit("GameOver", "_2_DEMO_MODE", g.Score.Uint64())
 }

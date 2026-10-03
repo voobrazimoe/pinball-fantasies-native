@@ -1,13 +1,13 @@
 // Package tablelogic holds demonstrated shared FANTASIE cooperative primitives.
 package tablelogic
 
-func Add(tasks []func() bool, ids []uint64, next *uint64, f func() bool) {
+func Add(tasks []func() bool, ids []uint64, next *uint64, f func() bool) int {
 	for i := range tasks {
 		if tasks[i] == nil {
 			*next++
 			ids[i] = *next
 			tasks[i] = f
-			return
+			return i
 		}
 	}
 	panic("table task list full")
