@@ -50,7 +50,9 @@ Transient release/fire/key edges survive between wakes and are consumed once.
 `plunger_delta` accepts relative vertical counts; eight counts equal one source
 adjustment, with at most one adjustment per task. Both mouse and touch must use
 this path and the existing 0..32 spring. Excess movement cannot charge faster.
-Invalid spring input is discarded and its remainder cleared. Fire is a make
+Invalid spring input is discarded and its remainder cleared. One shared frontend
+check consults the canonical source SpringValid flag as well as chute context
+for both engine and Go desktop adapters. Fire is a make
 edge, scheduled for the following task by the original Runner. A held mouse or
 touch button must not repeatedly call fire. Hosts use the mouse-active state bit
 for local cursor/relative-input policy; no absolute pointer position is involved.

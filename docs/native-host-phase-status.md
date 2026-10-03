@@ -8,6 +8,7 @@ branch must not be merged into main as a completed platform phase.
 - Pre-platform parity checkpoint: `ae57d8d112f3543da6aa400ae4643975c14c3c2d`.
 - Engine implementation: `9afb838`.
 - Conformance harness: `87693aa`; strengthened coverage: `851ac3067d4f449db76639be0d9e1188eff3ea68`.
+- Canonical spring validity gate: `af7a476`.
 - Branch: `codex/native-host-boundary-macos-android`.
 - No tag or release was created. The checkpoint commit identifies the final
   validated Windows/Linux baseline; existing release/version conventions remain
@@ -56,7 +57,11 @@ flippers/tilt, charged mouse fire, drains, new-ball/player handoff, focus loss,
 one-hour suspension without catch-up, regain still paused, manual resume and
 slow wakes with multiple overdue source tasks. Input tests also prove short
 release edges, eight-count accumulated movement, one adjustment per task,
-invalid-spring discard, scheduled-fire cancellation and duplicate active Resume.
+invalid-spring discard even when chute context remains true, scheduled-fire
+cancellation and duplicate active Resume. The regression first failed against
+the initial facade: a queued invalid fire consumed a later valid adjustment.
+A read-only `PlungerValid` accessor now exposes canonical `Physics.SpringValid`;
+one shared frontend validity check serves both engine and desktop adapters.
 Shared settings persistence runs during destruction while suspended. Existing
 four-table score save/restart/reset validation and portable storage checks pass.
 
@@ -127,9 +132,11 @@ Material additions: `internal/engine/{engine.go,engine_test.go,input_test.go}`,
 `cmd/pfengine/{main.go,abi.h}`, `cmd/pftrace/main.go`, `tools/build_engine.sh`,
 `tools/test_engine_abi.py`, the two AltGr regression files, this status document
 and `docs/native-engine.md`. Material updates: shared Runner focus helper/task
-counter, Win32 AltGr message handling, architecture/build docs and asset-free
-Linux CI archive/shared-library builds. Table/physics/matrix/audio implementations
-are unchanged. Hosted CI itself has not been rerun by these local checks.
+counter, canonical spring validity accessors on the four sessions, shared
+frontend/desktop plunger gating, Win32 AltGr message handling, architecture/build
+docs and asset-free
+Linux CI archive/shared-library builds. Table/physics/matrix/audio gameplay semantics
+are unchanged; table code only gains read-only spring-validity accessors. Hosted CI itself has not been rerun by these local checks.
 
 Only the feature branch is to be pushed. No main integration is authorized by
 the unfulfilled macOS/Android gates; public main remains the starting SHA.
