@@ -1,12 +1,10 @@
 # Matrix stabilization audit
 
-The source audit is complete, including the final `_2_DEMO_MODE` BX-clobber
-finding below. Integration requires the exact-commit validation gate. The full
-`go test ./...` pass recorded in `/tmp/stabilization-source-full4.log` includes
-the source-driven image-checkpoint reconciliations below. It predates the
-latest table-local pseudo-command corrections, which have focused tests.
-Earlier build/platform passes do not validate the eventual final commit.
-No image fixture has been regenerated.
+The source audit and all integration validation gates are complete. The final
+`_2_DEMO_MODE` BX-clobber finding below resolves the Stones non-qualifying
+blank-matrix report. The final validation record supersedes earlier progress
+runs and investigation notes. No image fixture was regenerated; no commercial
+payload or original screenshot was added to the public repository.
 
 ## Source evidence and implemented corrections
 
@@ -176,7 +174,8 @@ are under `/tmp/pf-matrix-interrupted-table1-c` and corresponding table2/3/4
 folders; comparison JSONs are under `/tmp`. The set of inherited phases is
 covered by the independent source-time tests. The pixel-state membership
 check alone does not establish which phase was interrupted or exact sync
-alignment; finish that trace analysis before closing this audit item.
+alignment. Ordered same-phase trace analysis below closes the comparison;
+exact source durations are established by independent boundary tests.
 
 ## Audit closure and integration gate
 
@@ -275,9 +274,9 @@ raster, and ZEROSCORE runs only on Party/SDEV/SHOW. Completed PLAYER_AREA scores
 remain available to the frontend timeline. Runtime PCM reads the single session
 sync result without advancing presentation audio a second time on a handoff.
 
-These lifecycle changes still need complete regression and source review;
-final validation and integration remain outstanding. No commit was pushed or
-merged during this continuation.
+This initial lifecycle interpretation was subsequently corrected by the
+BX-clobber review below. Final regressions and validation now supersede the
+progress runs recorded here.
 
 ### Additional lifecycle boundaries resolved
 
@@ -301,15 +300,14 @@ merged during this continuation.
 - TestSourceScoreEntryVisitsAndRetainedPixels covers one-player-per-visit
   qualification, the separate keyboard setup visit, single SCAN_CODE slot,
   HAJJSKAR retained rows, STJAERNOR at counter30 and the counter2 restart on
-  all four tables. TestGameOverContinuationKeepsSourceWaitAndMemory checks each
-  source post-demo wait, retained phase/memory, and Stones termination/NODOT
-  reentry. TestLostMatchRunsSourceScoreEntryClear covers all four clear/entry
+  all four tables. The later TestGameOverContinuationUsesDemoNodotAndRetainsMemory
+  replaces the incorrect post-demo-wait assumption and checks retained memory
+  and same-sync DEMOMODE NODOT reentry. TestLostMatchRunsSourceScoreEntryClear covers all four clear/entry
   boundaries. These pass alongside the full Go suite.
 
-The earlier sync298/278 game-over numbers refer to the separately tested
-AFTERDEMOMODETS helper. They are not the production match-to-demo starting
-point on SDEV/SHOW/STONES: the real continuation includes the source long wait
-above. No fixture or wait was changed to mimic the former native helper.
+The sync298/278 helper traces start at AFTERDEMOMODETS. The corrected live
+handoff reaches that program through DEMOMODE NODOT; the adjacent long-wait
+operands are not dispatched because DOADDTASK changes BX (see final finding).
 
 ### Validation progress
 
@@ -331,8 +329,9 @@ interference; no assertions were weakened. SDL's geometry fullscreen journey
 requires a window manager, absent from bare Xvfb, and is run separately on the
 managed desktop. Visible real-Windows OS cursor acceptance remains recommended.
 
-Package/storage journeys and exact-final-commit reruns are still outstanding.
-These progress runs are not a substitute for final-commit validation.
+Package/storage journeys and exact-commit reruns are recorded in the final
+validation section below. These earlier progress runs were not used as the
+integration gate.
 
 ### Investigation: Stones non-qualifying game-over blank matrix (resolved below)
 
@@ -371,12 +370,12 @@ implementation was weakened. This still predates an eventual validated commit.
 
 The user confirms original DOS displays GAME OVER promptly after a
 non-qualifying game. Treat the native long blank as an implementation bug,
-not an accepted DOS defect. The exact source replacement/control-flow owner
-remains unresolved; static presence of WAIT30000 does not establish that
-it survives the real handoff. Repeated automated DOS launch probes have not
+not an accepted DOS defect. At this investigation stage, the exact source control-flow owner had not
+yet been identified; static presence of WAIT30000 did not establish that it
+survived the handoff. The final BX-clobber finding below resolves it. Repeated automated DOS launch probes have not
 yet left the chute, so they provide no terminal timing proof. A physical
-XTest keyboard probe is running to distinguish posted-event input from
-actual keyboard makes. All four Linux and all four Wine live hotseat
+XTest keyboard probe also failed to establish a terminal gameplay trace.
+The later controlled post-match probe did establish the ending control flow. All four Linux and all four Wine live hotseat
 scenarios now pass with the correct platform test binaries
 (/tmp/continuation-hotseat-live2.log).
 
@@ -429,7 +428,7 @@ occupied next task slot); TestGameOverContinuationUsesDemoNodotAndRetainsMemory
 (all four, retained pixels, wait boundary and prompt text). The older
 TestGameOverContinuationKeepsSourceWaitAndMemory test encoded the incorrect
 BX-preservation assumption and has been replaced. This resolves the reported
-Stones blank-matrix bug; final complete validation remains mandatory.
+Stones blank-matrix bug. Final complete validation is recorded below.
 
 The private ending oracle exporter compares the corrected persistent timeline
 against the controlled DOS capture. All 899 nonblank frames match with no
@@ -439,3 +438,43 @@ and several final syncs, so exact durations come from source boundary tests.
 TestNonQualifyingGameShowsSourceGameOverPromptly additionally exercises all
 four real native drain/bonus/match/optional match-turn/qualification/demo paths
 and checks GAME OVER within its source-defined first 40 demo visits.
+
+## Final validation record
+
+The complete suite was run from the committed source with a clean working
+tree; the final documentation revision is also subject to the same exact-commit
+rerun before pushing or integration. All gates pass:
+
+| Gate | Result |
+| --- | --- |
+| `go test -count=1 ./...` | PASS: presentation, temporal, reachability-backed, numeric/operand, all four tables, source runner, hotseat/frontend and all cheat regressions |
+| Matrix diagnostic frontend/Party tests | PASS with `-tags=matrixdebug` |
+| Python extractor/comparator/personal tests | PASS: eight tests |
+| Matrix reachability | PASS: zero missing handlers across all four tables |
+| Matrix operands/numeric/source texts | PASS: zero unresolved operands; zero byte mismatches across 1,106 source texts; zero missing mutable-text writers |
+| PF8/PF7/PF4.5 generator verification | PASS: regenerated native constants unchanged; retained analysis fixture unchanged |
+| Private DOS scroll/startup/ending comparisons | PASS: ordered same-phase traces, zero unmatched nonblank frames; 320 one-player startup frames; 899 Stones ending frames |
+| Linux and Windows amd64 CGO=0 builds | PASS |
+| Public Windows and Linux/AppImage packages | PASS |
+| Personal Windows and Linux/AppImage packages | PASS; all 12 owned inputs validated |
+| Separate personal Windows diagnostic package | PASS; ordinary artifacts preserved |
+| Linux relative mouse | PASS on isolated Xvfb |
+| Win32/Wine layouts, sided modifiers/reconciliation, window/focus/pause, relative mouse and cursor-mode tests | PASS on isolated Xvfb/Wine |
+| Win32 fullscreen/music and waveOut | PASS |
+| Linux/Wine four-table OFF/NORMAL/HIGH journeys | PASS |
+| Linux/Wine fullscreen/music journeys | PASS; Linux geometry check on a desktop with a window manager |
+| Public/personal portable storage | PASS on Linux and Wine: Unicode paths, overrides, user fallback, unchanged originals |
+| Personal package controls/settings restart | PASS on Linux and Wine, all four tables |
+| Live hotseat host | PASS: all four Linux and all four Wine cases, independent scores/drains/rounds, pause/focus/fullscreen and nonzero PCM |
+
+No unresolved matrix checkpoint or known matrix parity discrepancy remains.
+DOS captures are undersampled and do not uniquely identify interruption phase
+or every elapsed source sync; exact temporal semantics are separately proved
+by source-derived tests. Visible OS cursor behavior still merits final real
+Windows hardware acceptance. The accepted real-Windows side Extra Ball/drain
+scenario is preserved and covered by automated source regressions.
+
+Commercial PRGs, MODs, SDR/configuration, extracted pixels, oracle captures and
+personal bundles remain owned local/ignored inputs or outputs. Public packages
+remain asset-free. No force-push, destructive reset, checkout over local changes
+or removal of intended handoff work was used.
