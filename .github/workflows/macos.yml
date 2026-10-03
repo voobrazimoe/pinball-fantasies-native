@@ -1,0 +1,53 @@
+name: macOS arm64 host
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  apple-silicon:
+    runs-on: macos-15
+    timeout-minutes: 25
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_16.4.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prove Apple Silicon and record Apple toolchain
+        run: |
+          uname -m
+          test "$(uname -m)" = arm64
+          sw_vers
+          xcodebuild -version
+          xcrun clang --version
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.1'
+          cache: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Shared Go engine tests (desktop Go CLI is Linux/Windows only)
+        shell: bash
+        run: |
+          go version
+          packages=$(go list ./... | sed '/\/internal\/platform$/d; /\/cmd\/pinballfantasies$/d')
+          go test -p=1 -count=1 -v $packages
+          python3 tools/check_public_source.py
+      - name: Apple C ABI, native host tests, arm64 app, signing and public package
+        run: ./tools/build_macos.sh
+      - name: Bounded AppKit launch smoke
+        run: |
+          python3 - <<'PY'
+          import subprocess
+          subprocess.run(['release/macos/Pinball Fantasies.app/Contents/MacOS/pinballfantasies','--ui-smoke'],check=True,timeout=15)
+          PY
+      - name: Record acceptance limits
+        run: |
+          echo 'Hosted CI uses no commercial originals; original-backed four-table macOS ABI journeys remain UNVERIFIED.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'See docs/macos.md for physical-Mac acceptance. Asset-free native ABI/host tests are required and cannot skip.' >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PinballFantasies-macos-arm64-adhoc
+          path: release/macos/PinballFantasies-arm64.zip
+          if-no-files-found: error

@@ -19,7 +19,7 @@ static OSStatus render(void *ctx,AudioUnitRenderActionFlags *flags,const AudioTi
     return noErr;
 }
 void pf_audio_init(PFAudio *a) {
-    memset(a,0,sizeof(*a)); pf_ring_init(&a->ring);
+    a->unit=NULL; a->error=0; a->running=false; a->listener=nil; pf_ring_init(&a->ring);
 }
 bool pf_audio_open(PFAudio *a) {
     AudioComponentDescription description={kAudioUnitType_Output,kAudioUnitSubType_DefaultOutput,

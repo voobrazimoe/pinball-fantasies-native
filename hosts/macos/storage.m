@@ -48,7 +48,7 @@ BOOL pf_import_assets(NSString *source,NSString *destination,PFValidateAssets va
     if (!validate(stage,error)) goto cleanup;
     if ([fm fileExistsAtPath:destination]) {
         NSString *backup=[@".previous-" stringByAppendingString:NSUUID.UUID.UUIDString];
-        NSURL *result=[fm replaceItemAtURL:[NSURL fileURLWithPath:destination]
+        BOOL result=[fm replaceItemAtURL:[NSURL fileURLWithPath:destination]
             withItemAtURL:[NSURL fileURLWithPath:stage] backupItemName:backup
             options:0 resultingItemURL:nil error:error];
         if (!result) goto cleanup;
