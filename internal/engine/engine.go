@@ -84,11 +84,7 @@ func (e *Engine) Key(code uint8) {
 }
 func (e *Engine) Release() { e.submit(gameplay.Controls{Release: true}) }
 func (e *Engine) MouseActive() bool {
-	if e.runner.Suspended || e.runner.Runtime.Model.Mode != frontend.Playing {
-		return false
-	}
-	s, ok := e.runner.Runtime.Model.Session.(interface{ InChute() bool })
-	return ok && s.InChute()
+	return !e.runner.Suspended && e.runner.Runtime.Model.MousePlungerActive()
 }
 
 // PlungerDelta takes raw relative vertical counts (eight counts per source

@@ -322,3 +322,6 @@ func (g *Game) beatHighScore() bool {
 	g.emit("HighScoreBeaten", "CHECKHIGHSCORE", g.Score.Uint64())
 	return true
 }
+
+// PlungerValid exposes the one canonical source spring gate to host adapters.
+func (g *Game) PlungerValid() bool { return g.Physics.SpringValid }

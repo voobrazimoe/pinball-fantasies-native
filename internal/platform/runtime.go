@@ -70,10 +70,7 @@ func showFrontend(r *frontend.Runtime, duration time.Duration, device *AudioDevi
 			runner.Done = true
 			return
 		}
-		mouseActive := r.Model.Mode == frontend.Playing && !runner.Suspended
-		if chute, ok := r.Model.Session.(interface{ InChute() bool }); ok {
-			mouseActive = mouseActive && chute.InChute()
-		}
+		mouseActive := !runner.Suspended && r.Model.MousePlungerActive()
 		if mouseActive != priorMouseActive {
 			mouse.Clear()
 			priorMouseActive = mouseActive

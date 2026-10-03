@@ -51,10 +51,7 @@ func main() {
 	mouse := gameplay.Mouse{}
 	delta := 0
 	fire := false
-	active := func() bool {
-		s, ok := rt.Model.Session.(interface{ InChute() bool })
-		return !r.Suspended && rt.Model.Mode == frontend.Playing && ok && s.InChute()
-	}
+	active := func() bool { return !r.Suspended && rt.Model.MousePlungerActive() }
 	submit := func(c gameplay.Controls) {
 		c.Left, c.Right, c.Down, c.Tilt = held.Left, held.Right, held.Down, held.Tilt
 		r.Submit(frontend.Input{Gameplay: c})

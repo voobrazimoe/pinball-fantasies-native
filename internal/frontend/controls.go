@@ -12,3 +12,13 @@ func (in Input) controls() gameplay.Controls {
 	c.Tilt = c.Tilt || in.Tilt
 	return c
 }
+
+// MousePlungerActive is shared by Go desktop and foreign host adapters. Chute
+// context alone is insufficient: source tasks can temporarily invalidate spring.
+func (m *Model) MousePlungerActive() bool {
+	s, ok := m.Session.(interface {
+		InChute() bool
+		PlungerValid() bool
+	})
+	return m.Mode == Playing && ok && s.InChute() && s.PlungerValid()
+}

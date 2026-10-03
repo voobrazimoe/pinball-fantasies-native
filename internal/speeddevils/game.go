@@ -370,3 +370,6 @@ func (g *Game) PCM() []byte              { return g.AudioPCM }
 func (g *Game) PresentationAudioSync()   { g.audioTick() }
 
 func (g *Game) AttractCue() string { return "S_NOHIGH" }
+
+// PlungerValid exposes the one canonical source spring gate to host adapters.
+func (g *Game) PlungerValid() bool { return g.Physics.SpringValid }

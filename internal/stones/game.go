@@ -321,3 +321,6 @@ func (g *Game) synced(n, s int, c uint8) {
 		}
 	}
 }
+
+// PlungerValid exposes the one canonical source spring gate to host adapters.
+func (g *Game) PlungerValid() bool { return g.Physics.SpringValid }

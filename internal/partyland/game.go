@@ -499,3 +499,6 @@ func (g *Game) AttachAudio(m *audio.Module) {
 		return next
 	}
 }
+
+// PlungerValid exposes the one canonical source spring gate to host adapters.
+func (g *Game) PlungerValid() bool { return g.Physics.SpringValid }

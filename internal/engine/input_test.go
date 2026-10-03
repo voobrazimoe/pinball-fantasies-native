@@ -27,7 +27,8 @@ func (s *inputSession) Frame() *image.RGBA                 { return image.NewRGB
 func (s *inputSession) Result() (tablelogic.Decimal, bool) { return tablelogic.Decimal{}, false }
 func (s *inputSession) PCM() []byte                        { return []byte{0, 0, 0, 0} }
 func (s *inputSession) Cue(string)                         {}
-func (s *inputSession) InChute() bool                      { return s.valid }
+func (s *inputSession) InChute() bool                      { return true }
+func (s *inputSession) PlungerValid() bool                 { return s.valid }
 func inputEngine(t *testing.T) (*Engine, *inputSession) {
 	t.Helper()
 	m, err := frontend.New(nil, nil)

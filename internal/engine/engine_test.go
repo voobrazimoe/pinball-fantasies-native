@@ -120,10 +120,7 @@ func TestDirectRunnerConformanceAllTables(t *testing.T) {
 				mouse := gameplay.Mouse{}
 				delta := 0
 				fire := false
-				active := func() bool {
-					v, ok := a.Model.Session.(interface{ InChute() bool })
-					return !direct.Suspended && a.Model.Mode == frontend.Playing && ok && v.InChute()
-				}
+				active := func() bool { return !direct.Suspended && a.Model.MousePlungerActive() }
 				key := func(k uint8) {
 					direct.Submit(frontend.Input{Gameplay: held, Keys: []frontend.Key{frontend.Key(k)}})
 					e.Key(k)
