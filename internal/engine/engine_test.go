@@ -17,13 +17,24 @@ import (
 	"time"
 )
 
+func requireData(t *testing.T, data string) {
+	t.Helper()
+	names := []string{"INTRO.PRG", "INTRO.MOD", "MOD2.MOD"}
+	for i := 1; i <= 4; i++ {
+		names = append(names, fmt.Sprintf("TABLE%d.PRG", i), fmt.Sprintf("TABLE%d.MOD", i))
+	}
+	for _, name := range names {
+		testinputs.Require(t, filepath.Join(data, name))
+	}
+}
+
 func runtimeFor(t *testing.T, scroll settings.ScrollMode) *frontend.Runtime {
 	t.Helper()
 	data := os.Getenv("PF_ENGINE_DATA_DIR")
 	if data == "" {
 		data = "../.."
 	}
-	testinputs.Require(t, filepath.Join(data, "INTRO.PRG"), filepath.Join(data, "TABLE1.MOD"))
+	requireData(t, data)
 	rt, err := frontend.LoadConfigured(data, nil, &settings.Store{Directory: t.TempDir()})
 	if err != nil {
 		t.Fatal(err)
@@ -138,6 +149,7 @@ func TestDirectRunnerConformanceAllTables(t *testing.T) {
 				}
 				var samples int
 				seenLaunch, seenDrain := false, false
+				seenMouseFire := false
 				seenPlayers := map[int]bool{}
 				seenBalls := map[uint64]bool{}
 				check := func(checkpoint bool) {
@@ -224,18 +236,29 @@ func TestDirectRunnerConformanceAllTables(t *testing.T) {
 					t.Fatal("table/hotseat start not exercised")
 				}
 
+				// Let original new-game/SETBALL presentation finish before launching.
+				for warm := 0; warm < 200; warm++ {
+					now = direct.Next
+					check(false)
+				}
+				if !active() {
+					t.Fatal("initial source chute not ready")
+				}
 				for tick := 0; tick < 2400; tick++ {
 					now = direct.Next
 					action(Left, tick%93 < 18)
 					action(Right, tick%71 < 14)
 					action(Spring, tick < 32)
-					if tick >= 600 && tick%600 < 32 {
+					if tick >= 100 && tick%64 < 32 {
 						e.PlungerDelta(8)
 						if active() {
 							delta += 8
 						}
 					}
-					if tick >= 600 && tick%600 == 32 {
+					if tick >= 100 && tick%64 == 32 {
+						if active() && reflect.ValueOf(a.Model.Session).Elem().FieldByName("Physics").Interface().(*physics.Game).SpringPosition > 0 {
+							seenMouseFire = true
+						}
 						e.PlungerFire()
 						if active() {
 							fire = true
@@ -282,8 +305,8 @@ func TestDirectRunnerConformanceAllTables(t *testing.T) {
 					check(tick%211 == 0)
 				}
 				t.Logf("source tasks=%d PCM frames=%d mode=%d launch=%t drain=%t players=%v balls=%v", direct.Ticks, samples, a.Model.Mode, seenLaunch, seenDrain, seenPlayers, seenBalls)
-				if !seenLaunch || !seenDrain || len(seenPlayers) < 2 {
-					t.Fatal("launch/drain/new-ball/hotseat trace coverage incomplete")
+				if !seenLaunch || !seenDrain || len(seenPlayers) < 2 || !seenMouseFire {
+					t.Fatal("launch/drain/new-ball/hotseat/mouse trace coverage incomplete")
 				}
 
 			})
@@ -310,7 +333,7 @@ func TestShutdownUsesSharedSettingsStorage(t *testing.T) {
 	if data == "" {
 		data = "../.."
 	}
-	testinputs.Require(t, filepath.Join(data, "INTRO.PRG"))
+	requireData(t, data)
 	state := t.TempDir()
 	e, err := Load(data, state, 0)
 	if err != nil {

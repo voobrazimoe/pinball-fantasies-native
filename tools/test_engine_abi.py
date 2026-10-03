@@ -3,7 +3,7 @@
 Usage: test_engine_abi.py --library LIB --oracle PFTRACE --data ORIGINALS
 No fixture or commercial payload is written to the repository.
 """
-import argparse, ctypes as C, hashlib, json, pathlib, subprocess, tempfile
+import argparse, ctypes as C, hashlib, json, pathlib, subprocess, tempfile, threading
 
 def trace(table):
     steps=[]; ns=0
@@ -17,6 +17,7 @@ def trace(table):
         for char in word:step(Keys=[57 if char==' ' else codes[letters.index(char)]])
         step(Frame=True)
     step(Keys=[60],Frame=True) # F2: two players
+    for _ in range(200):step()
     for tick in range(2400):
         if tick==300:
             step(Suspend=True,Frame=True);ns+=3_600_000_000_000
@@ -24,7 +25,7 @@ def trace(table):
             step(Resume=True,Frame=True);step(Keys=[25],Frame=True)
         if tick%137==0:ns+=70_422_535 # slow wake: all five overdue tasks
         step(Actions=[[0,int(tick%93<18)],[1,int(tick%71<14)],[2,int(tick<32)],[3,int(tick==120)]],
-             Delta=8 if tick>=600 and tick%600<32 else 0,Fire=tick>=600 and tick%600==32,Frame=tick%211==0)
+             Delta=8 if tick>=100 and tick%64<32 else 0,Fire=tick>=100 and tick%64==32,Frame=tick%211==0)
     return dict(Steps=steps)
 
 def main():
@@ -56,12 +57,18 @@ def main():
           expected=json.loads(subprocess.check_output([a.oracle,'-data',a.data,'-state',str(state)],input=json.dumps(replay).encode()))
           handle=lib.pf_engine_create(a.data.encode(),str(state).encode(),0,error,256)
           assert handle,error.value
-          count=0;digest=None;callback_errors=[]
+          count=0;digest=None;callback_errors=[];concurrent_checked=False
           def receive(ctx,samples,size):
-            nonlocal count
+            nonlocal count,concurrent_checked
             if size%4:callback_errors.append('partial PCM frame')
             count+=size//4;digest.update(C.string_at(samples,size))
             if lib.pf_engine_set_action(handle,0,1)!=-2:callback_errors.append('reentry not rejected')
+            if not concurrent_checked:
+              concurrent_checked=True
+              results=[]
+              worker=threading.Thread(target=lambda:results.append(lib.pf_engine_set_action(handle,0,1)))
+              worker.start();worker.join(5)
+              if worker.is_alive() or results!=[-2]:callback_errors.append('concurrent mutation not rejected')
           sink=sink_type(receive)
           for index,(step,want) in enumerate(zip(replay['Steps'],expected)):
             ns=step['NS']
