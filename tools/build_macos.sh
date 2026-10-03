@@ -8,6 +8,9 @@ export GOOS=darwin GOARCH=arm64 CGO_ENABLED=1
 export CC="$(xcrun --find clang)"
 export MACOSX_DEPLOYMENT_TARGET=13.0
 sdk=$(xcrun --sdk macosx --show-sdk-path)
+export SDKROOT="$sdk"
+export CGO_CFLAGS="-isysroot $sdk -arch arm64 -mmacosx-version-min=13.0"
+export CGO_LDFLAGS="-isysroot $sdk -arch arm64 -mmacosx-version-min=13.0"
 mkdir -p bin/macos release/macos
 ./tools/build_engine.sh c-archive bin/macos/libpfengine.a
 ./tools/build_engine.sh c-shared bin/macos/libpfengine.dylib
