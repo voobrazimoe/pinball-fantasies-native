@@ -38,3 +38,9 @@ local toolchain when installed, otherwise Go from PATH; Windows may run `go test
 ./...` and `go build -buildvcs=false -trimpath ./cmd/pinballfantasies` directly.
 Linux AppImage packaging additionally needs Debian/Ubuntu package metadata,
 `dpkg-query`, `ldd` and network access for the pinned AppImage tools.
+
+The host-independent engine can also be built as a C archive/shared library
+using `tools/build_engine.sh`. See [native engine build and conformance](native-engine.md)
+for the stable header, ownership rules and original-backed replay command. Linux
+CI builds both C interfaces without commercial assets. macOS/Android applications
+are not available yet; their SDK and runtime acceptance remain pending.

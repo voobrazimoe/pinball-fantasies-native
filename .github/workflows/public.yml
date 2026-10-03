@@ -24,5 +24,12 @@ jobs:
         run: echo "CGO_CFLAGS=$(pkg-config --cflags sdl2)" >> "$GITHUB_ENV"
       - run: python tools/check_public_source.py
       - run: go test -p=1 -count=1 ./...
+      - if: runner.os == 'Linux'
+        name: Build native engine C interfaces (no commercial inputs)
+        run: |
+          mkdir -p bin
+          go build -buildvcs=false -trimpath -buildmode=c-archive -o bin/libpfengine.a ./cmd/pfengine
+          go build -buildvcs=false -trimpath -buildmode=c-shared -o bin/libpfengine.so ./cmd/pfengine
+
       - run: go build -buildvcs=false -trimpath -o pinballfantasies${{ runner.os == 'Windows' && '.exe' || '' }} ./cmd/pinballfantasies
 # No commercial fixtures, reference downloads, personal tags or artifact uploads.
