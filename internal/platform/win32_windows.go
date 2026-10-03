@@ -196,6 +196,17 @@ func windowProc(hwnd uintptr, msg uint32, w, l uintptr) uintptr {
 			// Reconcile before decoding Enter as well as after pumping: a lost Alt
 			// break must not turn the next ordinary Enter into a shortcut.
 			h.refreshInput("key", uint32(w), l, msg == 0x100 || msg == 0x104)
+			if (w == 0x11 || w == 0xa2) && l&(1<<24) == 0 {
+				// Inspect without removing the next message. This runs in the
+				// window procedure so modal Windows message pumps work too.
+				stamp, _, _ := inputMessageTime.Call()
+				var next message
+				found, _, _ := inputPeekMessage.Call(uintptr(unsafe.Pointer(&next)), 0, 0, 0, 0)
+				if found != 0 && next.HWND == hwnd && windowsAltGrControl(uint32(w), l, uint32(stamp), next.ID, uint32(next.WParam), next.LParam, next.Time) {
+					h.refreshInput("altgr-control-ignored", uint32(w), l, msg == 0x100 || msg == 0x104)
+					return 0
+				}
+			}
 			h.events = append(h.events, h.input.key(uint32(w), l, msg == 0x100 || msg == 0x104)...)
 			return 0 // consume system keys too; Alt remains a flipper, Alt+Enter shared shortcut
 		case 0xff: // WM_INPUT: unscaled hardware-relative mouse motion.

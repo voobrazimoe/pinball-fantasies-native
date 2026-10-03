@@ -13,6 +13,8 @@ import (
 var asyncKeyState = up("GetAsyncKeyState")
 var inputFocus = up("GetFocus")
 var inputForeground = up("GetForegroundWindow")
+var inputMessageTime = up("GetMessageTime")
+var inputPeekMessage = up("PeekMessageW")
 
 func (h *hostWindow) refreshInput(source string, vk uint32, l uintptr, makeKey bool) int {
 	var physical uint8

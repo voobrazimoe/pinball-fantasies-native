@@ -4,6 +4,21 @@ package platform
 // Virtual letters match SDL's physical US scan contract (DOS initials/control codes).
 type windowsKeys struct{ down [256]bool }
 
+// Windows implements AltGr as Left Ctrl followed by extended Right Alt with
+// the same message timestamp. Identify the paired Ctrl before it enters the
+// flipper history; suppressing all Ctrl while Right Alt is held would also
+// suppress a real, independently pressed left flipper.
+func windowsAltGrControl(vk uint32, l uintptr, stamp uint32, nextID, nextVK uint32, nextL uintptr, nextStamp uint32) bool {
+	if (vk != 0x11 && vk != 0xa2) || l&(1<<24) != 0 {
+		return false
+	}
+	switch nextID {
+	case 0x100, 0x101, 0x104, 0x105:
+		return (nextVK == 0x12 || nextVK == 0xa5) && nextL&(1<<24) != 0 && stamp == nextStamp
+	}
+	return false
+}
+
 // Query the sided VKs, never VK_SHIFT/VK_CONTROL/VK_MENU. Each index in the
 // snapshot has its own bit, so overlapping modifiers can be reconciled
 // independently.
