@@ -14,6 +14,7 @@ type Runner struct {
 	Runtime          *frontend.Runtime
 	Now              func() time.Time
 	Next             time.Time
+	Ticks            uint64
 	Done, Suspended  bool
 	input            frontend.Input
 	resumeAfterFocus bool
@@ -58,6 +59,21 @@ func (r *Runner) Suspend() {
 	r.mouseFireNext = false
 	r.resumeAfterFocus = false
 }
+
+// LoseFocus applies the existing pause request immediately, without advancing
+// source or tracker time, then clears all pending controls. Resume re-anchors.
+func (r *Runner) LoseFocus() error {
+	if err := r.pauseForFocus(false); err != nil {
+		return err
+	}
+	r.Suspend()
+	return nil
+}
+func (r *Runner) pauseForFocus(close bool) error {
+	r.Runtime.PCM = nil
+	return r.Runtime.Model.Update(frontend.Input{FocusLost: true, Close: close})
+}
+
 func (r *Runner) Resume() {
 	if r.input.FocusLost {
 		r.resumeAfterFocus = true
@@ -111,12 +127,14 @@ func (r *Runner) Advance(poll func(), pcm func([]byte) error) error {
 		if in.FocusLost {
 			// Apply the desktop pause request without rendering INTRO PCM or moving
 			// tracker phase just because a lifecycle notification arrived.
-			r.Runtime.PCM = nil
-			if err := r.Runtime.Model.Update(in); err != nil {
+			if err := r.pauseForFocus(in.Close); err != nil {
 				return err
 			}
 		} else if err := r.Runtime.Update(in); err != nil {
 			return err
+		}
+		if !in.FocusLost {
+			r.Ticks++
 		}
 		r.Next = r.Next.Add(time.Second / time.Duration(hz))
 		r.Done = r.Runtime.Model.Mode == frontend.Quit
