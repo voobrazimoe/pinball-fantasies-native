@@ -24,7 +24,6 @@ static void inputEvent(void *context,PFHostEvent event,int32_t a,int32_t b) {
     PFInput _input;
     PFAudio _audio;
     BOOL _focused, _mouseActive, _cursorHidden, _failed;
-    id _deviceObserver;
 }
 - (int64_t)now { return pf_clock_ns(mach_absolute_time(),_epoch,_timebase.numer,_timebase.denom); }
 - (void)fail:(NSString *)message {
@@ -49,6 +48,7 @@ static void inputEvent(void *context,PFHostEvent event,int32_t a,int32_t b) {
     _engine=pf_engine_create((char *)data.fileSystemRepresentation,(char *)state.fileSystemRepresentation,
                              [self now],failure,sizeof(failure));
     if (!_engine) { [self fail:[NSString stringWithUTF8String:failure]]; return; }
+    [self check:pf_engine_suspend(_engine)];
     NSRect usable=NSScreen.mainScreen.visibleFrame;
     NSSize size=NSMakeSize(fmin(800,usable.size.width*.85),fmin(766,usable.size.height*.85));
     _window=[[NSWindow alloc] initWithContentRect:NSMakeRect(0,0,size.width,size.height)
@@ -61,7 +61,7 @@ static void inputEvent(void *context,PFHostEvent event,int32_t a,int32_t b) {
     _view.host=self; _view.autoresizingMask=NSViewWidthSizable|NSViewHeightSizable;
     _window.contentView=_view; [_window makeFirstResponder:_view]; [_window center];
     [_window makeKeyAndOrderFront:nil]; [NSApp activateIgnoringOtherApps:YES];
-    [self check:pf_engine_suspend(_engine)]; [self syncFocus];
+    [self syncFocus];
     if (!pf_audio_open(&_audio)) NSLog(@"CoreAudio unavailable: %d (game remains playable)",_audio.error);
     __weak PFApp *weakSelf=self;
     pf_audio_watch_device(&_audio, ^{ [weakSelf deviceChanged]; });
