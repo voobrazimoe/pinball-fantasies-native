@@ -1,8 +1,8 @@
 package platform
 
 import (
-	"fmt"
 	"os"
+	"pinballfantasies/internal/diagnostics"
 	"pinballfantasies/internal/frontend"
 	"pinballfantasies/internal/gameplay"
 	"pinballfantasies/internal/source"
@@ -122,7 +122,7 @@ func showFrontend(r *frontend.Runtime, duration time.Duration, device *AudioDevi
 	priorMode, priorTable := r.Model.Mode, r.Model.Selected
 	submitPCM := func(pcm []byte) error {
 		if priorMode != r.Model.Mode || priorTable != r.Model.Selected {
-			fmt.Printf("PF6: %s (table %d)\n", r.Model.Mode, r.Model.Selected)
+			diagnostics.Printf("PF6: %s (table %d)\n", r.Model.Mode, r.Model.Selected)
 		}
 		priorMode, priorTable = r.Model.Mode, r.Model.Selected
 		if runner.Done {

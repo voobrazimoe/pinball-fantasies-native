@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"pinballfantasies/internal/audio"
+	"pinballfantasies/internal/diagnostics"
 	"pinballfantasies/internal/frontend"
 	"pinballfantasies/internal/gameshow"
 	"pinballfantasies/internal/physics"
@@ -140,7 +141,7 @@ func runNativeTable(table int, dataDir, output string, duration time.Duration, t
 		if e != nil {
 			return e
 		}
-		fmt.Printf("PF%d ticks=%d %s\n", milestone, completed, summary())
+		diagnostics.Printf("PF%d ticks=%d %s\n", milestone, completed, summary())
 		return ce
 	}
 	return platform.ShowTablePhysics(g.Frame(), duration, name, next)

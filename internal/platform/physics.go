@@ -26,6 +26,7 @@ import "C"
 import (
 	"fmt"
 	"image"
+	"pinballfantasies/internal/diagnostics"
 	"runtime"
 	"time"
 	"unsafe"
@@ -67,7 +68,7 @@ func ShowTablePhysics(first *image.RGBA, duration time.Duration, table string, n
 		return fail()
 	}
 	defer C.SDL_DestroyTexture(texture)
-	fmt.Println(table+" window opened; SDL driver:", C.GoString(C.SDL_GetCurrentVideoDriver()))
+	diagnostics.Println(table+" window opened; SDL driver:", C.GoString(C.SDL_GetCurrentVideoDriver()))
 	frame := first
 	paused := false
 	deadline := time.Now().Add(duration)

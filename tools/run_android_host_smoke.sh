@@ -76,8 +76,21 @@ timeout 10 adb shell settings put system accelerometer_rotation 0
 timeout 10 adb shell wm user-rotation lock 0
 timeout 10 adb shell input keyevent KEYCODE_WAKEUP
 timeout 10 adb shell wm dismiss-keyguard
+# Public launch must be quiet before the marker-based opt-in smoke.
+timeout 10 adb shell am force-stop "$PACKAGE"
 begin_phase
 timeout 30 adb shell am start -W -n "$COMPONENT"
+sleep 3
+test -n "$(timeout 10 adb shell pidof "$PACKAGE" | tr -d '\r')"
+snapshot
+if grep -Eq 'A[123]_(HOST|SURFACE|VIEWPORT|FRAME|ACTIVE|ACTIVITY|NATIVE|INPUT|SHELL|DATA|IMPORT)' "$scratch/log"; then
+    echo 'Routine diagnostics emitted by default launch' >&2
+    cat "$scratch/log" >&2
+    exit 1
+fi
+timeout 10 adb shell am force-stop "$PACKAGE"
+begin_phase
+timeout 30 adb shell am start -W -n "$COMPONENT" --ez PF_DIAGNOSTICS true
 wait_for A1_FRAME_PRESENTED
 wait_for A2_SHELL_NO_DATA
 wait_for 'A3_INPUT_STATE resumed=1 focused=1'
@@ -100,7 +113,7 @@ begin_phase
 timeout 10 adb shell input keyevent KEYCODE_HOME
 wait_for A1_ACTIVITY_PAUSED
 begin_phase
-timeout 30 adb shell am start -W -n "$COMPONENT"
+timeout 30 adb shell am start -W -n "$COMPONENT" --ez PF_DIAGNOSTICS true
 wait_for A1_ACTIVITY_RESUMED
 wait_for A1_ACTIVE_FRAME
 wait_for 'A3_INPUT_STATE resumed=1 focused=1'
@@ -117,7 +130,7 @@ require_same_host
 # A process restart creates fresh EGL resources and presents again.
 timeout 10 adb shell am force-stop "$PACKAGE"
 begin_phase
-timeout 30 adb shell am start -W -n "$COMPONENT"
+timeout 30 adb shell am start -W -n "$COMPONENT" --ez PF_DIAGNOSTICS true
 wait_for A1_FRAME_PRESENTED
 wait_for A2_SHELL_NO_DATA
 wait_for 'A3_INPUT_STATE resumed=1 focused=1'

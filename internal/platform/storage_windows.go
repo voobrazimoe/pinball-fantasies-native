@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"pinballfantasies/internal/diagnostics"
 	"runtime/debug"
 	"unsafe"
 )
@@ -15,7 +16,7 @@ var GUIMode string
 var diagnosticFile *os.File
 
 func InitDiagnostics(configDir string) error {
-	if GUIMode != "1" {
+	if GUIMode != "1" || !diagnostics.Enabled() {
 		return nil
 	}
 	dir, e := StateDirectory(configDir)
@@ -43,7 +44,7 @@ func InitDiagnostics(configDir string) error {
 func ReportFatal(err error) {
 	fmt.Fprintln(os.Stderr, err)
 	if GUIMode == "1" {
-		up("MessageBoxW").Call(0, uintptr(unsafe.Pointer(utf(err.Error()+"\n\nOriginal data: use -data-dir <installation directory>. Diagnostics: userdata\\native.log beside the executable (or -config-dir)."))), uintptr(unsafe.Pointer(utf("Pinball Fantasies"))), 0x10)
+		up("MessageBoxW").Call(0, uintptr(unsafe.Pointer(utf(err.Error()+"\n\nOriginal data: use -data-dir <installation directory>. Enable PF_DIAGNOSTICS=1 for diagnostics in userdata\\native.log (or -config-dir)."))), uintptr(unsafe.Pointer(utf("Pinball Fantasies"))), 0x10)
 	}
 }
 func RecoverFatal() {

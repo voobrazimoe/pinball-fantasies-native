@@ -16,6 +16,7 @@ import "C"
 import (
 	"fmt"
 	"pinballfantasies/internal/audio"
+	"pinballfantasies/internal/diagnostics"
 	"unsafe"
 )
 
@@ -37,12 +38,12 @@ func OpenAudio() (*AudioDevice, error) {
 		return nil, fmt.Errorf("SDL audio: %s", C.GoString(C.SDL_GetError()))
 	}
 	// Queue a short deterministic pre-roll before starting device consumption.
-	fmt.Println("SDL audio opened: 48000 Hz stereo signed 16-bit; driver:", C.GoString(C.SDL_GetCurrentAudioDriver()))
+	diagnostics.Println("SDL audio opened: 48000 Hz stereo signed 16-bit; driver:", C.GoString(C.SDL_GetCurrentAudioDriver()))
 	return &AudioDevice{id: id}, nil
 }
 func (a *AudioDevice) Close() {
-	fmt.Printf("SDL audio output: queue resets=%d empty-queue observations=%d\n", a.Dropped, a.EmptyQueues)
-	fmt.Printf("SDL audio continuity: lifecycle clears=%d starts=%d\n", a.LifecycleClears, a.Starts)
+	diagnostics.Printf("SDL audio output: queue resets=%d empty-queue observations=%d\n", a.Dropped, a.EmptyQueues)
+	diagnostics.Printf("SDL audio continuity: lifecycle clears=%d starts=%d\n", a.LifecycleClears, a.Starts)
 	C.SDL_CloseAudioDevice(a.id)
 	C.SDL_QuitSubSystem(C.SDL_INIT_AUDIO)
 }

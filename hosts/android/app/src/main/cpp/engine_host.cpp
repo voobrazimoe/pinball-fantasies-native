@@ -1,6 +1,6 @@
 #include "abi.h"
 #include "a3_host.h"
-#include <android/log.h>
+#include "diagnostics.h"
 #include <jni.h>
 #include <time.h>
 #include <array>
@@ -29,7 +29,7 @@ std::string path(JNIEnv* env, jbyteArray bytes) {
     return result;
 }
 jstring error(JNIEnv* env, const char* message) {
-    __android_log_print(ANDROID_LOG_INFO, "PinballFantasies", "A2_ENGINE_REJECTED %s", message);
+    __android_log_print(ANDROID_LOG_ERROR, "PinballFantasies", "A2_ENGINE_REJECTED %s", message);
     // Shared loader errors are bounded; byte[] -> String below preserves standard UTF-8.
     jclass stringClass = env->FindClass("java/lang/String");
     jmethodID constructor = env->GetMethodID(stringClass, "<init>", "([BLjava/lang/String;)V");
@@ -47,6 +47,9 @@ void stop() {
 }
 }
 #define JNI_METHOD(name) Java_io_github_voobrazimoe_pinballfantasies_PinballActivity_##name
+extern "C" JNIEXPORT void JNICALL JNI_METHOD(nativeDiagnostics)(JNIEnv*, jclass, jboolean enabled) {
+    pfDiagnosticsRequested.store(enabled);
+}
 extern "C" JNIEXPORT jlong JNICALL JNI_METHOD(nativeOpen)(JNIEnv*, jclass) {
     std::lock_guard<std::mutex> guard(lock);
     stop(); opened = true; resumed = focused = false;
@@ -71,11 +74,11 @@ extern "C" JNIEXPORT jstring JNICALL JNI_METHOD(nativeEngine)(
     if (handle == 0) return error(env, message[0] ? message.data() : "Engine creation failed");
     if (operation == 0) {
         pf_engine_destroy(handle);
-        __android_log_print(ANDROID_LOG_INFO, "PinballFantasies", "A2_CANDIDATE_VALIDATED");
+        PF_LOGI("A2_CANDIDATE_VALIDATED");
     } else {
         persistent = handle;
         if (!active()) pf_engine_suspend(persistent);
-        __android_log_print(ANDROID_LOG_INFO, "PinballFantasies", "A2_ENGINE_BOOTSTRAPPED ABI=1");
+        PF_LOGI("A2_ENGINE_BOOTSTRAPPED ABI=1");
     }
     return nullptr;
 }
@@ -86,7 +89,7 @@ extern "C" JNIEXPORT void JNICALL JNI_METHOD(nativeActive)(JNIEnv*, jclass, jlon
  std::lock_guard<std::mutex> guard(lock);
  if (!opened || token != generation) return;
  bool before = active(); resumed = resume; focused = focus;
- __android_log_print(ANDROID_LOG_INFO, "PinballFantasies", "A3_INPUT_STATE resumed=%d focused=%d", resumed, focused);
+ PF_LOGI("A3_INPUT_STATE resumed=%d focused=%d", resumed, focused);
  if (persistent && before != active()) {
   if (active()) pf_engine_resume(persistent, now());
   else pf_engine_suspend(persistent);

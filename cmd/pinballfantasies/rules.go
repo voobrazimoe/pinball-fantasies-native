@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"pinballfantasies/internal/audio"
+	"pinballfantasies/internal/diagnostics"
 	"pinballfantasies/internal/partyland"
 	"pinballfantasies/internal/physics"
 	"pinballfantasies/internal/platform"
@@ -105,7 +106,7 @@ func runRules(dataDir, output string, duration time.Duration, ticks, releaseAt i
 		if err != nil {
 			return err
 		}
-		fmt.Printf("PF4 ticks=%d score=%s bonus=%s multiplier=%d ball=%d phase=%d\n", completed, game.Score, game.Bonus, game.Multiplier, game.BallNumber, game.Phase)
+		diagnostics.Printf("PF4 ticks=%d score=%s bonus=%s multiplier=%d ball=%d phase=%d\n", completed, game.Score, game.Bonus, game.Multiplier, game.BallNumber, game.Phase)
 		return closeErr
 	}
 	return platform.ShowPhysics(game.Frame(), duration, next)

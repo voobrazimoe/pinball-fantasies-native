@@ -54,6 +54,7 @@ public final class ImportInstrumentation extends Instrumentation {
             root = Files.createTempDirectory(getTargetContext().getNoBackupFilesDir().toPath(), "a2-test-").toFile();
             File data = new File(root, "Data"), state = new File(root, "State.validation-test");
             Files.createDirectories(data.toPath()); Files.createDirectories(state.toPath());
+            PinballActivity.nativeDiagnostics(true);
             session = PinballActivity.nativeOpen();
             String missing = PinballActivity.nativeEngine(session, 0,
                     data.getAbsolutePath().getBytes(StandardCharsets.UTF_8),

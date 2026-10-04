@@ -33,7 +33,7 @@ with tempfile.TemporaryDirectory(prefix='pf6-smoke-') as scores:
  if os.environ.get('PF11_CONFIG'):Path(scores,'PINBALL.CFG').write_bytes(initial_config)
  expected=bytearray(initial_config)
  for i in range(6):expected[i]=(expected[i]+1)%(3 if i==2 else 2)
- env=dict(os.environ,SDL_VIDEODRIVER='x11',SDL_AUDIODRIVER=os.environ.get('PF11_AUDIO_DRIVER','dummy'))
+ env=dict(os.environ,PF_DIAGNOSTICS='1',SDL_VIDEODRIVER='x11',SDL_AUDIODRIVER=os.environ.get('PF11_AUDIO_DRIVER','dummy'))
  p=subprocess.Popen(['./bin/pinballfantasies','-data-dir','.','-duration','180s','-high-score-dir',scores,'-config-dir',scores],env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
  def reader():
   for line in p.stdout:lines.append(line.rstrip());print(line.rstrip(),flush=True)

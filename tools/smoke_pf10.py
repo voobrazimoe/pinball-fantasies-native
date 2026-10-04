@@ -27,7 +27,7 @@ d=x.XOpenDisplay(None)
 assert d,'X11 display unavailable'
 lines=[]
 with tempfile.TemporaryDirectory(prefix='pf6-smoke-') as scores:
- env=dict(os.environ,SDL_VIDEODRIVER='x11',SDL_AUDIODRIVER=os.environ.get('PF10_AUDIO_DRIVER','dummy'))
+ env=dict(os.environ,PF_DIAGNOSTICS='1',SDL_VIDEODRIVER='x11',SDL_AUDIODRIVER=os.environ.get('PF10_AUDIO_DRIVER','dummy'))
  p=subprocess.Popen(['./bin/pinballfantasies','-data-dir','.','-duration','60s','-high-score-dir',scores],env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
  def reader():
   for line in p.stdout:lines.append(line.rstrip());print(line.rstrip(),flush=True)

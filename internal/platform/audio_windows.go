@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"pinballfantasies/internal/audio"
+	"pinballfantasies/internal/diagnostics"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -55,7 +56,7 @@ func OpenAudio() (*AudioDevice, error) {
 		mm("waveOutClose", a.id)
 		return nil, e
 	}
-	fmt.Println("waveOut opened: 48000 Hz stereo signed 16-bit")
+	diagnostics.Println("waveOut opened: 48000 Hz stereo signed 16-bit")
 	return a, nil
 }
 func (a *AudioDevice) reap(force bool) (int, error) {
@@ -179,7 +180,7 @@ func (a *AudioDevice) Close() {
 	if e := mm("waveOutClose", a.id); e != nil {
 		fmt.Fprintln(os.Stderr, e)
 	}
-	fmt.Printf("waveOut output: queue resets=%d empty-queue observations=%d lifecycle clears=%d starts=%d\n", a.Dropped, a.EmptyQueues, a.LifecycleClears, a.Starts)
+	diagnostics.Printf("waveOut output: queue resets=%d empty-queue observations=%d lifecycle clears=%d starts=%d\n", a.Dropped, a.EmptyQueues, a.LifecycleClears, a.Starts)
 }
 
 func (a *AudioDevice) QueuedBytes() int {

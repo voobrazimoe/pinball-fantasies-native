@@ -6,10 +6,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"pinballfantasies/internal/diagnostics"
 )
 
 func InitDiagnostics(configDir string) error {
-	if GUIMode != "1" {
+	if GUIMode != "1" || !diagnostics.Enabled() {
 		return nil
 	}
 	dir, err := StateDirectory(configDir)

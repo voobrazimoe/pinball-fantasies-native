@@ -40,6 +40,7 @@ import "C"
 import (
 	"fmt"
 	"image"
+	"pinballfantasies/internal/diagnostics"
 	"pinballfantasies/internal/gameplay"
 	"runtime"
 	"unsafe"
@@ -97,7 +98,7 @@ func openHost(first *image.RGBA) (_ *hostWindow, err error) {
 
 	hst := &hostWindow{window: window, renderer: renderer}
 	hst.presentation.backend = sdlWindow{window}
-	fmt.Println("PF6 window opened; SDL driver:", C.GoString(C.SDL_GetCurrentVideoDriver()))
+	diagnostics.Println("PF6 window opened; SDL driver:", C.GoString(C.SDL_GetCurrentVideoDriver()))
 	return hst, nil
 }
 func (h *hostWindow) Close() {
@@ -116,7 +117,7 @@ func (h *hostWindow) Present(frame *image.RGBA) error {
 			h.texture = nil
 		}
 		h.size = frame.Rect.Size()
-		fmt.Printf("PF11.2 presentation %dx%d window ID=%d fullscreen=%t\n", h.size.X, h.size.Y, uint32(C.SDL_GetWindowID(h.window)), h.presentation.IsFullscreen())
+		diagnostics.Printf("PF11.2 presentation %dx%d window ID=%d fullscreen=%t\n", h.size.X, h.size.Y, uint32(C.SDL_GetWindowID(h.window)), h.presentation.IsFullscreen())
 		logical := logicalSize(h.size)
 		if C.SDL_RenderSetLogicalSize(h.renderer, C.int(logical.X), C.int(logical.Y)) != 0 {
 			return fail()
@@ -154,9 +155,9 @@ func (h *hostWindow) Held() int {
 }
 
 func (h *hostWindow) FullscreenTrace(clears, starts uint64, device *AudioDevice) {
-	fmt.Printf("PF11.2 fullscreen=%t logical=%dx%d window ID=%d\n", h.presentation.IsFullscreen(), h.size.X, h.size.Y, uint32(C.SDL_GetWindowID(h.window)))
+	diagnostics.Printf("PF11.2 fullscreen=%t logical=%dx%d window ID=%d\n", h.presentation.IsFullscreen(), h.size.X, h.size.Y, uint32(C.SDL_GetWindowID(h.window)))
 	if device != nil {
-		fmt.Printf("PF11.2 fullscreen audio lifecycle clears=%d/%d starts=%d/%d producer unchanged=true\n", clears, device.LifecycleClears, starts, device.Starts)
+		diagnostics.Printf("PF11.2 fullscreen audio lifecycle clears=%d/%d starts=%d/%d producer unchanged=true\n", clears, device.LifecycleClears, starts, device.Starts)
 	}
 }
 

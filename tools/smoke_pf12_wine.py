@@ -15,10 +15,10 @@ root = Path(__file__).resolve().parent.parent
 os.chdir(root)
 source = root / ('tools/smoke_pf112_fullscreen.py' if '--fullscreen' in sys.argv else 'tools/smoke_pf112.py')
 def win_geometry():
-    output = subprocess.check_output(['wine64','./bin/platform-windows.test.exe','-test.v','-test.run','TestPF12HostDriver'],env=dict(os.environ,WINEPREFIX=os.environ.get('PF12_WINEPREFIX','/tmp/pf12-wine'),WINEDEBUG='-all',PF12_DRIVER_ACTION='geometry'),text=True)
+    output = subprocess.check_output(['wine64','./bin/platform-windows.test.exe','-test.v','-test.run','TestPF12HostDriver'],env=dict(os.environ,PF_DIAGNOSTICS='1',WINEPREFIX=os.environ.get('PF12_WINEPREFIX','/tmp/pf12-wine'),WINEDEBUG='-all',PF12_DRIVER_ACTION='geometry'),text=True)
     return tuple(map(int,re.search(r'geometry=(-?\d+),(-?\d+),(-?\d+),(-?\d+)',output).groups()))
 def win_client_crop(image):
-    output = subprocess.check_output(['wine64','./bin/platform-windows.test.exe','-test.v','-test.run','TestPF12HostDriver'],env=dict(os.environ,WINEPREFIX=os.environ.get('PF12_WINEPREFIX','/tmp/pf12-wine'),WINEDEBUG='-all',PF12_DRIVER_ACTION='client'),text=True)
+    output = subprocess.check_output(['wine64','./bin/platform-windows.test.exe','-test.v','-test.run','TestPF12HostDriver'],env=dict(os.environ,PF_DIAGNOSTICS='1',WINEPREFIX=os.environ.get('PF12_WINEPREFIX','/tmp/pf12-wine'),WINEDEBUG='-all',PF12_DRIVER_ACTION='client'),text=True)
     left, top, width, height = map(int,re.search(r'client=(-?\d+),(-?\d+),(-?\d+),(-?\d+)',output).groups())
     # Wine/GNOME's X11 bridge includes client-side titlebar and shadows. Locate
     # the real Win32 client in that image rather than measuring decorations.
@@ -30,7 +30,7 @@ def win_client_crop(image):
     return image.crop((left,top,left+width,top+height))
 s = source.read_text()
 s = s.replace('def position():', 'def position():\n   return win_geometry()[:2]')
-s = s.replace("env=dict(os.environ,SDL_VIDEODRIVER='x11',SDL_AUDIODRIVER=os.environ.get('PF11_AUDIO_DRIVER','dummy'))", "env=dict(os.environ,WINEPREFIX=os.environ.get('PF12_WINEPREFIX','/tmp/pf12-wine'),WINEDEBUG='-all')")
+s = s.replace("env=dict(os.environ,PF_DIAGNOSTICS='1',SDL_VIDEODRIVER='x11',SDL_AUDIODRIVER=os.environ.get('PF11_AUDIO_DRIVER','dummy'))", "env=dict(os.environ,PF_DIAGNOSTICS='1',WINEPREFIX=os.environ.get('PF12_WINEPREFIX','/tmp/pf12-wine'),WINEDEBUG='-all')")
 s = s.replace("['./bin/pinballfantasies','-data-dir','.','-duration','180s','-high-score-dir',scores,'-config-dir',scores]", "['wine64','./bin/pinballfantasies-debug.exe','-data-dir','Z:'+str(root).replace('/','\\\\'),'-duration','180s','-high-score-dir','Z:'+scores.replace('/','\\\\'),'-config-dir','Z:'+scores.replace('/','\\\\')]")
 # Wine's X11 window PID is not necessarily the launcher PID. Only one tested
 # Pinball Fantasies process should be running on this desktop during the smoke.

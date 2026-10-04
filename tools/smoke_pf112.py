@@ -34,7 +34,7 @@ smoke_start=time.monotonic()
 with tempfile.TemporaryDirectory(prefix='pf6-smoke-') as scores:
  initial_config=bytes([0,1,0,0,0,1])  # DOS MONO imports COLOR, HARD/NORMAL
  Path(scores,'PINBALL.CFG').write_bytes(initial_config)
- env=dict(os.environ,SDL_VIDEODRIVER='x11',SDL_AUDIODRIVER=os.environ.get('PF11_AUDIO_DRIVER','dummy'))
+ env=dict(os.environ,PF_DIAGNOSTICS='1',SDL_VIDEODRIVER='x11',SDL_AUDIODRIVER=os.environ.get('PF11_AUDIO_DRIVER','dummy'))
  p=subprocess.Popen(['./bin/pinballfantasies','-data-dir','.','-duration','180s','-high-score-dir',scores,'-config-dir',scores],env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
  def reader():
   for line in p.stdout:lines.append(line.rstrip());print(line.rstrip(),flush=True)

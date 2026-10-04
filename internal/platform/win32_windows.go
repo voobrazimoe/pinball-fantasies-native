@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"image"
 	"os"
+	"pinballfantasies/internal/diagnostics"
 	"runtime"
 	"syscall"
 	"time"
@@ -154,7 +155,7 @@ func openHost(first *image.RGBA) (_ *hostWindow, err error) {
 		return nil, err
 	}
 	up("ShowWindow").Call(hwnd, 5)
-	fmt.Printf("Win32 window opened HWND=%#x; %s\n", hwnd, dpiPolicy)
+	diagnostics.Printf("Win32 window opened HWND=%#x; %s\n", hwnd, dpiPolicy)
 	return h, nil
 }
 func (h *hostWindow) Close() {
@@ -169,7 +170,7 @@ func (h *hostWindow) Close() {
 	if e := h.destroySurface(); e != nil {
 		fmt.Fprintln(os.Stderr, e)
 	}
-	fmt.Printf("Win32 repaint: paints=%d erases=%d complete blits=%d\n", h.paints, h.erases, h.blits)
+	diagnostics.Printf("Win32 repaint: paints=%d erases=%d complete blits=%d\n", h.paints, h.erases, h.blits)
 	instance, _, _ := kernel32.NewProc("GetModuleHandleW").Call(0)
 	if v, _, e := up("UnregisterClassW").Call(uintptr(unsafe.Pointer(utf("PinballFantasiesPF12"))), instance); v == 0 {
 		fmt.Fprintln(os.Stderr, apiError("UnregisterClassW", e))
@@ -344,7 +345,7 @@ func (h *hostWindow) Present(f *image.RGBA) error {
 	}
 	if h.size != f.Rect.Size() {
 		h.surfaceNeedsClear = true
-		fmt.Printf("PF12 presentation %dx%d window ID=%d fullscreen=%t\n", f.Rect.Dx(), f.Rect.Dy(), h.hwnd, h.presentation.IsFullscreen())
+		diagnostics.Printf("PF12 presentation %dx%d window ID=%d fullscreen=%t\n", f.Rect.Dx(), f.Rect.Dy(), h.hwnd, h.presentation.IsFullscreen())
 	}
 	h.size = f.Rect.Size()
 	h.pixels = frameBGRA(h.pixels, f)
@@ -579,7 +580,7 @@ func (h *hostWindow) RestoreGeometry(WindowGeometry) {} // WINDOWPLACEMENT resto
 
 func (h *hostWindow) FullscreenTrace(clears, starts uint64, device *AudioDevice) {
 	if device != nil {
-		fmt.Printf("PF12 fullscreen audio lifecycle clears=%d/%d starts=%d/%d producer unchanged=true\n", clears, device.LifecycleClears, starts, device.Starts)
+		diagnostics.Printf("PF12 fullscreen audio lifecycle clears=%d/%d starts=%d/%d producer unchanged=true\n", clears, device.LifecycleClears, starts, device.Starts)
 	}
 }
 

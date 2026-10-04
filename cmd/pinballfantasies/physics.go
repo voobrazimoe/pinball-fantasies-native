@@ -6,6 +6,7 @@ import (
 	"image/png"
 	"os"
 	"path/filepath"
+	"pinballfantasies/internal/diagnostics"
 	"pinballfantasies/internal/physics"
 	"pinballfantasies/internal/platform"
 	"time"
@@ -43,7 +44,7 @@ func runPhysics(dataDir, output string, duration time.Duration, ticks, releaseAt
 		}
 		completed++
 		if ticks > 0 && completed == ticks {
-			fmt.Printf("PF3 froze after %d syncs at ball=(%d,%d), velocity=(%d,%d)\n", completed, game.Ball.PixelX, game.Ball.PixelY, game.Ball.VX, game.Ball.VY)
+			diagnostics.Printf("PF3 froze after %d syncs at ball=(%d,%d), velocity=(%d,%d)\n", completed, game.Ball.PixelX, game.Ball.PixelY, game.Ball.VX, game.Ball.VY)
 		}
 		return game.Frame(), nil
 	}
@@ -63,7 +64,7 @@ func runPhysics(dataDir, output string, duration time.Duration, ticks, releaseAt
 		if err != nil {
 			return err
 		}
-		fmt.Printf("PF3 syncs=%d ball=(%d,%d) velocity=(%d,%d) lost=%t\n", completed, game.Ball.PixelX, game.Ball.PixelY, game.Ball.VX, game.Ball.VY, game.Ball.Lost)
+		diagnostics.Printf("PF3 syncs=%d ball=(%d,%d) velocity=(%d,%d) lost=%t\n", completed, game.Ball.PixelX, game.Ball.PixelY, game.Ball.VX, game.Ball.VY, game.Ball.Lost)
 		return closeErr
 	}
 	return platform.ShowPhysics(game.Frame(), duration, next)

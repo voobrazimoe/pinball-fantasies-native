@@ -1,7 +1,7 @@
 #include "a3_host.h"
 #include <EGL/egl.h>
 #include <GLES2/gl2.h>
-#include <android/log.h>
+#include "diagnostics.h"
 #include <android/native_window.h>
 #include <game-activity/native_app_glue/android_native_app_glue.h>
 
@@ -16,7 +16,7 @@ constexpr char kLogTag[] = "PinballFantasies";
 constexpr int kFrameWidth = 320;
 constexpr int kFrameHeight = 609;
 
-#define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, kLogTag, __VA_ARGS__))
+#define LOGI(...) PF_LOGI(__VA_ARGS__)
 #define LOGE(...) ((void)__android_log_print(ANDROID_LOG_ERROR, kLogTag, __VA_ARGS__))
 
 GLuint compileShader(GLenum type, const char* source) {

@@ -36,6 +36,11 @@ int main() {
     // Simulate the already-validated A2 bootstrap; no commercial loader fixture.
     { std::lock_guard<std::mutex> guard(lock); persistent=42; }
     JNI_METHOD(nativeActive)(nullptr,nullptr,token,true,true);
+    assert(pfTestInfoLogs == 0);
+    JNI_METHOD(nativeDiagnostics)(nullptr,nullptr,true);
+    JNI_METHOD(nativeActive)(nullptr,nullptr,token,true,true);
+    assert(pfTestInfoLogs == 1);
+    JNI_METHOD(nativeDiagnostics)(nullptr,nullptr,false);
     std::vector<uint8_t> pixels; int w=0,h=0;
     assert(androidEngineFrame(true,pixels,w,h) && w==1 && h==2 && pixels[4]==5);
     assert(pixels.data()!=framePixels);

@@ -39,6 +39,11 @@ public final class PinballActivity extends GameActivity {
     private volatile boolean closed;
     private boolean resumed, focused;
     private Controls controls;
+    private boolean diagnostics;
+    static native void nativeDiagnostics(boolean enabled);
+    private void diagnostic(String message) {
+        if (diagnostics) Log.i("PinballFantasies", message);
+    }
     static native void nativeActive(long session, boolean resumed, boolean focused);
     static native void nativeInput(long session, int kind, int a, int b);
     static native long nativeOpen();
@@ -52,7 +57,8 @@ public final class PinballActivity extends GameActivity {
         if (failure != null) throw new IOException(failure);
     }
     private void status(String event, String message) {
-        Log.i("PinballFantasies", event + " " + message);
+        if (event.endsWith("REJECTED")) Log.e("PinballFantasies", event + " " + message);
+        else diagnostic(event + " " + message);
         runOnUiThread(() -> {
             if (!closed) {
                 importButton.setEnabled(true);
@@ -65,7 +71,7 @@ public final class PinballActivity extends GameActivity {
     private void requestImport() {
         if (!importButton.isEnabled()) return;
         importButton.setEnabled(false);
-        Log.i("PinballFantasies", "A2_IMPORT_REQUESTED");
+        diagnostic("A2_IMPORT_REQUESTED");
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         try { startActivityForResult(intent, IMPORT_TREE); }
@@ -123,6 +129,9 @@ public final class PinballActivity extends GameActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        diagnostics = getIntent().getBooleanExtra("PF_DIAGNOSTICS", false)
+                || "1".equals(System.getenv("PF_DIAGNOSTICS"));
+        nativeDiagnostics(diagnostics);
         super.onCreate(savedInstanceState);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             WindowManager.LayoutParams attributes = getWindow().getAttributes();
@@ -174,7 +183,7 @@ public final class PinballActivity extends GameActivity {
         importer = new DataImport(getNoBackupFilesDir(), new File(getFilesDir(), "State"),
                 new DataImport.Engine() {
                     public void validate(File data, File state) throws IOException { engineCall(0, data, state); }
-                    public void adopted() { Log.i("PinballFantasies", "A2_DATA_ADOPTED"); }
+                    public void adopted() { diagnostic("A2_DATA_ADOPTED"); }
                     public void stop() throws IOException { engineCall(2, null, null); }
                     public void bootstrap(File data, File state) throws IOException { engineCall(1, data, state); }
                 });

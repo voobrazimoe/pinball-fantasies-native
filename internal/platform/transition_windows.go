@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"image"
 	"os"
+	"pinballfantasies/internal/diagnostics"
 	"time"
 )
 
@@ -113,7 +114,7 @@ func (h *hostWindow) ToggleFullscreen(a *AudioDevice) error {
 			return err
 		}
 		h.transitionSettlingUntil = time.Now().Add(500 * time.Millisecond)
-		fmt.Printf("PF12 fullscreen=%t window ID=%d\n", h.presentation.IsFullscreen(), h.hwnd)
+		diagnostics.Printf("PF12 fullscreen=%t window ID=%d\n", h.presentation.IsFullscreen(), h.hwnd)
 		h.FullscreenTrace(clears, starts, a)
 		return nil
 	}
@@ -140,7 +141,7 @@ func (h *hostWindow) ToggleFullscreen(a *AudioDevice) error {
 	if e := writeTransition(t); e != nil && err == nil {
 		err = e
 	}
-	fmt.Printf("PF12 transition %d fullscreen=%t HWND=%#x duration=%.3fms queue=%d/%d empty=%d/%d resets=%d/%d starts=%d/%d clears=%d/%d geometry=%+v\n",
+	diagnostics.Printf("PF12 transition %d fullscreen=%t HWND=%#x duration=%.3fms queue=%d/%d empty=%d/%d resets=%d/%d starts=%d/%d clears=%d/%d geometry=%+v\n",
 		t.Sequence, t.Fullscreen, t.HWND, float64(t.DurationNS)/1e6, t.Pre.QueuedBytes, t.Post.QueuedBytes,
 		t.Pre.Empty, t.Post.Empty, t.Pre.Resets, t.Post.Resets, t.Pre.Starts, t.Post.Starts, t.Pre.Clears, t.Post.Clears, t.GeometryPost)
 	return err

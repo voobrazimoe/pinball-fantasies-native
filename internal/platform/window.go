@@ -20,6 +20,7 @@ import "C"
 import (
 	"fmt"
 	"image"
+	"pinballfantasies/internal/diagnostics"
 	"runtime"
 	"time"
 	"unsafe"
@@ -82,7 +83,7 @@ func show(frame *image.RGBA, duration time.Duration, windowTitle string) error {
 	}
 	runtime.KeepAlive(frame)
 	deadline := time.Now().Add(duration)
-	fmt.Println(windowTitle, "window opened; SDL driver:", C.GoString(C.SDL_GetCurrentVideoDriver()))
+	diagnostics.Println(windowTitle, "window opened; SDL driver:", C.GoString(C.SDL_GetCurrentVideoDriver()))
 	for {
 		if C.pf_poll_quit() != 0 {
 			return nil

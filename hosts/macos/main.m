@@ -4,6 +4,10 @@
 #import "native_input.h"
 #include <stdio.h>
 static const char *pacingPath;
+static BOOL diagnosticsEnabled(void) {
+    const char *value=getenv("PF_DIAGNOSTICS");
+    return value && strcmp(value,"1")==0;
+}
 /* OS helpers are separate modules; gameplay stays behind abi.h. */
 #import "audio_host.h"
 #import "storage.h"
@@ -158,7 +162,7 @@ static void inputEvent(void *context,PFHostEvent event,int32_t a,int32_t b) {
         if (_pacing) _advanceTime=fmax(_advanceTime,([self now]-start)/1e6);
         if (atomic_load(&_audio.ring.dropped)!=dropped) {
             pf_audio_pause(&_audio);
-            NSLog(@"Audio queue overrun: discarded stale PCM, source advancement preserved");
+            if (diagnosticsEnabled()) NSLog(@"Audio queue overrun: discarded stale PCM, source advancement preserved");
         }
         uint64_t ticks; uint32_t mode,table,flags;
         [self check:pf_engine_state(_engine,&ticks,&mode,&table,&flags)];
@@ -291,7 +295,7 @@ static void inputEvent(void *context,PFHostEvent event,int32_t a,int32_t b) {
     pf_audio_unwatch_device(&_audio); pf_audio_close(&_audio);
     if (_engine) { int32_t result=pf_engine_destroy(_engine); _engine=0;
         if (result!=PF_OK) NSLog(@"Settings save failed: %d",result); }
-    NSLog(@"Audio underruns=%llu dropped frames=%llu",(unsigned long long)atomic_load(&_audio.ring.underruns),
+    if (diagnosticsEnabled()) NSLog(@"Audio underruns=%llu dropped frames=%llu",(unsigned long long)atomic_load(&_audio.ring.underruns),
           (unsigned long long)atomic_load(&_audio.ring.dropped));
     if (_pacing) { fclose(_pacing); _pacing=NULL; }
 }

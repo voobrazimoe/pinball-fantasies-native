@@ -37,7 +37,7 @@ with tempfile.TemporaryDirectory(prefix='Personal Ж 日本 empty ') as tmp:
  folder = Path(tmp)/'Игра 日本 with spaces'; folder.mkdir()
  game = folder/artifact.name; shutil.copy2(artifact, game)
  assert list(folder.iterdir()) == [game]
- env = dict(os.environ, SDL_VIDEODRIVER='x11', SDL_AUDIODRIVER='pulseaudio', WINEPREFIX=os.environ.get('PF12_WINEPREFIX','/tmp/pf12-wine'), WINEDEBUG='-all')
+ env = dict(os.environ,PF_DIAGNOSTICS='1', SDL_VIDEODRIVER='x11', SDL_AUDIODRIVER='pulseaudio', WINEPREFIX=os.environ.get('PF12_WINEPREFIX','/tmp/pf12-wine'), WINEDEBUG='-all')
  trace=out/(backend+'-transitions.jsonl');trace.unlink(missing_ok=True)
  if backend=='wine':env['PF12_TRANSITION_LOG']=winpath(trace)
  command = [str(game)] if backend == 'linux' else ['wine64', str(game)]

@@ -36,7 +36,7 @@ for backend in (['linux', 'wine'] if args.backend == 'both' else [args.backend])
         shutil.copy2(binary, game)
         path = lambda p: str(p) if backend == 'linux' else 'Z:'+str(p).replace('/', '\\')
         fallback = Path(base)/'Fallback user config'
-        env = dict(os.environ)
+        env = dict(os.environ, PF_DIAGNOSTICS='1')
         if backend == 'linux':
             env.update(XDG_CONFIG_HOME=str(fallback), SDL_VIDEODRIVER='x11', SDL_AUDIODRIVER='pulseaudio')
             command = [str(game), '--appimage-extract-and-run']
@@ -44,8 +44,9 @@ for backend in (['linux', 'wine'] if args.backend == 'both' else [args.backend])
             env.update(APPDATA=path(fallback), WINEPREFIX=os.environ.get('PF12_WINEPREFIX', '/tmp/pf12-wine'), WINEDEBUG='-all')
             command = ['wine64', str(game)]
 
-        def run(extra, trace=False):
+        def run(extra, trace=False, diagnostics=True):
             runenv = dict(env)
+            runenv["PF_DIAGNOSTICS"] = "1" if diagnostics else "0"
             if trace:
                 runenv['LD_DEBUG'] = 'libs'
             launch = command+extra
@@ -59,6 +60,9 @@ for backend in (['linux', 'wine'] if args.backend == 'both' else [args.backend])
             return result
 
         png = Path(base)/'frame.png'
+        quiet = run(['-png', path(png)], diagnostics=False)
+        assert not (folder/'userdata/native.log').exists(), 'default launch created diagnostic file'
+        assert not quiet.stdout.strip() and not quiet.stderr.strip(), (quiet.stdout, quiet.stderr)
         result = run(['-png', path(png)], trace=backend == 'linux')
         assert png.stat().st_size > 0, 'default external data discovery failed'
         assert (folder/'userdata/native.log').is_file()
