@@ -14,6 +14,7 @@ static const char *pacingPath;
 - (void)deviceChanged;
 - (void)step;
 - (void)toggleFullscreen:(id)sender;
+- (void)toggleShiftSides:(NSMenuItem *)sender;
 - (void)noteInput:(NSEvent *)event;
 - (void)reportPacing;
 @end
@@ -60,14 +61,17 @@ static void inputEvent(void *context,PFHostEvent event,int32_t a,int32_t b) {
         if (!_pacing) NSLog(@"Could not open timing log: %s",pacingPath);
         else {
             fprintf(_pacing,"# Pinball macOS host timing; milliseconds; maxima per interval; input_draw includes event queue and waits for a source tick; draw_ms is layer submission, not scanout\n");
-            fprintf(_pacing,"# build=%s arch=%s timer=strict-dispatch input_service=immediate renderer=core-animation\n",
+            fprintf(_pacing,"# build=%s arch=%s timer=strict-dispatch input_service=immediate renderer=core-animation shift_mapping=%s\n",
                 [[NSBundle.mainBundle objectForInfoDictionaryKey:@"PFHostBuild"] UTF8String] ?: "unknown",
-                [[NSBundle.mainBundle objectForInfoDictionaryKey:@"PFHostArchitecture"] UTF8String] ?: "unknown");
+                [[NSBundle.mainBundle objectForInfoDictionaryKey:@"PFHostArchitecture"] UTF8String] ?: "unknown",
+                [NSUserDefaults.standardUserDefaults boolForKey:@"SwapShiftKeys"] ? "swapped" : "native");
             fprintf(_pacing,"seconds,mode,ticks,frames,draws,events,step_gap_ms,advance_ms,frame_copy_ms,draw_ms,event_queue_ms,input_draw_ms\n");
             fflush(_pacing);
         }
     }
-    pf_input_init(&_input,inputEvent,(__bridge void *)self); pf_audio_init(&_audio);
+    pf_input_init(&_input,inputEvent,(__bridge void *)self);
+    pf_input_swap_shift(&_input,[NSUserDefaults.standardUserDefaults boolForKey:@"SwapShiftKeys"]);
+    pf_audio_init(&_audio);
     NSString *data=nil,*state=nil; NSError *error=nil;
     if (!pf_storage_prepare(&data,&state,&error)) {
         if (error) [self fail:error.localizedDescription]; else [NSApp terminate:nil];
@@ -251,6 +255,13 @@ static void inputEvent(void *context,PFHostEvent event,int32_t a,int32_t b) {
     _cursorHidden=hide;
     if (hide) [NSCursor hide]; else [NSCursor unhide];
 }
+- (void)toggleShiftSides:(NSMenuItem *)sender {
+    BOOL swapped=!_input.swapShift;
+    pf_input_swap_shift(&_input,swapped);
+    [NSUserDefaults.standardUserDefaults setBool:swapped forKey:@"SwapShiftKeys"];
+    sender.state=swapped?NSControlStateValueOn:NSControlStateValueOff;
+    if (_pacing) fprintf(_pacing,"# shift_mapping=%s seconds=%.6f\n",swapped?"swapped":"native",[self now]/1e9);
+}
 - (void)toggleFullscreen:(id)sender {
     (void)sender;
     if (_input.fullscreenPending) return;
@@ -292,7 +303,12 @@ static void menu(PFApp *host) {
     NSMenuItem *viewItem=[NSMenuItem new]; [bar addItem:viewItem];
     NSMenu *view=[[NSMenu alloc] initWithTitle:@"View"];
     NSMenuItem *full=[view addItemWithTitle:@"Toggle Full Screen" action:@selector(toggleFullscreen:) keyEquivalent:@"f"];
-    full.target=host; viewItem.submenu=view; NSApp.mainMenu=bar;
+    full.target=host;
+    [view addItem:NSMenuItem.separatorItem];
+    NSMenuItem *shift=[view addItemWithTitle:@"Swap Left/Right Shift" action:@selector(toggleShiftSides:) keyEquivalent:@""];
+    shift.target=host;
+    shift.state=[NSUserDefaults.standardUserDefaults boolForKey:@"SwapShiftKeys"]?NSControlStateValueOn:NSControlStateValueOff;
+    viewItem.submenu=view; NSApp.mainMenu=bar;
 }
 int main(int argc,const char **argv) {
     @autoreleasepool {

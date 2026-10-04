@@ -133,6 +133,11 @@ events used keycode zero with only aggregate flags; exact sided modifier input
 cannot be recovered from those events. The original sided controls remain
 available when the input source supplies modifier keycodes.
 
+If the keyboard reports Shift sides opposite to the physical keys, enable
+**View → Swap Left/Right Shift**. The per-Mac preference persists across app
+launches and swaps only Shift contributors; Control, Option, Z, slash and arrows
+retain their normal mappings. The timing header records the selected mapping.
+
 Modifier-only input uses `flagsChanged`, public AppKit modifier-class flags and
 the physical modifier keycode. When device side flags are present, their exact
 snapshot determines the changed side instead of toggling it. This tolerates

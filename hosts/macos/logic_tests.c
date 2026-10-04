@@ -37,6 +37,19 @@ static void input_tests(void) {
     pf_input_focus(&p,false); assert(!p.held[1] && !p.fire);
     count=0; pf_input_key(&p,125,true,false,false,false); assert(count==0);
     pf_input_focus(&p,true); assert(!p.down[125]);
+    bool shifted[6]={true,false,false,false,false,false};
+    pf_input_modifiers(&p,shifted); assert(p.held[PF_LEFT] && !p.held[PF_RIGHT]);
+    pf_input_swap_shift(&p,true); assert(!p.held[PF_LEFT] && p.held[PF_RIGHT]);
+    shifted[0]=false; shifted[1]=true; pf_input_modifiers(&p,shifted);
+    assert(p.held[PF_LEFT] && !p.held[PF_RIGHT]);
+    shifted[1]=false; shifted[2]=true; pf_input_modifiers(&p,shifted);
+    assert(p.held[PF_LEFT] && !p.held[PF_RIGHT]); /* Control stays sided */
+    shifted[2]=false; shifted[5]=true; pf_input_modifiers(&p,shifted);
+    assert(!p.held[PF_LEFT] && p.held[PF_RIGHT]); /* Option stays sided */
+    pf_input_key(&p,6,true,false,false,false);
+    assert(p.held[PF_LEFT] && p.held[PF_RIGHT]); /* Z stays left */
+    pf_input_focus(&p,false); assert(!p.held[PF_LEFT] && !p.held[PF_RIGHT]);
+    pf_input_swap_shift(&p,false); pf_input_focus(&p,true);
     /* Parsec can omit side keycodes from modifier events. Ordinary arrow
        keys remain independent contributors without changing sided modifiers. */
     count=0;

@@ -170,3 +170,15 @@ breaks and missed sibling releases for Shift/Control/Option. Timing mode records
 modifier-only flags and resulting sides/holds for any remaining hardware issue.
 This addresses a found state-tracking weakness; the owner's actual Shift event
 sequence has not yet been captured, so hardware acceptance remains pending.
+
+## Shift side mapping follow-up
+
+The owner's requested left-then-right sequence in build 12e4f1e logs key 60 /
+flags 0x20104 / flippers 01 first, then key 56 / flags 0x20102 / flippers 10.
+Host routing is consistent with the reported native codes and flags. A persistent
+View → Swap Left/Right Shift option compensates for the observed reversal on the
+owner's keyboard without changing default routing on other Macs. The option
+recomputes held actions, preserves all other contributors, and appears in timing
+metadata. Logic checks cover both sides, toggling while held, mixed Control,
+Option and Z contributions, and focus clearing. Local menu activation and
+NSUserDefaults persistence after relaunch PASS. Intel physical retest pending.

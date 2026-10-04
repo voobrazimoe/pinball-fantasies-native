@@ -10,7 +10,7 @@ typedef enum { PF_EVENT_ACTION, PF_EVENT_KEY, PF_EVENT_RELEASE, PF_EVENT_FIRE,
                PF_EVENT_DELTA, PF_EVENT_FULLSCREEN } PFHostEvent;
 typedef void (*PFEmit)(void *, PFHostEvent, int32_t, int32_t);
 typedef struct {
-    bool down[128], held[4], fire, focused, fullscreenPending;
+    bool down[128], held[4], fire, focused, fullscreenPending, swapShift;
     /* Physical modifiers survive focus clearing; gameplay contributors do not. */
     bool physicalModifiers[6];
     PFEmit emit;
@@ -19,6 +19,7 @@ typedef struct {
 void pf_input_init(PFInput *, PFEmit, void *);
 void pf_input_key(PFInput *, uint16_t, bool down, bool repeat, bool command, bool option);
 void pf_input_modifiers(PFInput *, const bool sides[6]);
+void pf_input_swap_shift(PFInput *, bool swapped);
 void pf_input_focus(PFInput *, bool);
 void pf_input_button(PFInput *, bool down, bool mouseActive);
 void pf_input_motion(PFInput *, int64_t delta, bool mouseActive);
