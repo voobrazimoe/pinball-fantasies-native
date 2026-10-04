@@ -31,7 +31,7 @@ cp LICENSE "$app/Contents/Resources/LICENSE.txt"
 cp "$(./tools/go.sh env GOROOT)/LICENSE" "$app/Contents/Resources/Go-LICENSE.txt"
 ./tools/go.sh env GOVERSION > "$app/Contents/Resources/Go-version.txt"
 common=(-arch "$target" -isysroot "$sdk" -mmacosx-version-min=13.0 -Wall -Wextra -Werror -O2)
-objc=(-fobjc-arc -fblocks -framework AppKit -framework AudioToolbox -framework CoreAudio -framework IOKit -framework Security -framework CoreFoundation -framework CoreGraphics)
+objc=(-fobjc-arc -fblocks -framework AppKit -framework AudioToolbox -framework CoreAudio -framework IOKit -framework Security -framework CoreFoundation -framework CoreGraphics -framework QuartzCore)
 "$CC" "${common[@]}" -std=c11 -pthread hosts/macos/host_logic.c hosts/macos/logic_tests.c -o "$build/logic-tests"
 "$CC" "${common[@]}" "${objc[@]}" hosts/macos/main.m hosts/macos/frame_view.m hosts/macos/storage.m hosts/macos/audio_host.m hosts/macos/native_input.m hosts/macos/host_logic.c "$build/libpfengine.a" -o "$app/Contents/MacOS/pinballfantasies"
 "$CC" "${common[@]}" "${objc[@]}" hosts/macos/native_tests.m hosts/macos/frame_view.m hosts/macos/storage.m hosts/macos/audio_host.m hosts/macos/native_input.m hosts/macos/host_logic.c "$build/libpfengine.a" -o "$build/native-tests"

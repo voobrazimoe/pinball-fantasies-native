@@ -44,7 +44,7 @@ beside the app, then play with the built-in or attached keyboard. This writes
 `~/Desktop/PinballFantasies-timing.csv` with one summary per second: source ticks,
 raster/draw/event counts and maximum timer gap, engine advance, frame copy, drawing,
 event-queue delay and event-to-draw time. Event-to-draw waits for a source tick
-after receipt; it measures AppKit drawing completion, not physical screen scanout
+after receipt; it measures layer submission completion, not physical screen scanout
 or remote video latency. The log includes the build revision and timer policy;
 the zip is also saved with its revision in the filename to distinguish test builds.
 Normal launches do not open a log. The equivalent CLI
@@ -91,22 +91,23 @@ and every invalid-handle export; they do not claim successful gameplay replay.
 
 ## Window, time and input
 
-CoreGraphics presents a copied RGBA8 framebuffer with black bars and
-`kCGInterpolationNone`. Storage grows only when geometry requires more capacity;
-CGImage/provider wrappers are bounded and released after drawing. The copy is
-necessary because ABI frame retrieval can invalidate its borrowed pointer.
+Core Animation presents an immutable copied RGBA8 CGImage in a child layer with
+black bars and nearest-neighbour minification/magnification. AppKit uses
+`updateLayer`, bypassing per-frame CPU drawing and scaling in `drawRect`.
+Implicit animations are disabled for frame and geometry updates. Each image owns
+its bytes because ABI frame retrieval can invalidate the borrowed pointer and
+the compositor may still retain the previous frame.
 The original 640×240 selector is presented as 640×480, matching desktop policy;
-other framebuffers preserve their source aspect. No Metal, SDL or gameplay
-renderer is introduced.
+other framebuffers preserve their source aspect. No gameplay renderer changes.
 
 A non-spinning 120 Hz strict, zero-leeway dispatch timer on the main queue supplies
 `mach_absolute_time()` converted by `mach_timebase_info` to monotonic nanoseconds.
 Integer conversion uses 128-bit arithmetic to avoid overflow. The Go Runner
 owns 60/71 Hz scheduling and drains every due task. The host retrieves a new
 frame only after a source tick advances; intervening 120 Hz polls do not rebuild
-and copy identical rasters. Expose and resize events draw the view's retained
-pixels. Keyboard event handlers also service already-due source ticks immediately
-and display any newly prepared frame, without advancing future source ticks.
+and copy identical rasters. Expose and resize events reuse the layer's retained
+image. Keyboard event handlers also service already-due source ticks immediately
+without forcing synchronous drawing or advancing future source ticks.
 A foreground latency activity requests precise scheduling and ends on focus loss,
 minimize/sleep or termination; the dispatch timer is stopped while inactive.
 Presentation can skip frames without dropping source ticks. Resize and AppKit fullscreen do not change source

@@ -59,8 +59,8 @@ static void inputEvent(void *context,PFHostEvent event,int32_t a,int32_t b) {
         _pacing=fopen(pacingPath,"w");
         if (!_pacing) NSLog(@"Could not open timing log: %s",pacingPath);
         else {
-            fprintf(_pacing,"# Pinball macOS host timing; milliseconds; maxima per interval; input_draw includes event queue and waits for a source tick\n");
-            fprintf(_pacing,"# build=%s arch=%s timer=strict-dispatch input_service=immediate\n",
+            fprintf(_pacing,"# Pinball macOS host timing; milliseconds; maxima per interval; input_draw includes event queue and waits for a source tick; draw_ms is layer submission, not scanout\n");
+            fprintf(_pacing,"# build=%s arch=%s timer=strict-dispatch input_service=immediate renderer=core-animation\n",
                 [[NSBundle.mainBundle objectForInfoDictionaryKey:@"PFHostBuild"] UTF8String] ?: "unknown",
                 [[NSBundle.mainBundle objectForInfoDictionaryKey:@"PFHostArchitecture"] UTF8String] ?: "unknown");
             fprintf(_pacing,"seconds,mode,ticks,frames,draws,events,step_gap_ms,advance_ms,frame_copy_ms,draw_ms,event_queue_ms,input_draw_ms\n");
@@ -227,12 +227,12 @@ static void inputEvent(void *context,PFHostEvent event,int32_t a,int32_t b) {
                  (e.modifierFlags & NSEventModifierFlagOption)!=0);
     /* Consume already-due source work using the newly submitted input instead
        of waiting for another timer wake. Never advance a future source tick. */
-    [self step]; [_view displayIfNeeded];
+    [self step];
 }
 - (void)modifiers:(NSEvent *)e {
     [self noteInput:e];
     pf_macos_modifiers(&_input,e.keyCode,e.modifierFlags);
-    [self step]; [_view displayIfNeeded];
+    [self step];
 }
 - (void)motion:(NSEvent *)e {
     [self updateCursor];

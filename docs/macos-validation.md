@@ -137,3 +137,25 @@ acceptance or listening.
 [Build commands and the physical checklist](macos.md) provide the next-session
 handoff. The macOS branch must not merge before this validation is completed and
 integration is authorized.
+
+## Intel scroll-lag follow-up (Core Animation presenter)
+
+Owner timing capture from build eaa7be6/x86_64 shows playing-mode drawing maxima
+up to 31.403 ms, input queue delay up to 316.520 ms and input-to-draw up to
+318.608 ms. Source advance is typically below 0.5 ms; the owner reports severe
+lag during table scrolling. The old host forced synchronous view drawing on
+keyboard events and scaled the changing bitmap in CGContextDrawImage on main.
+
+The replacement uses immutable CGImages as Core Animation layer contents with
+nearest filtering, no implicit animation, and no forced display in key handlers.
+Timing draw_ms/input_draw_ms now end at layer submission, not physical scanout;
+the renderer policy is included in the CSV header. Hardware scroll/input feel
+on the Intel Mac remains pending owner retest.
+
+Local validation: asset-free host/ABI/audio/storage tests and layer presentation
+checks PASS, including retained-image immutability, colours/orientation, bars,
+640×240 selector geometry and resizing without animations. Original-backed native
+journeys PASS for all four tables, four scroll modes and two resolutions (32
+journeys, 708 source ticks each). Live arm64 window and fullscreen/restoration
+show correct pixels and geometry. x86_64 compilation and bundle checks PASS;
+target executable performance is not measured on this arm64 development Mac.

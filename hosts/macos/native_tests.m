@@ -1,4 +1,5 @@
 #import "frame_view.h"
+#import <QuartzCore/QuartzCore.h>
 #import "storage.h"
 #import "audio_host.h"
 #import "native_input.h"
@@ -176,7 +177,9 @@ static void frameTests(void) {
     NSGraphicsContext *ctx=[NSGraphicsContext graphicsContextWithBitmapImageRep:bitmap];
     [NSGraphicsContext saveGraphicsState]; NSGraphicsContext.currentContext=ctx;
     CGContextTranslateCTM(ctx.CGContext,0,4); CGContextScaleCTM(ctx.CGContext,1,-1);
-    [view drawRect:view.bounds]; [NSGraphicsContext restoreGraphicsState];
+    CGContextSetInterpolationQuality(ctx.CGContext,kCGInterpolationNone);
+    [view updateLayer];
+    [view.layer renderInContext:ctx.CGContext]; [NSGraphicsContext restoreGraphicsState];
     /* Black bars plus exact source colours: no blended/scaled filtering. */
     unsigned red=0,green=0,blue=0,white=0,black=0;
     for (int y=0;y<4;y++) for (int x=0;x<8;x++) {
@@ -193,7 +196,23 @@ static void frameTests(void) {
     unsigned char *bottom=bitmap.bitmapData+3*32+2*4;
     assert(top[0]==255 && top[1]==0 && top[2]==0);
     assert(bottom[0]==0 && bottom[1]==0 && bottom[2]==255);
-    puts("PASS native bitmap copy, aspect, black bars, exact nearest-neighbour colours");
+    CALayer *frame=view.layer.sublayers.firstObject;
+    assert([frame.magnificationFilter isEqualToString:kCAFilterNearest]);
+    assert([frame.minificationFilter isEqualToString:kCAFilterNearest]);
+    CGImageRef previous=CGImageRetain((__bridge CGImageRef)frame.contents);
+    assert([view acceptPixels:pixels width:2 height:2 stride:8]);
+    [view updateLayer];
+    CFDataRef oldData=CGDataProviderCopyData(CGImageGetDataProvider(previous));
+    assert(CFDataGetBytePtr(oldData)[0]==255); /* compositor's old image is immutable */
+    CFRelease(oldData); CGImageRelease(previous);
+    uint8_t *selector=calloc(640*240,4); assert(selector);
+    assert([view acceptPixels:selector width:640 height:240 stride:640*4]); free(selector);
+    [view updateLayer];
+    assert(fabs(frame.frame.size.width-16.0/3)<1e-6 && frame.frame.size.height==4);
+    view.frame=NSMakeRect(0,0,4,8); [view layout];
+    assert(frame.frame.size.width==4 && frame.frame.size.height==3 && frame.frame.origin.y==2.5);
+    assert(![frame animationForKey:@"contents"] && ![frame animationForKey:@"bounds"]);
+    puts("PASS layer presenter: immutable frames, orientation, nearest colours, bars, selector aspect, resize without animation");
 }
 static void abiTests(void) {
     assert(pf_engine_abi_version()==PF_ABI_VERSION);
