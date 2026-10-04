@@ -166,7 +166,7 @@ jobs:
           timeout 240 bash -c 'until [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d "\r")" = 1 ]; do sleep 2; done'
           test "$(adb shell getprop dalvik.vm.extra-opts | tr -d '\r')" = '-Xint'
           test "$(adb shell getprop dalvik.vm.usejit | tr -d '\r')" = 'false'
-          test "$(adb shell settings get secure immersive_mode_confirmations | tr -d '\r')" = 'confirmed' 
+          test "$(adb shell settings get secure immersive_mode_confirmations | tr -d '\r')" = 'confirmed'
 
       - name: Exercise packaged ABI through A2 JNI (invented invalid data only)
         shell: bash
