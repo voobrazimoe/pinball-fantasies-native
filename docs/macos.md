@@ -173,7 +173,7 @@ import and persistence across real app launches remain unverified.
 
 The owner has an authorized Apple Silicon Mac with Codex for the next session.
 Original-backed macOS tests are **PENDING**, distinct from green hosted checks.
-With a pristine owner-supplied original directory and installed Go 1.27.1:
+With an owner-supplied directory containing pristine PRG/MOD originals and installed Go 1.27.1:
 
 ```sh
 python3 tools/validate_macos_originals.py --data /absolute/path/to/originals
@@ -182,7 +182,14 @@ python3 tools/validate_macos_originals.py --data /absolute/path/to/originals \
   --reference /absolute/path/to/original-dos-source
 ```
 
-This command refuses non-Mac/non-arm64 hosts, checks the pinned original hashes,
+PINBALL.CFG is optional mutable user state and need not match a pristine hash.
+The required pinned payload is INTRO.PRG, INTRO.MOD, MOD2.MOD and TABLE1–4.PRG/MOD.
+All supplied PRG/MOD files and any supplied CFG are hashed before and after
+validation, including failed runs. Tests receive temporary copies; CFG is never
+a writable symlink to external settings. A missing CFG gets default settings only
+in temporary storage.
+
+This command refuses non-Mac/non-arm64 hosts, checks the pinned PRG/MOD hashes,
 builds with Apple tools, runs the actual C-library direct-Runner comparison for
 all four tables in SOFT/OFF (including cheats/lifecycle/PCM/frame checkpoints),
 runs native four-table journeys in HARD/MEDIUM/SOFT/OFF, with NORMAL and HIGH resolution, runs shared Go tests in

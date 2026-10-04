@@ -25,7 +25,9 @@ Windows CGO_ENABLED=0 builds; public/personal packaging and portable-storage
 smokes on Linux/Wine; Python regressions; and public source/payload hygiene.
 A mutable local PINBALL.CFG was initially rejected by the pinned inventory test;
 the suite was rerun green with a checksum-matching pristine test seed before
-merging. Local data/references remained external, ignored and unuploaded.
+merging. That historical workaround is not a requirement: PINBALL.CFG is optional
+mutable state. The macOS validator now pins only required PRG/MOD payloads, copies
+settings into temporary storage, and checks external inputs remain unchanged. Local data/references remained external, ignored and unuploaded.
 
 ## macOS branch and implementation
 

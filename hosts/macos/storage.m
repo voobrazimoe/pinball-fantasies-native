@@ -41,10 +41,16 @@ BOOL pf_import_assets(NSString *source,NSString *destination,PFValidateAssets va
     NSMutableArray *names=[pf_required_assets() mutableCopy];
     if ([fm fileExistsAtPath:[source stringByAppendingPathComponent:@"PINBALL.CFG"]]) [names addObject:@"PINBALL.CFG"];
     for (NSString *name in names) {
+        if (!regular([source stringByAppendingPathComponent:name],error)) goto cleanup;
+    }
+    /* Copy only a compatible installation. Revalidate the isolated copies too,
+       so a changed source during copying cannot publish an invalid import. */
+    if (!validate(source,error)) goto cleanup;
+    for (NSString *name in names) {
         NSString *input=[source stringByAppendingPathComponent:name];
         if (!regular(input,error) || ![fm copyItemAtPath:input toPath:[stage stringByAppendingPathComponent:name] error:error]) goto cleanup;
     }
-    /* Shared Go hashes, decoders and settings semantics are authoritative. */
+    /* Shared Go layout compatibility, decoders and settings semantics are authoritative. */
     if (!validate(stage,error)) goto cleanup;
     if ([fm fileExistsAtPath:destination]) {
         NSString *backup=[@".previous-" stringByAppendingString:NSUUID.UUID.UUIDString];

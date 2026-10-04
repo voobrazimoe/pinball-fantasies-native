@@ -218,10 +218,44 @@ static void journey(NSString *data) {
         }
     }
 }
+
+static void compatibilityImportTests(NSString *originals) {
+    NSFileManager *fm=NSFileManager.defaultManager;
+    NSString *root=[NSTemporaryDirectory() stringByAppendingPathComponent:NSUUID.UUID.UUIDString];
+    NSString *source=[root stringByAppendingPathComponent:@"source"];
+    NSString *destination=[root stringByAppendingPathComponent:@"Data"];
+    assert([fm createDirectoryAtPath:source withIntermediateDirectories:YES attributes:nil error:NULL]);
+    for (NSString *name in pf_required_assets()) {
+        assert([fm copyItemAtPath:[originals stringByAppendingPathComponent:name]
+                          toPath:[source stringByAppendingPathComponent:name] error:NULL]);
+    }
+    NSError *error=nil;
+    assert(pf_import_assets(source,destination,pf_validate_assets,&error)); /* CFG absent */
+    const uint8_t legacy[]={1,1,2,1,1,1};
+    assert([[NSData dataWithBytes:legacy length:sizeof(legacy)] writeToFile:[source stringByAppendingPathComponent:@"PINBALL.CFG"] atomically:YES]);
+    for (NSString *name in pf_required_assets()) {
+        if (![name hasSuffix:@".PRG"]) continue;
+        NSString *path=[source stringByAppendingPathComponent:name];
+        NSMutableData *bytes=[NSMutableData dataWithContentsOfFile:path];
+        assert(bytes.length); ((uint8_t *)bytes.mutableBytes)[0]^=1; /* unconsumed MZ byte */
+        assert([bytes writeToFile:path atomically:YES]);
+    }
+    assert(pf_import_assets(source,destination,pf_validate_assets,&error));
+    NSData *accepted=[NSData dataWithContentsOfFile:[destination stringByAppendingPathComponent:@"TABLE1.PRG"]];
+    NSString *path=[source stringByAppendingPathComponent:@"TABLE1.PRG"];
+    NSMutableData *bytes=[NSMutableData dataWithContentsOfFile:path];
+    ((uint8_t *)bytes.mutableBytes)[336944]^=1; /* consumed FORM anchor */
+    assert([bytes writeToFile:path atomically:YES]);
+    assert(!pf_import_assets(source,destination,pf_validate_assets,&error));
+    assert([accepted isEqualToData:[NSData dataWithContentsOfFile:[destination stringByAppendingPathComponent:@"TABLE1.PRG"]]]);
+    assert([fm removeItemAtPath:root error:NULL]);
+    puts("PASS shared macOS import compatibility: absent/modified CFG, unused PRG bytes, anchor rejection, prior import preserved");
+}
+
 int main(int argc,const char **argv) {
     @autoreleasepool {
         abiTests(); modifierTests(); audioTests(); storageTests(); frameTests();
-        if (argc==2) journey([NSString stringWithUTF8String:argv[1]]);
+        if (argc==2) { NSString *originals=[NSString stringWithUTF8String:argv[1]]; compatibilityImportTests(originals); journey(originals); }
         else puts("UNVERIFIED original-backed four-table macOS journey: external originals not supplied");
     }
     return 0;
