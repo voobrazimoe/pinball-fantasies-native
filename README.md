@@ -21,7 +21,7 @@ chmod +x PinballFantasies-x86_64.AppImage
 ./PinballFantasies-x86_64.AppImage -data-dir "/path/to/Pinball Fantasies"
 ```
 
-The supported installation provides these 12 required runtime files:
+The supported installation provides these 11 required PRG/MOD runtime files:
 
 ```text
 INTRO.PRG  INTRO.MOD  MOD2.MOD
@@ -29,8 +29,9 @@ TABLE1.PRG TABLE1.MOD
 TABLE2.PRG TABLE2.MOD
 TABLE3.PRG TABLE3.MOD
 TABLE4.PRG TABLE4.MOD
-PINBALL.CFG
 ```
+
+`PINBALL.CFG` is an optional legacy settings seed. Missing or malformed settings use native defaults; writable PFNC settings live in native state. Runtime accepts the supported consumed-data layout; exact whole-file hashes are reserved for research and parity fixtures.
 
 The originals are treated as read-only data. Native settings, high scores and logs are written to `userdata/` beside the executable/AppImage, with a per-user configuration directory as fallback. Optional legacy `TABLE*.HI` files are read-only score seeds; without them the native factory scores are used.
 
@@ -104,7 +105,7 @@ A native Windows Win32/GDI/waveOut build is provided. Hosted native Windows buil
 
 ## Local-only personal builder
 
-For local use, `./tools/build_personal_release.sh "/path/to/original/game"` creates self-contained builds under `release/personal/` from the same 12 inputs. These local builds contain your commercial game data and are **not distributable project releases**. Do not commit, push or upload them.
+For local use, `./tools/build_personal_release.sh "/path/to/original/game"` creates self-contained builds under `release/personal/` from the same 11 game-data inputs and optional settings seed. These local builds contain your commercial game data and are **not distributable project releases**. Do not commit, push or upload them.
 
 ## License and game data
 

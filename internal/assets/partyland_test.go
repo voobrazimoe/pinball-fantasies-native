@@ -77,9 +77,9 @@ func TestPartyLandReference(t *testing.T) {
 	if !bytes.Equal(frame.Pix, second.Framebuffer().Pix) {
 		t.Fatal("repeated render differs")
 	}
-	data[len(data)-1] ^= 1
+	data[stripOffsets[0]] ^= 1
 	if _, err := DecodePartyLand(data); err == nil {
-		t.Fatal("modified file accepted")
+		t.Fatal("broken FORM accepted")
 	}
 }
 

@@ -46,8 +46,8 @@ func LoadInitialPartyLand(path string) (*InitialPartyLand, error) {
 }
 
 func DecodeInitialPartyLand(data []byte) (*InitialPartyLand, error) {
-	// The PF1 decoder validates the entire pinned file before any fixed content
-	// offsets are read. Its decoder, palette and framebuffer remain unchanged.
+	// The shared layout profile bounds all consumed regions before fixed-offset
+	// artwork and physics records are read.
 	field, err := DecodePartyLand(data)
 	if err != nil {
 		return nil, err

@@ -13,6 +13,8 @@ import tempfile
 import zipfile
 from personal_assets import ROOT, PERSONAL_INPUTS
 
+PAYLOAD_INPUTS = PERSONAL_INPUTS + (('PINBALL.CFG',) if (ROOT/'PINBALL.CFG').is_file() else ())
+
 ARTIFACTS = [ROOT/'release/personal/windows/pinballfantasies.exe',
              ROOT/'release/personal/linux/PinballFantasies-x86_64.AppImage']
 
@@ -28,21 +30,21 @@ def verify_payloads():
     start = exe.index(b'PK\x03\x04')
     end = exe.index(b'PK\x05\x06', start) + 22
     with zipfile.ZipFile(io.BytesIO(exe[start:end])) as archive:
-        assert archive.namelist() == list(PERSONAL_INPUTS), archive.namelist()
+        assert archive.namelist() == list(PAYLOAD_INPUTS), archive.namelist()
         for name in archive.namelist():
             assert archive.read(name) == (ROOT/name).read_bytes(), name
     with tempfile.TemporaryDirectory(prefix='personal-payload-') as folder:
         subprocess.run([str(ARTIFACTS[1]), '--appimage-extract'], cwd=folder,
                        stdout=subprocess.DEVNULL, check=True)
         data = Path(folder)/'squashfs-root/usr/share/pinballfantasies'
-        assert sorted(p.name for p in data.iterdir()) == sorted(PERSONAL_INPUTS)
-        for name in PERSONAL_INPUTS:
+        assert sorted(p.name for p in data.iterdir()) == sorted(PAYLOAD_INPUTS)
+        for name in PAYLOAD_INPUTS:
             assert (data/name).read_bytes() == (ROOT/name).read_bytes(), name
         manifest = json.loads((Path(folder)/'squashfs-root/BUILD-MANIFEST.json').read_text())
-        assert [r['name'] for r in manifest['original_inputs']] == list(PERSONAL_INPUTS)
+        assert [r['name'] for r in manifest['original_inputs']] == list(PAYLOAD_INPUTS)
     for manifest in ['build-manifest.json', 'linux-build-manifest.json']:
         records = json.loads((ROOT/'.build-personal'/manifest).read_text())['original_inputs']
-        assert [r['name'] for r in records] == list(PERSONAL_INPUTS)
+        assert [r['name'] for r in records] == list(PAYLOAD_INPUTS)
 
 if __name__ == '__main__':
     scores = [ROOT/f'TABLE{table}.HI' for table in range(1, 5)]
@@ -60,7 +62,7 @@ if __name__ == '__main__':
         assert removed == baseline, (baseline, removed)
         verify_payloads()
         result = {'baseline': baseline, 'all_four_replaced': replaced, 'all_four_removed': removed,
-                  'byte_identical': True, 'payload_input_count': 12, 'payload_hi_count': 0}
+                  'byte_identical': True, 'payload_input_count': len(PAYLOAD_INPUTS), 'payload_hi_count': 0}
         (ROOT/'.build-personal/cleanup-reproducibility.json').write_text(json.dumps(result, indent=2)+'\n')
         print(json.dumps(result, indent=2))
     finally:

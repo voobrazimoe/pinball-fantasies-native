@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"pinballfantasies/internal/oracle"
 	"testing"
 )
 
@@ -34,6 +35,18 @@ func Require(t *testing.T, paths ...string) {
 			t.Skipf("external original/reference input %s is absent; supply legally obtained originals or the documented private validation capture to run this integration check", path)
 		} else if err != nil {
 			t.Fatal(err)
+		}
+		// Tests using external originals are deterministic oracle checks.
+		// Compatibility mutation tests deliberately read inputs independently.
+		name := filepath.Base(path)
+		if oracle.Known(name) {
+			data, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := oracle.Verify(name, data); err != nil {
+				t.Fatal(err)
+			}
 		}
 	}
 }

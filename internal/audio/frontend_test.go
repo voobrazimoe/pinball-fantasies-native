@@ -38,9 +38,9 @@ func TestFrontendModules(t *testing.T) {
 					}
 				}
 			}
-			b[0] ^= 1
+			b[1080] ^= 1
 			if _, e := DecodeFrontend(b); e == nil {
-				t.Fatal("unknown module accepted")
+				t.Fatal("unsupported channel marker accepted")
 			}
 		})
 	}

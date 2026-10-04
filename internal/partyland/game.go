@@ -110,7 +110,7 @@ func New(table *physics.Table, data []byte) *Game {
 	g.Audio.Priority = 1
 	g.Audio.ReadyAnim = true
 	g.Audio.ReadyLogic = true
-	// Original external content, statically located in SHA-validated TABLE1.PRG.
+	// Original external content, statically located in layout-validated TABLE1.PRG.
 	g.font13 = append([]byte(nil), data[0x1ff40:0x1ff40+36*13]...)
 	g.font5 = append([]byte(nil), data[0x20450:0x20450+36*5]...)
 	p := 0x1adb9

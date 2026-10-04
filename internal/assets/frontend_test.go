@@ -34,9 +34,9 @@ func TestFrontendContent(t *testing.T) {
 	if sha256.Sum256(a.Logo.Frame().Pix) != sha256.Sum256(again.Logo.Frame().Pix) {
 		t.Fatal("nondeterministic frontend decode")
 	}
-	b[0] ^= 1
+	b[0x6b70] ^= 1
 	if _, e := DecodeFrontend(b); e == nil {
-		t.Fatal("unknown build accepted")
+		t.Fatal("broken FORM accepted")
 	}
 }
 func TestFrontendIFFValidation(t *testing.T) {

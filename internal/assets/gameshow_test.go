@@ -41,8 +41,8 @@ func TestGameshowOriginalAssets(t *testing.T) {
 	if p.State.Viewport != image.Rect(0, 259, 320, 576) || p.State.BallOrigin != image.Pt(299, 530) {
 		t.Fatal(p.State)
 	}
-	data[0] ^= 1
+	data[0x4cb60] ^= 1
 	if _, e = DecodeGameshow(data); e == nil {
-		t.Fatal("accepts changed executable/data")
+		t.Fatal("accepts broken FORM")
 	}
 }

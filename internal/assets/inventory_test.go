@@ -29,9 +29,9 @@ func TestOriginalInventories(t *testing.T) {
 			t.Fatal(err)
 		}
 		for _, r := range records {
-			// Mutable DOS scores are optional seeds. Their pristine hashes are
+			// Mutable DOS settings and scores are optional seeds. Score pristine hashes are
 			// verified against frontend.Defaults by TestDefaultScoresSourceFidelity.
-			if group.manifest == "game-inventory.json" && strings.HasSuffix(r.Name, ".HI") {
+			if group.manifest == "game-inventory.json" && (r.Name == "PINBALL.CFG" || strings.HasSuffix(r.Name, ".HI")) {
 				continue
 			}
 			t.Run(group.manifest+"/"+r.Name, func(t *testing.T) {

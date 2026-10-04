@@ -50,3 +50,15 @@ for package,filename in [('partyland','timing_data.go'),('speeddevils','content.
             assert sum(v[1] for v in data['area_refs'].values()) == 44
             assert all(len(v) == 2 and v[0] >= 0 and v[1] >= 0 for v in data['area_refs'].values())
 print('PASS: native jingle/animation registration and PRG DAC/gate layouts')
+
+profiles=json.loads((root/'internal/datalayout/profiles.json').read_text())
+assert set(profiles)=={'INTRO.PRG',*(f'TABLE{n}.PRG' for n in range(1,5))}
+for name,profile in profiles.items():
+    assert set(profile)=={'profile','regions','pictures'}
+    for region in profile['regions']:
+        assert set(region) <= {'offset','size','purpose','sha256','kind'}
+        assert region['offset']>0 and region['size']>0
+        if 'sha256' in region: assert re.fullmatch('[0-9a-f]{64}',region['sha256'])
+    for picture in profile['pictures']:
+        assert set(picture)=={'offset','kind','width','height','planes'}
+print('PASS: runtime compatibility profiles contain addresses, geometry and hashes only')

@@ -1,18 +1,14 @@
 package assets
 
 import (
-	"crypto/sha256"
-	"fmt"
 	"image"
 )
-
-const Table2SHA256 = "6689dcef5fd051998bab990b5d243614c7dae2dcdcab9bffbe3c1936a76504b5"
 
 // SDEV BANH=576 and shared INIT_GFX's four 320x144 PBM strips. Static linked
 // INIT_GFX references locate these original assets; no executable code runs.
 func DecodeSpeedDevils(data []byte) (*Playfield, error) {
-	if fmt.Sprintf("%x", sha256.Sum256(data)) != Table2SHA256 {
-		return nil, fmt.Errorf("TABLE2.PRG differs from inventoried Speed Devils build")
+	if err := validateLayout("TABLE2.PRG", data); err != nil {
+		return nil, err
 	}
 	p := &Playfield{}
 	for _, off := range []int{0x50730, 0x583f0, 0x60030, 0x67b00} {

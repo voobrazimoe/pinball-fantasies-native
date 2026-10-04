@@ -1,13 +1,11 @@
-// Package audio decodes only the supplied Party Land module. It has no host clock.
+// Package audio decodes supported four-channel game modules. It has no host clock.
 package audio
 
 import (
-	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
 )
 
-const ModuleSHA256 = "a0877e4372abe64b70d9e361bf257ea5a84c948771f0eace3433d5f6399060b5"
 const Rate = 48000
 
 type Sample struct {
@@ -23,40 +21,113 @@ type Module struct {
 	Samples  [31]Sample
 }
 
-func Decode(data []byte) (*Module, error) {
-	if fmt.Sprintf("%x", sha256.Sum256(data)) != ModuleSHA256 {
-		return nil, fmt.Errorf("TABLE1.MOD differs from supplied Party Land module")
-	}
-	return decodeModule(data, false)
-}
+// Table profiles retain source-referenced order extents; PCM bytes are not an oracle.
+func Decode(data []byte) (*Module, error)            { return compatibleModule(data, false, 64) }
+func DecodeSpeedDevils(data []byte) (*Module, error) { return compatibleModule(data, false, 65) }
+func DecodeGameshow(data []byte) (*Module, error)    { return compatibleModule(data, false, 63) }
+func DecodeIntro(data []byte) (*Module, error)       { return compatibleModule(data, true, 44) }
+func DecodeMenu(data []byte) (*Module, error)        { return compatibleModule(data, false, 15) }
 
-// DecodeSpeedDevils uses the same native tracker and validates TABLE2.MOD.
-func DecodeSpeedDevils(data []byte) (*Module, error) {
-	if fmt.Sprintf("%x", sha256.Sum256(data)) != "728629c54311386781271308e181ac0435f0582e90870accff0a42270d467529" {
-		return nil, fmt.Errorf("TABLE2.MOD differs from supplied Speed Devils module")
-	}
-	return decodeModule(data, false)
-}
-
-// DecodeGameshow validates original TABLE3.MOD and reuses the native tracker.
-func DecodeGameshow(data []byte) (*Module, error) {
-	if fmt.Sprintf("%x", sha256.Sum256(data)) != "fb7bfd1c96a462cb03999d2e6f843a20d3de69ba05fcbd384a9f1c131b9a563a" {
-		return nil, fmt.Errorf("TABLE3.MOD differs from supplied Gameshow module")
-	}
-	return decodeModuleWithOrders(data, false, 63)
-}
-
-// DecodeFrontend accepts only the two inventoried original frontend modules.
+// DecodeFrontend preserves the library API. Host loading uses explicit roles.
 func DecodeFrontend(data []byte) (*Module, error) {
-	hash := fmt.Sprintf("%x", sha256.Sum256(data))
-	if hash != "9ecb5813ba1a5f606b47f0dbb9cc65c5dc5c0f07596ccd23fdf019b0283f1dcc" && hash != "aa5003c275b494062f37f44e8c77105b8a420555f4bd6ff53d7698f89c540f21" {
-		return nil, fmt.Errorf("frontend MOD differs from inventoried build")
+	if len(data) < 1084 {
+		return nil, fmt.Errorf("unsupported MOD layout: truncated header")
 	}
-	return decodeModule(data, hash == "9ecb5813ba1a5f606b47f0dbb9cc65c5dc5c0f07596ccd23fdf019b0283f1dcc")
+	if data[950] >= 44 {
+		return DecodeIntro(data)
+	}
+	return DecodeMenu(data)
 }
 
-func decodeModule(data []byte, omittedSilentSamples bool) (*Module, error) {
-	return decodeModuleWithOrders(data, omittedSilentSamples, int(data[950]))
+func compatibleModule(data []byte, intro bool, requiredOrders int) (*Module, error) {
+	if len(data) < 1084 || string(data[1080:1084]) != "M.K." {
+		return nil, fmt.Errorf("unsupported MOD layout: require 31-sample four-channel M.K. module")
+	}
+	count := int(data[950])
+	if count < 1 || count > 128 {
+		return nil, fmt.Errorf("invalid MOD song length")
+	}
+	// SHOW references orders 61/62 beyond its legacy length byte.
+	if count < requiredOrders {
+		if requiredOrders != 63 || count != 61 {
+			return nil, fmt.Errorf("unsupported MOD layout: need %d source-referenced orders", requiredOrders)
+		}
+		count = requiredOrders
+	}
+	maxPattern := 0
+	for _, p := range data[952 : 952+count] {
+		if p > 127 {
+			return nil, fmt.Errorf("invalid MOD pattern reference")
+		}
+		if int(p) > maxPattern {
+			maxPattern = int(p)
+		}
+	}
+	off := 1084 + (maxPattern+1)*1024
+	if off > len(data) {
+		return nil, fmt.Errorf("truncated MOD patterns")
+	}
+	used := [31]bool{}
+	for q := 1084; q < off; q += 4 {
+		sample := int(data[q]&240) | int(data[q+2]>>4)
+		if sample > 31 {
+			return nil, fmt.Errorf("invalid MOD sample number")
+		}
+		if sample > 0 {
+			used[sample-1] = true
+		}
+		if data[q+2]&15 == 15 && (data[q+3] == 0 || data[q+3] > 31) {
+			return nil, fmt.Errorf("unsupported MOD layout: tracker requires speed-only F01..F1F")
+		}
+		if data[q+2]&15 == 11 && int(data[q+3]) >= count {
+			return nil, fmt.Errorf("MOD jump outside orders")
+		}
+		if data[q+2]&15 == 13 && (data[q+3]>>4 > 6 || data[q+3]&15 > 9 || int(data[q+3]>>4)*10+int(data[q+3]&15) > 63) {
+			return nil, fmt.Errorf("MOD break outside rows")
+		}
+	}
+	total := 0
+	for i := 0; i < 31; i++ {
+		h := data[20+i*30 : 50+i*30]
+		n := int(binary.BigEndian.Uint16(h[22:])) * 2
+		loopStart, loopLength := int(binary.BigEndian.Uint16(h[26:]))*2, int(binary.BigEndian.Uint16(h[28:]))*2
+		if h[24] > 15 || h[25] > 64 || (loopLength > 2 && (loopStart > n || loopLength > n-loopStart)) {
+			return nil, fmt.Errorf("invalid MOD sample %d metadata", i+1)
+		}
+		if used[i] && n == 0 {
+			return nil, fmt.Errorf("missing MOD pattern sample %d", i+1)
+		}
+		total += n
+	}
+	omitted := false
+	// INTRO's verified omitted slots have two-byte silent headers, no loop,
+	// and no pattern references. Accept both full storage and legacy omission.
+	if intro && len(data)-off == total-22+2 {
+		omitted = true
+		for i := 20; i < 31; i++ {
+			h := data[20+i*30 : 50+i*30]
+			if used[i] || binary.BigEndian.Uint16(h[22:]) != 1 || h[25] != 0 || binary.BigEndian.Uint16(h[28:]) > 1 {
+				return nil, fmt.Errorf("unsupported INTRO omitted sample layout")
+			}
+		}
+	} else if len(data)-off != total && len(data)-off != total+2 {
+		return nil, fmt.Errorf("unsupported MOD layout: sample extent differs (truncated or extra patterns)")
+	}
+	m, err := decodeModuleWithOrders(data, omitted, count)
+	if err != nil {
+		return nil, err
+	}
+	if requiredOrders >= 63 {
+		// All table effects address these slots directly; other slots are checked
+		// by pattern references. Samples may change, but cannot disappear.
+		required := map[int][]int{64: {7, 22, 23, 24, 25, 28, 29, 30}, 65: {23, 24, 25, 26, 27, 28, 29, 30}, 63: {7, 15, 22, 23, 24, 25, 28, 29, 30}, 66: {2, 6, 10, 23, 24, 25, 28, 29, 30}}
+		for _, sample := range required[requiredOrders] {
+			if len(m.Samples[sample-1].PCM) == 0 {
+				return nil, fmt.Errorf("missing table effect sample %d", sample)
+			}
+		}
+	}
+	return m, nil
 }
 
 // Gameshow's source explicitly references the populated order 62 beyond its
@@ -122,9 +193,4 @@ var Effects = map[string]Effect{
 }
 
 // DecodeStones uses the physically verified 66-order/64-pattern TABLE4 module.
-func DecodeStones(data []byte) (*Module, error) {
-	if fmt.Sprintf("%x", sha256.Sum256(data)) != "31ad7e671ae77c07c3d075e2f1fecd3d918fd921fa23acd9a1b0b6fc07fbbcea" {
-		return nil, fmt.Errorf("TABLE4.MOD differs from supplied Stones module")
-	}
-	return decodeModule(data, false)
-}
+func DecodeStones(data []byte) (*Module, error) { return compatibleModule(data, false, 66) }

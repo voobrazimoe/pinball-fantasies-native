@@ -47,8 +47,8 @@ func TestSpeedDevilsOriginalAssets(t *testing.T) {
 	if hash(initial.Ball[:]) != fixture.Ball || hash(initial.Framebuffer().Pix) != fixture.Initial {
 		t.Fatal("original initial frame differs")
 	}
-	data[0] ^= 1
+	data[0x50730] ^= 1
 	if _, e := DecodeSpeedDevils(data); e == nil {
-		t.Fatal("must reject other builds")
+		t.Fatal("must reject broken FORM")
 	}
 }

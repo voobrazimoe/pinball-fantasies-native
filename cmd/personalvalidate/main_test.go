@@ -9,7 +9,7 @@ import (
 
 func TestValidationIgnoresAmbientHighScores(t *testing.T) {
 	data := t.TempDir()
-	names := []string{"INTRO.PRG", "INTRO.MOD", "MOD2.MOD", "PINBALL.CFG", "TABLE1.PRG", "TABLE1.MOD", "TABLE2.PRG", "TABLE2.MOD", "TABLE3.PRG", "TABLE3.MOD", "TABLE4.PRG", "TABLE4.MOD"}
+	names := []string{"INTRO.PRG", "INTRO.MOD", "MOD2.MOD", "TABLE1.PRG", "TABLE1.MOD", "TABLE2.PRG", "TABLE2.MOD", "TABLE3.PRG", "TABLE3.MOD", "TABLE4.PRG", "TABLE4.MOD"}
 	for _, name := range names {
 		testinputs.Require(t, filepath.Join("../..", name))
 		raw, err := os.ReadFile(filepath.Join("../..", name))

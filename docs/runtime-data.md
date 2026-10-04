@@ -16,10 +16,11 @@ TABLE3.PRG
 TABLE3.MOD
 TABLE4.PRG
 TABLE4.MOD
-PINBALL.CFG
 ```
 
-The files are validated against supported fingerprints and treated as read-only inputs.
+These eleven PRG/MOD files are read-only game data. The shared decoders validate the supported consumed-data layout, not exact whole-file identity. Windows, Linux and the macOS importer/host all use `frontend.LoadConfigured`. See [the compatibility audit](runtime-compatibility-audit.md) for the file-by-file policy and extension rules.
+
+`PINBALL.CFG` is optional mutable settings, separate from commercial payload. A valid six-byte DOS record may seed native settings. Missing or malformed CFG uses native defaults. Native state may contain a valid versioned PFNC record. No CFG hash is required.
 
 ## What is decoded
 
@@ -41,7 +42,7 @@ Optional legacy `TABLE*.HI` files may be read as score seeds in a normal asset-f
 
 ## Personal builds
 
-The local-only personal builder embeds exactly the 12 required files above into the resulting EXE/AppImage. Those artifacts therefore contain the user's commercial game data and must not be distributed as project releases. Public GitHub release binaries are always asset-free.
+The local-only personal builder embeds the eleven compatible game-data files above and an optional CFG settings seed into the resulting EXE/AppImage. Those artifacts therefore contain the user's commercial game data and must not be distributed as project releases. Public GitHub release binaries are always asset-free.
 
 ## Fonts and presentation
 

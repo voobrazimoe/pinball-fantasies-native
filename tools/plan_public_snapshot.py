@@ -16,7 +16,7 @@ DUMPS = {
     'internal/speeddevils/content.go', 'internal/gameshow/content.go',
     'internal/stones/content.go',
 }
-DOCS = {'README.md', 'docs/build.md', 'docs/runtime-data.md', 'docs/architecture.md'}
+DOCS = {'docs/runtime-compatibility-audit.md', 'README.md', 'docs/build.md', 'docs/runtime-data.md', 'docs/architecture.md'}
 BUILD = {
     '.gitignore', 'go.mod', 'tools/go.sh', 'tools/setup-local.py',
     'tools/build_windows.sh', 'tools/build_release.sh', 'tools/build_appimage.py',
@@ -24,12 +24,17 @@ BUILD = {
     'packaging/README-windows.txt', 'packaging/notices/AppImage-runtime-20251108.txt',
 }
 PUBLIC_TESTS = {
+    'internal/audio/compatibility_test.go', 'internal/datalayout/layout_test.go',
     'internal/settings/settings_test.go',
     'internal/speeddevils/lamp_decode_test.go', 'internal/stones/area_decode_test.go',
     *('internal/platform/'+name+'_test.go' for name in (
         'fullscreen','keys_reconcile','personal_data','sizing','storage','transfer')),
 }
-NEW = {'analysis/public-snapshot-plan.json', 'analysis/program-data-manifest.json',
+NEW = {
+       'docs/runtime-compatibility-audit.md', 'internal/assets/layout.go',
+       'internal/datalayout/layout.go', 'internal/datalayout/prepare.go', 'internal/datalayout/picture.go',
+       'internal/datalayout/profiles.json', 'internal/datalayout/layout_test.go',
+       'internal/audio/compatibility_test.go','analysis/public-snapshot-plan.json', 'analysis/program-data-manifest.json',
        'analysis/final-cleanup-validation.json', 'docs/architecture.md',
        'tools/plan_public_snapshot.py',
        'internal/speeddevils/lamp_decode_test.go', 'internal/speeddevils/lamp_parity_test.go',
@@ -44,8 +49,12 @@ def classify(name):
         return 'PUBLIC_REQUIRED', 'Build/package dependency or required third-party packaging notice.', None
     if name in PUBLIC_TESTS:
         return 'PUBLIC_USEFUL', 'Native platform/settings or synthetic record validation without original game/source fixtures.', None
+    if name.startswith('internal/oracle/'):
+        return 'PRIVATE_VALIDATION', 'Exact original identity gate for research and parity fixtures; not a runtime dependency.', None
     if name.endswith('_test.go') or name.endswith('matrix_reachability_data.go') or name.startswith('internal/testinputs/'):
         return 'PRIVATE_VALIDATION', 'Original-backed/reference-dependent suite or development verification; retain privately.', None
+    if name == 'internal/datalayout/profiles.json':
+        return 'PUBLIC_REQUIRED', 'Address-only runtime compatibility profiles; no commercial payload.', None
     if name.startswith('internal/') and name.endswith('.go') or name.startswith('cmd/pinballfantasies/'):
         return 'PUBLIC_REQUIRED', 'Native runtime implementation; subject to whole-project ownership review.', None
     if name.startswith(('cmd/pf8','cmd/personalvalidate')):

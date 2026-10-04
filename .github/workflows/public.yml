@@ -6,7 +6,7 @@ jobs:
   source:
     strategy:
       matrix:
-        os: [ubuntu-24.04, windows-latest]
+        os: [ubuntu-24.04, windows-latest, macos-15]
       fail-fast: false
     runs-on: ${{ matrix.os }}
     steps:
@@ -23,7 +23,20 @@ jobs:
       - if: runner.os == 'Linux'
         run: echo "CGO_CFLAGS=$(pkg-config --cflags sdl2)" >> "$GITHUB_ENV"
       - run: python tools/check_public_source.py
-      - run: go test -p=1 -count=1 ./...
+      - if: runner.os == 'macOS'
+        name: Prove native Apple Silicon
+        run: test "$(uname -m)" = arm64
+      - if: runner.os != 'macOS'
+        run: go test -p=1 -count=1 ./...
+      - if: runner.os == 'macOS'
+        name: Native shared engine tests (CLI host is Linux/Windows only)
+        shell: bash
+        run: |
+          packages=$(go list ./... | sed '/\/internal\/platform$/d; /\/cmd\/pinballfantasies$/d')
+          go test -p=1 -count=1 $packages
+      - name: Synthetic runtime policy regressions
+        run: go test -count=1 -v ./internal/settings ./internal/audio ./internal/datalayout ./internal/oracle
+
       - if: runner.os == 'Linux'
         name: Build native engine C interfaces (no commercial inputs)
         run: |
@@ -31,5 +44,12 @@ jobs:
           go build -buildvcs=false -trimpath -buildmode=c-archive -o bin/libpfengine.a ./cmd/pfengine
           go build -buildvcs=false -trimpath -buildmode=c-shared -o bin/libpfengine.so ./cmd/pfengine
 
-      - run: go build -buildvcs=false -trimpath -o pinballfantasies${{ runner.os == 'Windows' && '.exe' || '' }} ./cmd/pinballfantasies
+      - if: runner.os == 'macOS'
+        name: Build native Apple Silicon C engine interfaces
+        run: |
+          mkdir -p bin
+          go build -buildvcs=false -trimpath -buildmode=c-archive -o bin/libpfengine.a ./cmd/pfengine
+          go build -buildvcs=false -trimpath -buildmode=c-shared -o bin/libpfengine.dylib ./cmd/pfengine
+      - if: runner.os != 'macOS'
+        run: go build -buildvcs=false -trimpath -o pinballfantasies${{ runner.os == 'Windows' && '.exe' || '' }} ./cmd/pinballfantasies
 # No commercial fixtures, reference downloads, personal tags or artifact uploads.

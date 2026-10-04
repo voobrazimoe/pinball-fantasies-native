@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"pinballfantasies/internal/assets"
 	"pinballfantasies/internal/audio"
+	"pinballfantasies/internal/datalayout"
 	"pinballfantasies/internal/gameshow"
 	"pinballfantasies/internal/partyland"
 	"pinballfantasies/internal/physics"
@@ -14,6 +15,7 @@ import (
 	"pinballfantasies/internal/speeddevils"
 	"pinballfantasies/internal/stones"
 	"pinballfantasies/internal/tablelogic"
+	"strings"
 )
 
 type Runtime struct {
@@ -29,7 +31,16 @@ func Load(dataDir string, store Store) (*Runtime, error) {
 	return LoadConfigured(dataDir, store, nil)
 }
 func LoadConfigured(dataDir string, store Store, configStore *settings.Store) (*Runtime, error) {
-	read := func(name string) ([]byte, error) { return os.ReadFile(filepath.Join(dataDir, name)) }
+	read := func(name string) ([]byte, error) {
+		data, err := os.ReadFile(filepath.Join(dataDir, name))
+		if err != nil {
+			return nil, err
+		}
+		if strings.HasSuffix(name, ".PRG") {
+			return datalayout.PreparePRG(name, data)
+		}
+		return data, nil
+	}
 	b, e := read("INTRO.PRG")
 	if e != nil {
 		return nil, e
@@ -59,7 +70,7 @@ func LoadConfigured(dataDir string, store Store, configStore *settings.Store) (*
 	if e != nil {
 		return nil, e
 	}
-	intro, e := audio.DecodeFrontend(b)
+	intro, e := audio.DecodeIntro(b)
 	if e != nil {
 		return nil, e
 	}
@@ -67,7 +78,7 @@ func LoadConfigured(dataDir string, store Store, configStore *settings.Store) (*
 	if e != nil {
 		return nil, e
 	}
-	menu, e := audio.DecodeFrontend(b)
+	menu, e := audio.DecodeMenu(b)
 	if e != nil {
 		return nil, e
 	}

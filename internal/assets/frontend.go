@@ -1,13 +1,10 @@
 package assets
 
 import (
-	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
 	"image"
 )
-
-const IntroSHA256 = "f6b5590f88949174b8f530d5b2d5b59f329d9fde24bfa98a0154d74f19f06881"
 
 // FrontendPicture is native IFF content, never a loaded DOS executable segment.
 type FrontendPicture struct {
@@ -24,8 +21,8 @@ type FrontendArt struct {
 }
 
 func DecodeFrontend(data []byte) (*FrontendArt, error) {
-	if fmt.Sprintf("%x", sha256.Sum256(data)) != IntroSHA256 {
-		return nil, fmt.Errorf("INTRO.PRG differs from inventoried build")
+	if err := validateLayout("INTRO.PRG", data); err != nil {
+		return nil, err
 	}
 	offsets := []int{0x1cb10, 0x6b70, 0x8b00, 0x20430, 0x24a50, 0x29410, 0x2dd40, 0x3b810, 0x42c50, 0x46930, 0x4daa0, 0x12020, 0x17f20, 0x10e60, 0xa450, 0x34d90, 0x33410}
 	pics := make([]*FrontendPicture, len(offsets))
@@ -85,15 +82,24 @@ func decodeFrontendIFF(data []byte, off int) (*FrontendPicture, error) {
 		v := data[pos+8 : pos+8+int(n)]
 		switch string(data[pos : pos+4]) {
 		case "BMHD":
+			if hdr != nil {
+				return nil, fmt.Errorf("duplicate BMHD")
+			}
 			hdr = v
 		case "CMAP":
+			if pal != nil {
+				return nil, fmt.Errorf("duplicate CMAP")
+			}
 			pal = v
 		case "BODY":
+			if body != nil {
+				return nil, fmt.Errorf("duplicate BODY")
+			}
 			body = v
 		}
 		pos = int(next)
 	}
-	if len(hdr) != 20 || hdr[10] != 1 || hdr[9] == 1 {
+	if len(hdr) != 20 || hdr[10] != 1 || (hdr[9] != 0 && hdr[9] != 2) {
 		return nil, fmt.Errorf("unsupported header")
 	}
 	w, h := int(binary.BigEndian.Uint16(hdr)), int(binary.BigEndian.Uint16(hdr[2:]))
@@ -125,6 +131,11 @@ func decodeFrontendIFF(data []byte, off int) (*FrontendPicture, error) {
 					}
 				}
 			}
+		}
+	}
+	for _, index := range p.Indices {
+		if int(index) >= len(p.Palette)/3 {
+			return nil, fmt.Errorf("pixel outside palette")
 		}
 	}
 	// Original VGA palette writes retain the upper six bits of each IFF component.

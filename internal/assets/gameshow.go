@@ -1,17 +1,13 @@
 package assets
 
 import (
-	"crypto/sha256"
-	"fmt"
 	"image"
 )
 
-const Table3SHA256 = "da83ef5a7a471e6a6ad759126907076c81e92ffde6dec8e3de8e6052c6a98858"
-
 // SHOW STAGE1_1..4, located by original INIT_GFX segment references.
 func DecodeGameshow(data []byte) (*Playfield, error) {
-	if fmt.Sprintf("%x", sha256.Sum256(data)) != Table3SHA256 {
-		return nil, fmt.Errorf("TABLE3.PRG differs from inventoried Gameshow build")
+	if err := validateLayout("TABLE3.PRG", data); err != nil {
+		return nil, err
 	}
 	p := &Playfield{}
 	for _, o := range []int{0x4cb60, 0x52410, 0x5a6b0, 0x634d0} {

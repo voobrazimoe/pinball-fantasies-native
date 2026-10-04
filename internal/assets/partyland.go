@@ -3,7 +3,6 @@ package assets
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
 	"image"
@@ -12,7 +11,6 @@ import (
 
 const Width = 320
 const Height = 576
-const Table1SHA256 = "4d7a69e7dc95260ad2541c6981a11ab842e2f1f20e45447e5613688b86e38414"
 
 // Original: FANTASIE.ASM, INIT_GFX: STAGE1_1..4 at y=0,144,288,432
 // (after the separate SPLH score panel); PLAND.ASM, BANH=576.
@@ -32,11 +30,11 @@ func LoadPartyLand(path string) (*Playfield, error) {
 	return DecodePartyLand(data)
 }
 
-// DecodePartyLand intentionally accepts only the inventoried installation build.
+// DecodePartyLand accepts the shared supported consumed-data layout.
 // MZ headers and machine instructions are never interpreted or executed.
 func DecodePartyLand(data []byte) (*Playfield, error) {
-	if fmt.Sprintf("%x", sha256.Sum256(data)) != Table1SHA256 {
-		return nil, fmt.Errorf("TABLE1.PRG differs from the inventoried build (want SHA-256 %s)", Table1SHA256)
+	if err := validateLayout("TABLE1.PRG", data); err != nil {
+		return nil, err
 	}
 	field := &Playfield{Indices: make([]byte, 0, Width*Height)}
 	for _, off := range stripOffsets {

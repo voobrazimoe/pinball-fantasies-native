@@ -1,0 +1,8 @@
+package assets
+
+// Exact reference identities belong to oracle tests, never runtime compatibility.
+const IntroSHA256 = "f6b5590f88949174b8f530d5b2d5b59f329d9fde24bfa98a0154d74f19f06881"
+const Table1SHA256 = "4d7a69e7dc95260ad2541c6981a11ab842e2f1f20e45447e5613688b86e38414"
+const Table2SHA256 = "6689dcef5fd051998bab990b5d243614c7dae2dcdcab9bffbe3c1936a76504b5"
+const Table3SHA256 = "da83ef5a7a471e6a6ad759126907076c81e92ffde6dec8e3de8e6052c6a98858"
+const Table4SHA256 = "88f63edd4c7b50bd057397016d7aa962f0ed1c858f4a746f1ccf976f67494ebf"

@@ -100,8 +100,8 @@ func TestPartyLandInitialReference(t *testing.T) {
 	if !bytes.Equal(frame.Pix, p.Framebuffer().Pix) {
 		t.Fatal("retained input alias")
 	}
-	if _, err := DecodeInitialPartyLand(data); err == nil {
-		t.Fatal("modified installation accepted")
+	if _, err := DecodeInitialPartyLand(data); err != nil {
+		t.Fatal("compatible foreground rejected", err)
 	}
 	if _, err := DecodeInitialPartyLand(nil); err == nil {
 		t.Fatal("truncated installation accepted")

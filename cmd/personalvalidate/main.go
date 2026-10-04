@@ -7,26 +7,17 @@ import (
 	"os"
 	"path/filepath"
 	"pinballfantasies/internal/frontend"
-	"pinballfantasies/internal/settings"
 	"pinballfantasies/internal/tablelogic"
 )
 
 func main() {
 	dir := flag.String("data-dir", "", "original personal data directory")
 	flag.Parse()
-	cfg, err := os.ReadFile(filepath.Join(*dir, "PINBALL.CFG"))
-	if err == nil {
-		_, err = settings.DecodeLegacy(cfg)
-	}
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "personal configuration seed:", err)
-		os.Exit(1)
-	}
 	if err := validate(*dir); err != nil {
 		fmt.Fprintln(os.Stderr, "personal data validation:", err)
 		os.Exit(1)
 	}
-	fmt.Println("12 personal inputs validated; all four factory scores save, restart and reset in isolated storage")
+	fmt.Println("11 game-data inputs and optional settings validated; all four factory scores save, restart and reset in isolated storage")
 }
 
 func validate(dir string) error {
