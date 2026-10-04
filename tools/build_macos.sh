@@ -35,6 +35,9 @@ objc=(-fobjc-arc -fblocks -framework AppKit -framework AudioToolbox -framework C
 "$CC" "${common[@]}" -std=c11 -pthread hosts/macos/host_logic.c hosts/macos/logic_tests.c -o "$build/logic-tests"
 "$CC" "${common[@]}" "${objc[@]}" hosts/macos/main.m hosts/macos/frame_view.m hosts/macos/storage.m hosts/macos/audio_host.m hosts/macos/native_input.m hosts/macos/host_logic.c "$build/libpfengine.a" -o "$app/Contents/MacOS/pinballfantasies"
 "$CC" "${common[@]}" "${objc[@]}" hosts/macos/native_tests.m hosts/macos/frame_view.m hosts/macos/storage.m hosts/macos/audio_host.m hosts/macos/native_input.m hosts/macos/host_logic.c "$build/libpfengine.a" -o "$build/native-tests"
+# The Apple linker retains an N_OSO archive path even with Go -trimpath.
+# Remove debug symbols before signing so local checkout paths are not shipped.
+xcrun strip -S "$app/Contents/MacOS/pinballfantasies"
 codesign --force --sign - "$app"
 codesign --verify --strict "$app"
 file "$app/Contents/MacOS/pinballfantasies"

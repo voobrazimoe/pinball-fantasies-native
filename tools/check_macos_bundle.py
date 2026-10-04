@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Public bundle allowlist and commercial-payload hygiene, before artifact upload."""
-import argparse, hashlib, json, pathlib, plistlib, sys
+import argparse, hashlib, json, pathlib, plistlib, re, sys
 p=argparse.ArgumentParser(); p.add_argument('app',type=pathlib.Path); p.add_argument('--originals',type=pathlib.Path); a=p.parse_args()
 root=pathlib.Path(__file__).resolve().parent.parent
 allowed={'Contents/Info.plist','Contents/MacOS/pinballfantasies','Contents/Resources/LICENSE.txt',
@@ -11,6 +11,7 @@ assert not any(f.is_symlink() for f in a.app.rglob('*'))
 info=plistlib.loads(files['Contents/Info.plist'].read_bytes())
 assert info['CFBundleExecutable']=='pinballfantasies' and info['CFBundlePackageType']=='APPL'
 assert files['Contents/MacOS/pinballfantasies'].stat().st_mode & 0o111
+assert not re.search(rb'/(?:Users|home)/', files['Contents/MacOS/pinballfantasies'].read_bytes()), 'local build path in public executable'
 assert files['Contents/Resources/LICENSE.txt'].read_bytes()==(root/'LICENSE').read_bytes()
 originals=json.loads((root/'analysis/game-inventory.json').read_text())
 hashes={record['sha256'] for record in originals}
