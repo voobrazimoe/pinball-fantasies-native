@@ -298,8 +298,8 @@ rotation, inset changes and keyboard expansion; it has no phone-specific pixels.
 | Keys expanded panel | One horizontally scrollable row containing F1–F8 and A–Z |
 
 Keys starts collapsed on every Activity creation; toggling it adds/removes the
-auxiliary row and its occupied gameplay area. Narrow screens can scroll the
-compact toolbar horizontally. Data retains the existing SAF picker. The normal
+auxiliary row and its occupied gameplay area. The toolbar fits its eight
+buttons in the safe width; the auxiliary row scrolls. Data retains the existing SAF picker. The normal
 overlay paints only L/R labels, with no permanent Pull/Nudge labels or rectangles.
 A lightweight Pull ↓ indication exists only while a plunger pointer is owned,
 and disappears on up/cancel/focus loss.

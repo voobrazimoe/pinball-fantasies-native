@@ -70,6 +70,10 @@ public final class ImportInstrumentation extends Instrumentation {
             menu.safeInsets(safe.left,safe.top,safe.right);
             measure(root,shape[0],shape[1]);
             int collapsed=menu.getHeight();
+            for(int i=0;i<8;i++) {
+                android.view.View button=menu.toolbar.getChildAt(i);
+                check(button.getLeft()>=0 && button.getRight()<=menu.getWidth());
+            }
             check(menu.getTop()==safe.top && menu.getLeft()==safe.left && menu.getRight()==shape[0]-safe.right);
             menu.keysButton.performClick(); measure(root,shape[0],shape[1]);
             check(menu.panel.getVisibility()==android.view.View.VISIBLE && menu.getHeight()==collapsed*2);

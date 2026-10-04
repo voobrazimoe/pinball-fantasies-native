@@ -16,7 +16,7 @@ final class ControlMenu extends LinearLayout {
     ControlMenu(Context context, Controls controls, Runnable importData) {
         super(context); this.controls=controls; setOrientation(VERTICAL);
         toolbar=new LinearLayout(context);
-        addView(scroll(toolbar));
+        addView(toolbar,new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT,LayoutParams.WRAP_CONTENT));
         String[] labels={"Enter","Esc","P","M","Y","N"};
         int[] codes={28,1,25,50,21,49};
         for (int i=0;i<labels.length;i++) key(toolbar,labels[i],codes[i]);
@@ -42,7 +42,8 @@ final class ControlMenu extends LinearLayout {
         button.setMinWidth(0); button.setMinimumWidth(0); button.setPadding(0,0,0,0);
         button.setAlpha(.65f); button.setFocusable(false);
         int size=Math.round(44*getResources().getDisplayMetrics().density);
-        row.addView(button,new LinearLayout.LayoutParams(size,size,1)); return button;
+        row.addView(button,new LinearLayout.LayoutParams(row==toolbar ? 0 : size,size,
+                row==toolbar ? 1 : 0)); return button;
     }
     private void key(LinearLayout row,String label,int code) {
         button(row,label).setOnClickListener(v->controls.tap(code));
