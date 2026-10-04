@@ -32,6 +32,14 @@ jobs:
           ./tools/go.sh test -p=1 -count=1 ./...
       - name: Build fresh public Windows and Linux artifacts
         run: ./tools/build_release.sh
+      - name: Inspect public package architecture and extracted runtime
+        run: |
+          file release/windows/pinballfantasies.exe release/linux/PinballFantasies-x86_64.AppImage
+          mkdir -p .cache/candidate-smoke
+          cd .cache/candidate-smoke
+          ../../release/linux/PinballFantasies-x86_64.AppImage --appimage-extract
+          file squashfs-root/usr/bin/pinballfantasies
+          squashfs-root/AppRun -h
       - uses: actions/upload-artifact@v4
         with:
           name: PinballFantasies-windows-linux-public

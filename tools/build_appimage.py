@@ -110,12 +110,22 @@ notice_sources = {record['source'] for record in bundled.values()}
 if Path('/usr/share/alsa').exists():
     notice_sources.update(str(p) for p in Path('/usr/share/alsa').rglob('*') if p.is_file())
 for source in sorted(notice_sources):
-    try:
-        owners = subprocess.check_output(['dpkg-query', '-S', source], text=True, stderr=subprocess.DEVNULL).splitlines()
+    # On merged-/usr distributions ldd may report /lib while dpkg records
+    # /usr/lib (or the versioned symlink target). Preserve strict provenance
+    # while trying both the loader spelling and the resolved package path.
+    owned = False
+    for candidate in dict.fromkeys([source, str(Path(source).resolve())]):
+        try:
+            owners = subprocess.check_output(['dpkg-query', '-S', candidate], text=True, stderr=subprocess.DEVNULL).splitlines()
+        except (FileNotFoundError, subprocess.CalledProcessError):
+            continue
         for owner in owners:
             if ': ' in owner and not owner.startswith('diversion '):
                 packages.add(owner.split(': ')[0].split(':')[0])
-    except (FileNotFoundError, subprocess.CalledProcessError):
+                owned = True
+        if owned:
+            break
+    if not owned:
         unowned.append(source)
 if unowned:
     raise SystemExit('No package license provenance for: '+', '.join(unowned))
