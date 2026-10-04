@@ -1,5 +1,9 @@
 # Android host
 
+A6 physical-device preparation and the owner-run checklist are in
+[android-a6-acceptance.md](android-a6-acceptance.md). Preparation does not mark
+A6 complete; hosted CI cannot certify original-backed physical acceptance.
+
 Android support is being added as a native host around the existing Go engine and stable C ABI 1. The Android host must not duplicate table rules, presentation programs, tracker progression, settings/high-score encodings, source cadence or gameplay semantics.
 
 ## Development status (2026-10-04)
