@@ -7,6 +7,7 @@ import (
 	"image/draw"
 	"pinballfantasies/internal/assets"
 	"pinballfantasies/internal/presentation"
+	"pinballfantasies/internal/settings"
 	"strconv"
 )
 
@@ -30,7 +31,12 @@ func black(w, h int) *image.RGBA {
 func blit(dst *image.RGBA, p *assets.FrontendPicture, x, y, w, h, sx, sy int) {
 	draw.Draw(dst, image.Rect(x, y, x+w, y+h), p.Frame(), image.Pt(sx, sy), draw.Src)
 }
-func (v *View) Frame(m *Model) *image.RGBA {
+func (v *View) Frame(m *Model) *image.RGBA { return v.framePresentation(m, false) }
+func (v *View) framePresentation(m *Model, full bool) *image.RGBA {
+	c := m.Settings
+	if full {
+		c.ScrollMode = settings.ScrollOff
+	}
 	switch m.Mode {
 	case Startup:
 		return v.startup(m)
@@ -42,7 +48,7 @@ func (v *View) Frame(m *Model) *image.RGBA {
 		return black(640, 240)
 	}
 	out := m.Session.Frame()
-	draw.Draw(out, image.Rect(0, m.Settings.MatrixY(), 320, m.Settings.MatrixY()+33), image.NewUniform(color.RGBA{0, 0, 0, 255}), image.Point{}, draw.Src)
+	draw.Draw(out, image.Rect(0, c.MatrixY(), 320, c.MatrixY()+33), image.NewUniform(color.RGBA{0, 0, 0, 255}), image.Point{}, draw.Src)
 	switch m.Mode {
 	case Playing:
 		return m.Session.Frame()
@@ -52,9 +58,9 @@ func (v *View) Frame(m *Model) *image.RGBA {
 		}
 		// end_gamen's six-sync handoff clears the display before score entry.
 	case Paused:
-		v.matrixText(out, "GAME PAUSED", 72, 2, m.Selected, m.Settings.MatrixY())
+		v.matrixText(out, "GAME PAUSED", 72, 2, m.Selected, c.MatrixY())
 	case QuitQuestion:
-		v.matrixText(out, "REALLY QUIT (Y OR N)", 0, 2, m.Selected, m.Settings.MatrixY())
+		v.matrixText(out, "REALLY QUIT (Y OR N)", 0, 2, m.Selected, c.MatrixY())
 	case Initials, EntryWait:
 		if m.sourceScoreStage != 0 {
 			return m.Session.Frame()
@@ -63,13 +69,13 @@ func (v *View) Frame(m *Model) *image.RGBA {
 		if m.Mode == EntryWait && m.Counter <= 30 {
 			text = "********************"
 		}
-		v.matrixText(out, text, 0, 2, m.Selected, m.Settings.MatrixY())
+		v.matrixText(out, text, 0, 2, m.Selected, c.MatrixY())
 
 	case TableAttract:
 		if session, ok := m.Session.(interface{ AttractFrame(int) *image.RGBA }); ok {
 			out = session.AttractFrame(m.Counter)
 		}
-		draw.Draw(out, image.Rect(0, m.Settings.MatrixY(), 320, m.Settings.MatrixY()+33), image.NewUniform(color.RGBA{0, 0, 0, 255}), image.Point{}, draw.Src)
+		draw.Draw(out, image.Rect(0, c.MatrixY(), 320, c.MatrixY()+33), image.NewUniform(color.RGBA{0, 0, 0, 255}), image.Point{}, draw.Src)
 		d := v.Matrix
 		on, off := byte(242), byte(96)
 		if m.Selected == 2 && v.SpeedMatrix != nil {
@@ -113,7 +119,7 @@ func (v *View) Frame(m *Model) *image.RGBA {
 		if m.Selected == 4 {
 			p = d.SourceMatrixPalette(p)
 		}
-		matrix.DrawAt(out, p, off, on, m.Settings.MatrixY())
+		matrix.DrawAt(out, p, off, on, c.MatrixY())
 
 	}
 	return out

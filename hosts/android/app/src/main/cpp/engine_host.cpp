@@ -1,4 +1,5 @@
 #include "abi.h"
+#include "a3_host.h"
 #include <android/log.h>
 #include <jni.h>
 #include <time.h>
@@ -11,6 +12,8 @@ std::mutex lock;
 uint64_t persistent = 0;
 jlong generation = 0;
 bool opened = false;
+bool resumed = false, focused = false;
+bool active() { return resumed && focused; }
 int64_t now() {
     timespec value{};
     clock_gettime(CLOCK_MONOTONIC, &value);
@@ -46,7 +49,7 @@ void stop() {
 #define JNI_METHOD(name) Java_io_github_voobrazimoe_pinballfantasies_PinballActivity_##name
 extern "C" JNIEXPORT jlong JNICALL JNI_METHOD(nativeOpen)(JNIEnv*, jclass) {
     std::lock_guard<std::mutex> guard(lock);
-    stop(); opened = true;
+    stop(); opened = true; resumed = focused = false;
     return ++generation;
 }
 extern "C" JNIEXPORT void JNICALL JNI_METHOD(nativeClose)(JNIEnv*, jclass, jlong token) {
@@ -71,7 +74,45 @@ extern "C" JNIEXPORT jstring JNICALL JNI_METHOD(nativeEngine)(
         __android_log_print(ANDROID_LOG_INFO, "PinballFantasies", "A2_CANDIDATE_VALIDATED");
     } else {
         persistent = handle;
+        if (!active()) pf_engine_suspend(persistent);
         __android_log_print(ANDROID_LOG_INFO, "PinballFantasies", "A2_ENGINE_BOOTSTRAPPED ABI=1");
     }
     return nullptr;
+}
+
+// UI input, lifecycle, importer and native render calls all take the same lock.
+// No ABI call can overlap another, including destruction and borrowed-frame copy.
+extern "C" JNIEXPORT void JNICALL JNI_METHOD(nativeActive)(JNIEnv*, jclass, jlong token, jboolean resume, jboolean focus) {
+ std::lock_guard<std::mutex> guard(lock);
+ if (!opened || token != generation) return;
+ bool before = active(); resumed = resume; focused = focus;
+ if (persistent && before != active()) {
+  if (active()) pf_engine_resume(persistent, now());
+  else pf_engine_suspend(persistent);
+ }
+}
+extern "C" JNIEXPORT void JNICALL JNI_METHOD(nativeInput)(JNIEnv*, jclass, jlong token, jint kind, jint a, jint b) {
+ std::lock_guard<std::mutex> guard(lock);
+ if (!opened || token != generation || !persistent || !active()) return;
+ switch (kind) {
+ case 0: pf_engine_set_action(persistent, a, b); break;
+ case 1: pf_engine_key(persistent, a); break;
+ case 2: pf_engine_release(persistent); break;
+ case 3: pf_engine_plunger_delta(persistent, a); break;
+ case 4: pf_engine_plunger_fire(persistent); break;
+ }
+}
+bool androidEngineFrame(bool portrait, std::vector<uint8_t>& pixels, int& width, int& height) {
+ std::lock_guard<std::mutex> guard(lock);
+ if (!opened || !persistent || !active()) return false;
+ // NULL sink safely discards PCM synchronously. Runner owns every due 60/71 Hz
+ // source tick; this display wake supplies wall time, never a simulation delta.
+ if (pf_engine_set_presentation(persistent, portrait ? 1 : 0) != PF_OK ||
+     pf_engine_advance(persistent, now(), nullptr, nullptr) != PF_OK) return false;
+ uint8_t* borrowed = nullptr;
+ int32_t w = 0, h = 0, stride = 0;
+ if (pf_engine_frame(persistent, &borrowed, &w, &h, &stride) != PF_OK ||
+     !a3::copyFrame(borrowed, w, h, stride, pixels)) return false;
+ width = w; height = h;
+ return true;
 }

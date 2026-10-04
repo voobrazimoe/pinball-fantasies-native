@@ -27,7 +27,7 @@ func (g *Game) applyLamp(p *[768]byte, n int, on bool) {
 func (g *Game) Frame() *image.RGBA {
 	p := presentation.MatrixPaletteMode(g.Palette(), g.Physics.ReferenceMode, 242)
 	d := *g.Display
-	return presentation.ComposeNative(g.Physics.FramePalette(p), &d, p, 96, 242, g.Physics.Settings, g.Physics.ScreenOffset)
+	return presentation.ComposeNative(g.Physics.FramePalette(p), &d, p, 96, 242, g.Physics.PresentationSettings(), g.Physics.ScreenOffset)
 }
 func (g *Game) text(out *image.RGBA, s string, x, y, height, scale int, c color.RGBA) {
 	font := g.font5

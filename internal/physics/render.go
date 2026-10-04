@@ -3,6 +3,7 @@ package physics
 import (
 	"encoding/binary"
 	"image"
+	"pinballfantasies/internal/settings"
 )
 
 // Frame applies original FLIPPRA delta records before PUTTHEBALL. Each record
@@ -16,10 +17,10 @@ func (g *Game) Frame() *image.RGBA {
 		foreground = g.Table.upperForeground
 	}
 	viewport := int(g.Raster>>4) - 33
-	if g.Settings.TableY() != 0 {
+	if g.PresentationSettings().TableY() != 0 {
 		viewport = 0
 	}
-	return g.Table.Initial.SimulationFrameHeight(g.indices, image.Pt(int(g.Ball.PixelX), int(g.Ball.PixelY)), viewport, foreground, g.Settings.RenderHeight())
+	return g.Table.Initial.SimulationFrameHeight(g.indices, image.Pt(int(g.Ball.PixelX), int(g.Ball.PixelY)), viewport, foreground, g.PresentationSettings().RenderHeight())
 }
 
 func (g *Game) animateFlipper(i int) {
@@ -62,4 +63,13 @@ func (g *Game) animateFlipper(i int) {
 		}
 		distance -= chunk
 	}
+}
+
+// PresentationSettings returns a copy. Source camera arithmetic keeps Settings.
+func (g *Game) PresentationSettings() settings.Config {
+	c := g.Settings
+	if g.PresentationFullTable {
+		c.ScrollMode = settings.ScrollOff
+	}
+	return c
 }

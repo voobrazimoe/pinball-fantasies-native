@@ -41,19 +41,19 @@ func (g *Game) AttractFrame(ticks int) *image.RGBA {
 	var lamps [57]bool
 	palette := g.paletteFor(lamps)
 	presentation.AttractLamps(ticks, g.Display.Content.LampFlash, func(n int, on bool) { g.applyLamp(&palette, n, on) })
-	height := g.Physics.Settings.FieldHeight()
+	height := g.Physics.PresentationSettings().FieldHeight()
 	limit := 576 - height
 	y := limit - ticks%(2*limit)
 	if y < 0 {
 		y = -y
 	}
-	if g.Physics.Settings.TableY() != 0 {
+	if g.Physics.PresentationSettings().TableY() != 0 {
 		y, height = 0, 576
 	}
 	for row := 0; row < height; row++ {
 		for x := 0; x < 320; x++ {
 			index := int(field.Indices[(y+row)*320+x]) * 3
-			p := (row+g.Physics.Settings.TableY())*out.Stride + x*4
+			p := (row+g.Physics.PresentationSettings().TableY())*out.Stride + x*4
 			copy(out.Pix[p:p+3], palette[index:index+3])
 		}
 	}

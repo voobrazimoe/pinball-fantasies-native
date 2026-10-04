@@ -75,11 +75,11 @@ func (g *Game) FramePalette(palette [768]byte) *image.RGBA {
 		balloffset = 0
 	}
 	viewport := int(g.Raster>>4) - 33 + int(offset)
-	if g.Settings.TableY() != 0 {
+	if g.PresentationSettings().TableY() != 0 {
 		// Full-table composition applies SCREENPOSY after rendering. Keep
 		// PUTTHEBALL's offset (except HOLDSTILL), so the free ball stays fixed
 		// on screen while the table moves, just like SETSCREENSTART.
 		viewport = 0
 	}
-	return initial.SimulationFrameHeight(indices, image.Pt(int(g.Ball.PixelX), int(g.Ball.PixelY+balloffset)), viewport, foreground, g.Settings.RenderHeight())
+	return initial.SimulationFrameHeight(indices, image.Pt(int(g.Ball.PixelX), int(g.Ball.PixelY+balloffset)), viewport, foreground, g.PresentationSettings().RenderHeight())
 }

@@ -44,7 +44,7 @@ This is an asset-free platform prototype, not a playable Android release.
   and [macOS native hosts](https://github.com/voobrazimoe/pinball-fantasies-native/actions/runs/37202017274)
   also passed. A2 supplies SAF import, private Data/State, shared-loader validation
   and persistent engine creation. Successful original-backed Android import/bootstrap
-  and physical-device acceptance remain unverified for A6. A3–A7 remain outstanding.
+  and physical-device acceptance remain unverified for A6. A3 implementation is described below; A4–A7 remain outstanding.
 
 Build the engine first with an installed Go 1.27.1, SDK/NDK/JDK and Gradle 9.6.0:
 
@@ -115,7 +115,7 @@ live State. Successful adoption creates one persistent native engine using
 `Data`, `filesDir/State`, and monotonic time. Native session tokens and a mutex
 serialize creation/destruction and prevent an old Activity's worker from creating
 another persistent instance after close. Activity destruction closes the native
-handle. A2 does not advance it. Relaunch bootstraps adopted Data automatically;
+handle. A3 advances that same handle. Relaunch bootstraps adopted Data automatically;
 missing Data stays in the shell, and malformed/incomplete Data reports failure.
 An engine/bootstrap failure after commit leaves validated Data installed and
 reports the error; importing again does not require deleting it.
@@ -123,8 +123,8 @@ reports the error; importing again does not require deleting it.
 Log events distinguish `A2_SHELL_NO_DATA`, `A2_IMPORT_REQUESTED`,
 `A2_IMPORT_CANCELLED`, `A2_IMPORT_REJECTED`, `A2_CANDIDATE_VALIDATED`,
 `A2_DATA_ADOPTED`, `A2_ENGINE_BOOTSTRAPPED`, and `A2_BOOTSTRAP_REJECTED`.
-The A1 synthetic renderer and its timing are unchanged and never clock the engine.
-There are no gameplay controls, framebuffer upload, or audio device operations.
+The no-data shell retains the A1 synthetic renderer. A3 adds gameplay controls
+and real framebuffer upload; there are no audio device operations.
 
 Asset-free hosted checks build/package both ABIs, check exported engine/host
 symbols and every packaged ELF's 16 KB alignment, run ZIP alignment and commercial
@@ -141,6 +141,184 @@ verify successful validation/adoption/bootstrap and automatic relaunch, optional
 CFG and persistent State separation, cancellation/rejection preserving a prior
 installation, and normal compiled ART on both supported architectures. Do not
 commit those inputs or upload original-backed private directories to CI.
+
+## A3 cadence, framebuffer and input
+
+A3 adds real engine advancement and presentation to the persistent A2 handle.
+No SAF, import transaction, Data/State layout or bootstrap policy is redesigned.
+The native GameActivity glue thread owns `pf_engine_advance`, `pf_engine_frame`
+and EGL/GLES. Each active display-loop wake supplies `CLOCK_MONOTONIC` nanoseconds
+rather than a tick count or frame delta. The existing Go `source.Runner.Advance`
+executes every due source task at its existing 60/71 Hz cadence, including when
+presentation is slower. EGL swap interval and the host's 16 ms poll timeout only
+pace presentation/wakes. Neither creates an Android simulation clock.
+`pf_engine_advance` receives a null PCM sink: the engine/tracker still progress
+normally and returned PCM is discarded synchronously. No Oboe, device, PCM ring
+or device buffering has been added.
+
+### Ownership and lifecycle
+
+`engine_host.cpp` has one mutex shared by **every** persistent-engine operation:
+A2 worker create/validate/destroy, UI input, UI lifecycle, and native advancement,
+frame retrieval and copy. UI callbacks translate events and call the serialized
+JNI path; they do not advance source time. The mutex remains held across
+advance → frame → validation → copy, so replacement/destruction cannot invalidate
+the borrowed pointer mid-copy. No sink reentry and no concurrent ABI calls occur.
+GLES receives only the host-owned copy after unlocking; all EGL operations stay
+on the glue thread. JNI session tokens reject callbacks from a closed Activity.
+
+Pause or window focus loss synchronously calls `pf_engine_suspend` under that
+same mutex **before** clearing Java pointer/key ownership. The existing engine
+suspend operation clears held controls, mouse remainder, pending delta/fire and
+Runner input, applies the shared focus-pause request, and stops source/tracker
+progression. Resuming calls `pf_engine_resume` with fresh monotonic time. The
+Runner re-anchors its deadline and preserves the gameplay instance; shared game
+pause semantics still apply (a logical key resumes a paused game). The render
+loop also sleeps while paused/unfocused. Rotation and EGL surface replacement
+only replace graphics resources; they neither destroy the engine nor reset
+source/table/player state. A brief surface gap while otherwise active is caught
+up by the Runner at the next presentation. Process restart uses A2 bootstrap.
+There is no A5 audio-focus policy in this milestone.
+
+### Real frame upload
+
+`pf_engine_frame` supplies top-down RGBA8. The host rejects null pixels, nonpositive
+or greater-than-4096 dimensions, and strides smaller than `width*4` or larger
+than 16384 bytes. Each row is copied using the supplied stride into a reusable
+packed vector while the engine mutex is held. The engine pointer is never
+written, retained, freed or passed to GLES. Vector capacity is reused; texture
+storage changes only when dimensions change, with `glTexSubImage2D` otherwise.
+The Go renderer retains its existing allocations; A3 does not redesign it.
+
+GLES2 uses `GL_NEAREST` for both filters and black clearing outside a centred
+aspect-preserving viewport. Table pixels are square. The original 640×240
+startup/selector/options frontend has its existing desktop logical 640×480
+pixel aspect. A no-data installation keeps the legal synthetic 320×609 shell.
+
+### Transient portrait override
+
+The optional additive ABI 1 function
+`pf_engine_set_presentation(handle, full_table)` accepts only 0 or 1 and uses
+the same invalid-handle/busy/non-reentry rules. Existing exports, signatures and
+ABI version remain unchanged; older hosts default to 0 and need no changes.
+A new host requires a library containing this optional export (packaged Android
+symbol checks enforce it). The previous ABI had no transient presentation hook:
+`pf_engine_frame` used saved model/session settings, and logical options keys
+would change persistent preferences. This is why the additive hook is needed.
+
+The setter stores only an engine presentation boolean. `Engine.Frame` calls
+`Runtime.FramePresentation`; for that retrieval, it scopes a render-only
+`physics.Game.PresentationFullTable` flag to the current session and restores
+it with `defer`. `PresentationSettings()` returns a **copy** with ScrollOff only
+for rendering. Physics raster/camera calculations, model Settings, session
+Settings, update/audio tasks, settings storage and future session creation
+continue to use the saved preference. Table raster, full-table composition,
+attract artwork and frontend matrix text all use the render copy. No F5/options
+navigation, preference key, settings write, source tick or audio advancement is
+performed by the setter or orientation choice.
+
+The renderer chooses portrait when surface height ≥ width, sets full_table=1
+before retrieval, and presents the complete 320×33 matrix above the 320×576
+field (320×609) in table modes. Frontend menus keep their own authoritative
+raster. Landscape sets 0 and immediately restores saved HARD/MEDIUM/SOFT/OFF
+presentation, including preferences changed through the normal options screen.
+Orientation never writes or temporarily assigns saved settings.
+
+### Touch layout and gestures
+
+The translucent full-window overlay uses normalized coordinates. Pointer IDs
+own regions until up/cancel; moving across regions does not transfer a flipper.
+
+| Region | Operation |
+| --- | --- |
+| Bottom 35%, left 40% of width | Hold left flipper |
+| Bottom 35%, middle 40% | Hold right flipper |
+| Bottom 35%, rightmost 20% | Pull plunger downward, release to fire |
+| Rightmost 20%, between 20% and 65% height | Hold nudge/tilt |
+| Top menu rows | Enter, Esc, P, M, Y, N, F1–F8; Data opens the existing import picker; Keys reveals a scrollable alphabet for initials |
+
+Multiple pointers contribute independently; releasing one never releases a
+control another pointer or physical key still holds. Flipper presses also send
+the desktop modifier make 127; nudge sends Space's make. Plunger has one pointer
+owner: downward displacement from its initial position is clamped to 0..25% of
+screen height, quantized to 0..128 relative counts, and consecutive absolute
+positions produce `pf_engine_plunger_delta` differences. A second plunger finger
+is ignored and cannot release the first. Up samples the final position and calls
+`pf_engine_plunger_fire`. `ACTION_CANCEL` clears touch owners and calls the same
+existing fire/release semantics for a held touch plunger. Focus/pause instead
+suspend first, discarding pending motion/fire without launching the spring.
+The source mouse/plunger tasks remain authoritative: eight relative counts per
+adjustment, at most one sign-based adjustment per source task. Event frequency
+or a large motion packet cannot make charging faster than engine rules allow.
+
+### Physical keyboard and Back
+
+`Controls` is an Android-framework-independent translation policy shared by
+hardware dispatch, menu controls and tests. Each physical key contributes
+independently, and repeated/duplicate down events do not emit extra makes.
+Action key-up removes only that contributor; Down release follows the engine's
+existing spring release edge. Enter also calls `pf_engine_release` on its make,
+matching the desktop native host.
+
+| Android keys | Logical engine semantics |
+| --- | --- |
+| F1–F8 | DOS makes 59–66 |
+| Enter / numpad Enter | release + make 28 |
+| Escape / Android Back | make 1 |
+| Down | spring held action + make 80 |
+| Left Shift/Ctrl/Alt, Left arrow, Z | left flipper contributors |
+| Right Shift/Ctrl/Alt, Right arrow, slash | right flipper contributors |
+| Space | nudge held action + make 57 |
+| P / M | makes 25 / 50 |
+| Up, numpad multiply, A–Z | existing desktop logical makes, including initials and Y/N prompts |
+
+Android system Back is registered through the Activity's Back dispatcher,
+including predictive-Back integration; hardware Back uses the same translation.
+It reaches the shared escape/back/quit state machine. The Activity is never
+unconditionally finished by Back; a completed engine quit presents its quit
+frame until normal process/lifecycle destruction.
+
+### Validation and acceptance boundary
+
+`tools/test_android_a3.sh` runs deterministic asset-free Java control tests,
+C++ frame/stride/viewport tests, and the actual `engine_host.cpp` JNI/session
+implementation against mock ABI functions. The session stress test races native
+presentation, UI input and pause/focus transitions and asserts no overlapping
+ABI calls, advancement while suspended, borrowed-pointer retention, destruction
+races or stale-token revival. Java tests cover hit regions, simultaneous flippers,
+multiple contributors, pointer-ID changes, cancellation, bounded signed plunger
+deltas, release, repeat suppression, make codes, Back and focus clearing.
+
+Android instrumentation additionally dispatches real multi-pointer `MotionEvent`
+objects through `ControlOverlay`, verifies cancellation/plunger dispatch, and
+exercises no-data JNI callbacks. Hosted Android CI retains A2 import/recovery
+checks, packaged ABI exports, payload scan, all ELF/ZIP 16 KB checks and A1
+rotation/background/resume smoke. Smoke now issues hardware/menu/Back and touch
+input in the no-data shell and requires the same host to survive.
+
+Asset-free Go regressions cover every saved scrolling mode/resolution without
+mutating settings. The optional private-original engine regression compares
+portrait/landscape rendering for all four tables and saved modes against a second
+Runner, including source state, PCM and restored landscape pixels; public CI
+explicitly skips commercial fixtures. Shared source/macOS regressions and A0
+are required here because the render/ABI boundary changed. No commercial data
+is added to any public test or artifact. Original-backed **Android** framebuffer,
+touch playability and successful import acceptance still require A6; passing
+mock, Go or no-data emulator tests is not proof of those Android outcomes.
+
+Local validation during A3 passed the private-original Go presentation comparison
+for all four tables × all four saved modes (80 advancing checkpoints each), plus
+asset-free controls/frame/session tests, A2 transactions and the real desktop C
+ABI error/extension contract. This is shared-engine evidence only, not
+original-backed Android playability acceptance.
+
+Local asset-free checks:
+
+```sh
+sh tools/test_android_import.sh
+sh tools/test_android_a3.sh
+sh tools/go.sh test -count=1 ./internal/physics ./internal/presentation ./internal/engine ./internal/frontend ./internal/source
+```
 
 ## Fixed platform decisions
 
@@ -180,4 +358,10 @@ The second argument is the required device page size. Omit it for a normal 4 KB 
 
 ## Remaining phases
 
-A2 supplies SAF staging, app-private Data/State and real engine bootstrap. A3 adds cadence, framebuffer upload and touch/keyboard translation, including the temporary portrait scrolling override. A4 adds Oboe and the bounded host PCM ring. A5 adds engine lifecycle/audio-focus handling. A6 runs original-backed parity and physical-device acceptance. A7 adds signed APK/AAB packaging and release payload scanning.
+A3 implements cadence, framebuffer upload, touch/keyboard translation and transient
+portrait presentation on the A2 engine. A4 remains Oboe plus the bounded host PCM
+ring/device output; Android is currently silent. A5 remains broader lifecycle and
+audio-focus handling. A6 remains original-backed Android parity, practical touch
+charging/layout acceptance, normal compiled ART, hardware keyboards and physical
+devices. A7 remains signed APK/AAB packaging and release payload scanning.
+No A4 work or main merge is authorized by A3.

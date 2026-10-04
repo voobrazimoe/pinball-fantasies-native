@@ -192,3 +192,11 @@ func pf_engine_state(h C.uint64_t, tick *C.uint64_t, mode, table, flags *C.uint3
 	})
 }
 func main() {}
+
+//export pf_engine_set_presentation
+func pf_engine_set_presentation(h C.uint64_t, full C.int32_t) C.int32_t {
+	if full != 0 && full != 1 {
+		return C.PF_INVALID
+	}
+	return invoke(h, func(i *instance) C.int32_t { i.engine.SetPresentation(full == 1); return C.PF_OK })
+}

@@ -37,6 +37,10 @@ public final class PinballActivity extends GameActivity {
     private long session;
     private Button importButton;
     private volatile boolean closed;
+    private boolean resumed, focused;
+    private Controls controls;
+    static native void nativeActive(long session, boolean resumed, boolean focused);
+    static native void nativeInput(long session, int kind, int a, int b);
     static native long nativeOpen();
     static native void nativeClose(long session);
     static native String nativeEngine(long session, int operation, byte[] data, byte[] state);
@@ -52,11 +56,14 @@ public final class PinballActivity extends GameActivity {
         runOnUiThread(() -> {
             if (!closed) {
                 importButton.setEnabled(true);
+                if (event.equals("A2_DATA_READY") || event.equals("A2_IMPORT_FINISHED"))
+                    importButton.setVisibility(android.view.View.GONE);
                 Toast.makeText(this, message, Toast.LENGTH_LONG).show();
             }
         });
     }
     private void requestImport() {
+        if (!importButton.isEnabled()) return;
         importButton.setEnabled(false);
         Log.i("PinballFantasies", "A2_IMPORT_REQUESTED");
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
@@ -125,6 +132,45 @@ public final class PinballActivity extends GameActivity {
         }
         applyImmersiveMode();
         session = nativeOpen();
+        controls = new Controls((kind,a,b) -> nativeInput(session,kind,a,b));
+        getOnBackPressedDispatcher().addCallback(this,new androidx.activity.OnBackPressedCallback(true) {
+            @Override public void handleOnBackPressed() { controls.tap(1); }
+        });
+        addContentView(new ControlOverlay(this,controls), new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,FrameLayout.LayoutParams.MATCH_PARENT));
+        android.widget.LinearLayout menu = new android.widget.LinearLayout(this);
+        menu.setOrientation(android.widget.LinearLayout.VERTICAL);
+        android.widget.LinearLayout row = new android.widget.LinearLayout(this);
+        menu.addView(row);
+        String[] labels={"Enter","Esc","P","M","Y","N"};
+        int[] codes={28,1,25,50,21,49};
+        for (int i=0;i<labels.length;i++) addKey(row,labels[i],codes[i]);
+        Button more = new Button(this); more.setText("Keys"); more.setTextSize(11);
+        more.setAlpha(.65f); more.setFocusable(false);
+        android.widget.HorizontalScrollView alphabet = new android.widget.HorizontalScrollView(this);
+        android.widget.LinearLayout letters = new android.widget.LinearLayout(this);
+        alphabet.addView(letters);
+        for (int k=29;k<=54;k++) {
+            final int code=Controls.make(k);
+            Button letter=new Button(this); letter.setText(Character.toString((char)('A'+k-29)));
+            letter.setAlpha(.65f); letter.setFocusable(false);
+            letter.setOnClickListener(v -> controls.tap(code)); letters.addView(letter);
+        }
+        alphabet.setVisibility(android.view.View.GONE);
+        more.setOnClickListener(v -> alphabet.setVisibility(
+                alphabet.getVisibility()==android.view.View.GONE ? android.view.View.VISIBLE : android.view.View.GONE));
+        row.addView(more,new android.widget.LinearLayout.LayoutParams(0,
+                (int)(40*getResources().getDisplayMetrics().density),1));
+        row = new android.widget.LinearLayout(this); menu.addView(row);
+        for (int i=0;i<8;i++) addKey(row,"F"+(i+1),59+i);
+        Button dataButton=new Button(this); dataButton.setText("Data"); dataButton.setTextSize(11);
+        dataButton.setAlpha(.65f); dataButton.setFocusable(false);
+        dataButton.setOnClickListener(v -> requestImport());
+        row.addView(dataButton,new android.widget.LinearLayout.LayoutParams(0,
+                (int)(40*getResources().getDisplayMetrics().density),1));
+        menu.addView(alphabet);
+        addContentView(menu,new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT,Gravity.TOP));
         importer = new DataImport(getNoBackupFilesDir(), new File(getFilesDir(), "State"),
                 new DataImport.Engine() {
                     public void validate(File data, File state) throws IOException { engineCall(0, data, state); }
@@ -138,7 +184,7 @@ public final class PinballActivity extends GameActivity {
         importButton.setOnClickListener(view -> requestImport());
         FrameLayout.LayoutParams layout = new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT,
-                Gravity.TOP | Gravity.CENTER_HORIZONTAL);
+                Gravity.CENTER);
         addContentView(importButton, layout);
         worker.execute(() -> {
             try {
@@ -156,14 +202,47 @@ public final class PinballActivity extends GameActivity {
     protected void onResume() {
         super.onResume();
         applyImmersiveMode();
+        resumed = true; syncInputs();
     }
 
     @Override
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
+        focused = hasFocus; syncInputs();
         if (hasFocus) {
             applyImmersiveMode();
         }
+    }
+
+    private void addKey(android.widget.LinearLayout row,String text,int code) {
+        Button button=new Button(this);
+        button.setText(text); button.setTextSize(11); button.setMinWidth(0);
+        button.setMinimumWidth(0); button.setPadding(0,0,0,0); button.setAlpha(.65f);
+        button.setFocusable(false);
+        button.setOnClickListener(v -> controls.tap(code));
+        row.addView(button,new android.widget.LinearLayout.LayoutParams(0,
+                (int)(40*getResources().getDisplayMetrics().density),1));
+    }
+    private void syncInputs() {
+        if (controls==null) return;
+        // Suspend under the native mutex before clearing Java ownership. Pending
+        // spring/mouse edges are discarded by the engine, not fired on focus loss.
+        nativeActive(session,resumed,focused);
+        controls.enabled=resumed && focused;
+        if (!controls.enabled) controls.clear();
+    }
+    @Override protected void onPause() {
+        resumed=false; syncInputs(); super.onPause();
+    }
+    @Override public boolean dispatchKeyEvent(android.view.KeyEvent event) {
+        if (controls!=null && (event.getAction()==android.view.KeyEvent.ACTION_DOWN ||
+                event.getAction()==android.view.KeyEvent.ACTION_UP) &&
+                controls.key(event.getKeyCode(),event.getAction()==android.view.KeyEvent.ACTION_DOWN,
+                             event.getRepeatCount())) return true;
+        return super.dispatchKeyEvent(event);
+    }
+    @Override public void onBackPressed() {
+        if (controls!=null) controls.tap(1);
     }
 
     private void applyImmersiveMode() {

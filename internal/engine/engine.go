@@ -23,13 +23,14 @@ const (
 // Engine operations, including Frame and PCM sinks, must be serialized by the
 // host. A PCM sink may copy/enqueue samples but must not reenter the engine.
 type Engine struct {
-	runner *source.Runner
-	now    time.Time
-	last   int64
-	held   gameplay.Controls
-	mouse  gameplay.Mouse
-	delta  int
-	fire   bool
+	runner    *source.Runner
+	now       time.Time
+	last      int64
+	held      gameplay.Controls
+	mouse     gameplay.Mouse
+	delta     int
+	fire      bool
+	fullTable bool
 }
 
 func Load(data, state string, ns int64) (*Engine, error) {
@@ -142,7 +143,7 @@ func (e *Engine) Advance(ns int64, pcm func([]byte) error) error {
 
 // Frame borrows the runtime framebuffer. Valid until the next mutating engine
 // operation or Frame call. The caller must not write it or use it concurrently.
-func (e *Engine) Frame() *image.RGBA { return e.runner.Frame() }
+func (e *Engine) Frame() *image.RGBA { return e.runner.Runtime.FramePresentation(e.fullTable) }
 
 type State struct {
 	Tick                         uint64
@@ -164,3 +165,6 @@ func (e *Engine) Close() error {
 	e.runner.Submit(frontend.Input{Close: true})
 	return e.runner.Advance(nil, nil)
 }
+
+// SetPresentation changes only subsequent frame composition.
+func (e *Engine) SetPresentation(full bool) { e.fullTable = full }

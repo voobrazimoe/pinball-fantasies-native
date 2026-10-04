@@ -46,7 +46,7 @@ func (g *Game) applyLamp(p *[768]byte, n int, on bool) {
 func (g *Game) Frame() *image.RGBA {
 	p := presentation.MatrixPaletteMode(g.Palette(), g.Physics.ReferenceMode, 128)
 	d := *g.Display
-	return presentation.ComposeNative(g.Physics.FramePalette(p), &d, p, 98, 128, g.Physics.Settings, g.Physics.ScreenOffset)
+	return presentation.ComposeNative(g.Physics.FramePalette(p), &d, p, 98, 128, g.Physics.PresentationSettings(), g.Physics.ScreenOffset)
 }
 func (g *Game) text(out *image.RGBA, s string, x, y, h, scale int) {
 	font := g.font5
@@ -87,13 +87,13 @@ func (g *Game) AttractFrame(ticks int) *image.RGBA {
 	if y < 0 {
 		y = -y
 	}
-	if g.Physics.Settings.TableY() != 0 {
+	if g.Physics.PresentationSettings().TableY() != 0 {
 		y = 0
 	}
-	for row := 0; row < g.Physics.Settings.RenderHeight(); row++ {
+	for row := 0; row < g.Physics.PresentationSettings().RenderHeight(); row++ {
 		for x := 0; x < 320; x++ {
 			i := int(field.Indices[(y+row)*320+x]) * 3
-			o := (row+g.Physics.Settings.TableY())*out.Stride + x*4
+			o := (row+g.Physics.PresentationSettings().TableY())*out.Stride + x*4
 			copy(out.Pix[o:o+3], p[i:i+3])
 		}
 	}

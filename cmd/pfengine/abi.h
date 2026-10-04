@@ -48,6 +48,11 @@ int32_t pf_engine_advance(uint64_t handle, int64_t ns, pf_pcm_sink sink, void *c
  * destroy. Do not free/write. Retrieval copies the authoritative Go raster into
  * reusable C storage: never exports a retained Go pointer; no per-frame malloc.
  * Every out pointer must be non-null. */
+/* Optional additive ABI 1 extension. full_table must be 0 (saved presentation)
+ * or 1 (full 320x609 table presentation). Changes only frame composition;
+ * never settings, simulation, cadence, audio, table or player state. Serialized
+ * like all other calls. Older hosts need not call it; default is 0. */
+int32_t pf_engine_set_presentation(uint64_t handle, int32_t full_table);
 int32_t pf_engine_frame(uint64_t handle, uint8_t **pixels, int32_t *width, int32_t *height, int32_t *stride);
 /* flags: bit 0 suspended, bit 1 quit, bit 2 mouse plunger active. */
 int32_t pf_engine_state(uint64_t handle, uint64_t *tick, uint32_t *mode, uint32_t *table, uint32_t *flags);

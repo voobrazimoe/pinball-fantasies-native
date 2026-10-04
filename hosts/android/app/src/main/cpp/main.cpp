@@ -1,3 +1,4 @@
+#include "a3_host.h"
 #include <EGL/egl.h>
 #include <GLES2/gl2.h>
 #include <android/log.h>
@@ -234,6 +235,8 @@ public:
             return false;
         }
         const std::vector<std::uint8_t> pixels = makeSyntheticFrame();
+        frameWidth_ = textureWidth_ = kFrameWidth;
+        frameHeight_ = textureHeight_ = kFrameHeight;
         glBindTexture(GL_TEXTURE_2D, texture_);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -297,8 +300,10 @@ public:
         LOGI("A1_ACTIVITY_%s", resumed ? "RESUMED" : "PAUSED");
     }
 
+    void setFocused(bool focused) { focused_ = focused; }
+
     [[nodiscard]] bool active() const {
-        return resumed_ && ready();
+        return resumed_ && focused_ && ready();
     }
 
     bool draw() {
@@ -314,26 +319,27 @@ public:
             return false;
         }
 
-        int viewportX = 0;
-        int viewportY = 0;
-        int viewportWidth = surfaceWidth;
-        int viewportHeight = surfaceHeight;
-        const double sourceAspect = static_cast<double>(kFrameWidth) / static_cast<double>(kFrameHeight);
-        const double surfaceAspect = static_cast<double>(surfaceWidth) / static_cast<double>(surfaceHeight);
-        if (surfaceAspect > sourceAspect) {
-            viewportWidth = static_cast<int>(std::lround(static_cast<double>(surfaceHeight) * sourceAspect));
-            viewportX = (surfaceWidth - viewportWidth) / 2;
-        } else {
-            viewportHeight = static_cast<int>(std::lround(static_cast<double>(surfaceWidth) / sourceAspect));
-            viewportY = (surfaceHeight - viewportHeight) / 2;
+        if (androidEngineFrame(a3::portrait(surfaceWidth, surfaceHeight), pixels_, frameWidth_, frameHeight_)) {
+            glBindTexture(GL_TEXTURE_2D, texture_);
+            if (textureWidth_ != frameWidth_ || textureHeight_ != frameHeight_) {
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, frameWidth_, frameHeight_, 0,
+                             GL_RGBA, GL_UNSIGNED_BYTE, pixels_.data());
+                textureWidth_ = frameWidth_; textureHeight_ = frameHeight_;
+            } else {
+                glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, frameWidth_, frameHeight_,
+                                GL_RGBA, GL_UNSIGNED_BYTE, pixels_.data());
+            }
         }
+        const auto viewport = a3::letterbox(surfaceWidth, surfaceHeight, frameWidth_, frameHeight_);
+        const int viewportX = viewport.x, viewportY = viewport.y;
+        const int viewportWidth = viewport.w, viewportHeight = viewport.h;
 
         if (surfaceWidth != lastSurfaceWidth_ || surfaceHeight != lastSurfaceHeight_) {
             LOGI("A1_VIEWPORT surface=%dx%d orientation=%s viewport=%d,%d,%dx%d source=%dx%d",
                  surfaceWidth, surfaceHeight,
                  surfaceHeight >= surfaceWidth ? "portrait" : "landscape",
                  viewportX, viewportY, viewportWidth, viewportHeight,
-                 kFrameWidth, kFrameHeight);
+                 frameWidth_, frameHeight_);
             lastSurfaceWidth_ = surfaceWidth;
             lastSurfaceHeight_ = surfaceHeight;
         }
@@ -381,6 +387,9 @@ public:
     }
 
 private:
+    std::vector<uint8_t> pixels_;
+    int frameWidth_ = kFrameWidth, frameHeight_ = kFrameHeight;
+    int textureWidth_ = kFrameWidth, textureHeight_ = kFrameHeight;
     EGLDisplay display_ = EGL_NO_DISPLAY;
     EGLSurface surface_ = EGL_NO_SURFACE;
     EGLContext context_ = EGL_NO_CONTEXT;
@@ -393,6 +402,7 @@ private:
     int lastSurfaceHeight_ = -1;
     bool firstFrame_ = true;
     bool resumed_ = false;
+    bool focused_ = false;
     bool resumeFrame_ = false;
 };
 
@@ -403,6 +413,12 @@ void handleAppCommand(android_app* app, int32_t command) {
     }
 
     switch (command) {
+        case APP_CMD_GAINED_FOCUS:
+            renderer->setFocused(true);
+            break;
+        case APP_CMD_LOST_FOCUS:
+            renderer->setFocused(false);
+            break;
         case APP_CMD_RESUME:
             renderer->setResumed(true);
             break;

@@ -9,6 +9,7 @@ on:
       - 'tools/test_check_android_elf.py'
       - 'tools/run_android_host_smoke.sh'
       - 'tools/test_android_import.sh'
+      - 'tools/test_android_a3.sh'
       - 'tools/build_android_engine.sh'
       - 'tools/build_engine.sh'
       - 'cmd/pfengine/**'
@@ -22,6 +23,7 @@ on:
       - 'tools/test_check_android_elf.py'
       - 'tools/run_android_host_smoke.sh'
       - 'tools/test_android_import.sh'
+      - 'tools/test_android_a3.sh'
       - 'tools/build_android_engine.sh'
       - 'tools/build_engine.sh'
       - 'cmd/pfengine/**'
@@ -38,7 +40,7 @@ env:
   ANDROID_AVD_HOME: ${{ github.workspace }}/.android-avd
 
 jobs:
-  a2-import-shell:
+  a3-engine-host:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -83,11 +85,15 @@ jobs:
 
       - name: Asset-free import transaction tests
         run: sh tools/test_android_import.sh
-      - name: Build unchanged ABI 1 engine for both public ABIs
+      - name: Asset-free A3 controls, framebuffer and native serialization tests
+        run: sh tools/test_android_a3.sh
+      - name: Shared presentation policy regressions
+        run: go test -count=1 ./internal/physics ./internal/presentation ./internal/engine ./internal/frontend ./internal/source
+      - name: Build ABI 1 engine for both public ABIs
         run: |
           export ANDROID_NDK_HOME="${ANDROID_HOME}/ndk/${ANDROID_NDK_VERSION}"
           sh tools/build_android_engine.sh all
-      - name: Build A2 debug APK
+      - name: Build A3 debug APK
         id: apk-build
         run: gradle -p hosts/android :app:assembleDebug :app:assembleDebugAndroidTest --stacktrace
 
@@ -114,7 +120,7 @@ jobs:
             python3 tools/check_android_elf.py "$library" --objdump "$OBJDUMP"
             if [[ "$library" == */libpfengine.so ]]; then
               "$OBJDUMP" -T "$library" > "${RUNNER_TEMP}/engine-symbols.txt"
-              for symbol in pf_engine_abi_version pf_engine_create pf_engine_destroy; do
+              for symbol in pf_engine_abi_version pf_engine_create pf_engine_destroy pf_engine_advance pf_engine_frame pf_engine_set_presentation pf_engine_suspend pf_engine_resume pf_engine_set_action pf_engine_key pf_engine_release pf_engine_plunger_delta pf_engine_plunger_fire; do
                 grep -E "[[:space:]]\\.text[[:space:]].*[[:space:]]${symbol}$" "${RUNNER_TEMP}/engine-symbols.txt"
               done
             fi
@@ -170,11 +176,11 @@ jobs:
       - name: Exercise A1 rendering, rotation and lifecycle
         run: sh tools/run_android_host_smoke.sh
 
-      - name: Upload A2 APK
+      - name: Upload A3 APK
         if: ${{ !cancelled() && steps.apk-build.outcome == 'success' }}
         uses: actions/upload-artifact@v4
         with:
-          name: pinball-fantasies-android-a2-debug
+          name: pinball-fantasies-android-a3-debug
           if-no-files-found: error
           path: hosts/android/app/build/outputs/apk/debug/app-debug.apk
 

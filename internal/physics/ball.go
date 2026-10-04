@@ -36,14 +36,15 @@ type Game struct {
 	FastBall     bool  // FAIRPLAY clears SHIFTKEYS bit2; HI_RES initially sets it.
 	TargetRaster int16 // SCREENFORCE2: desired viewport, still smoothed
 
-	Settings      settings.Config
-	ReferenceMode byte // Historical DOS palette reference; never a native user setting.
-	gravity       [][2]int16
-	Table         *Table
-	Ball          Ball
-	Flippers      [3]Flipper
-	mask12        []byte
-	mask22        []byte
+	PresentationFullTable bool // Render-only host override; never read by simulation or persistence.
+	Settings              settings.Config
+	ReferenceMode         byte // Historical DOS palette reference; never a native user setting.
+	gravity               [][2]int16
+	Table                 *Table
+	Ball                  Ball
+	Flippers              [3]Flipper
+	mask12                []byte
+	mask22                []byte
 	// Optional Party Land consumer, called at the original callback boundaries.
 	OnEvent                                   func(Event)
 	BeforeLate                                func()       // PF4.5 matrix work finishes VBLANK before late-raster physics.

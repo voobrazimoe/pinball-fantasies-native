@@ -229,3 +229,25 @@ func (r *Runtime) Update(in Input) error {
 	r.PCM = r.Player.Render(audio.Rate / 60)
 	return nil
 }
+
+// FramePresentation scopes a render-only override to this retrieval. It cannot
+// affect Update, source camera arithmetic, settings writes or future sessions.
+func (r *Runtime) FramePresentation(full bool) *image.RGBA {
+	var p *physics.Game
+	switch g := r.Model.Session.(type) {
+	case *partyland.Game:
+		p = g.Physics
+	case *speeddevils.Game:
+		p = g.Physics
+	case *gameshow.Game:
+		p = g.Physics
+	case *stones.Game:
+		p = g.Physics
+	}
+	if p != nil {
+		previous := p.PresentationFullTable
+		p.PresentationFullTable = full
+		defer func() { p.PresentationFullTable = previous }()
+	}
+	return r.View.framePresentation(r.Model, full)
+}

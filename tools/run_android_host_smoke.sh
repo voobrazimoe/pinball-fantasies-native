@@ -99,6 +99,14 @@ wait_for A1_ACTIVITY_RESUMED
 wait_for A1_ACTIVE_FRAME
 require_same_host
 
+# A3 no-data inputs/Back must keep the same legal native shell alive.
+begin_phase
+for key in KEYCODE_F1 KEYCODE_F8 KEYCODE_ENTER KEYCODE_DPAD_DOWN KEYCODE_SHIFT_LEFT KEYCODE_SHIFT_RIGHT KEYCODE_SPACE KEYCODE_P KEYCODE_M KEYCODE_BACK; do
+    timeout 10 adb shell input keyevent "$key"
+done
+timeout 10 adb shell input swipe 900 1600 900 1800 150
+require_same_host
+
 # A process restart creates fresh EGL resources and presents again.
 timeout 10 adb shell am force-stop "$PACKAGE"
 begin_phase
@@ -106,4 +114,4 @@ timeout 30 adb shell am start -W -n "$COMPONENT"
 wait_for A1_FRAME_PRESENTED
 wait_for A2_SHELL_NO_DATA
 test "$(grep -c A1_HOST_STARTED "$scratch/log")" -eq 1
-echo 'OK: Android A1 frame, rotation, background/resume and fresh process'
+echo 'OK: Android A3 no-data inputs/Back and A1 frame, rotation, background/resume and fresh process'
