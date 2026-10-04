@@ -1,7 +1,29 @@
 name: macOS native hosts
 on:
   push:
+    paths-ignore:
+      - 'hosts/android/**'
+      - 'docs/android.md'
+      - '.github/workflows/android-a0.yml'
+      - '.github/workflows/android-host.yml'
+      - 'tools/build_android_engine.sh'
+      - 'tools/check_android_elf.py'
+      - 'tools/test_check_android_elf.py'
+      - 'tools/run_android_abi_smoke.sh'
+      - 'tools/run_android_host_smoke.sh'
+      - 'tools/test_android_import.sh'
   pull_request:
+    paths-ignore:
+      - 'hosts/android/**'
+      - 'docs/android.md'
+      - '.github/workflows/android-a0.yml'
+      - '.github/workflows/android-host.yml'
+      - 'tools/build_android_engine.sh'
+      - 'tools/check_android_elf.py'
+      - 'tools/test_check_android_elf.py'
+      - 'tools/run_android_abi_smoke.sh'
+      - 'tools/run_android_host_smoke.sh'
+      - 'tools/test_android_import.sh'
   workflow_dispatch:
 permissions:
   contents: read
