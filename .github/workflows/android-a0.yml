@@ -78,6 +78,8 @@ jobs:
           echo "ANDROID_NDK_HOME=${ANDROID_HOME}/ndk/${ANDROID_NDK_VERSION}" >> "$GITHUB_ENV"
           echo "${ANDROID_HOME}/platform-tools" >> "$GITHUB_PATH"
           echo "${ANDROID_HOME}/emulator" >> "$GITHUB_PATH"
+          echo "ANDROID_AVD_HOME=${RUNNER_TEMP}/android-avd" >> "$GITHUB_ENV"
+          mkdir -p "${RUNNER_TEMP}/android-avd"
       - name: Build x86_64 A0 binaries
         env:
           PF_ANDROID_API: ${{ env.ANDROID_API }}
@@ -87,6 +89,7 @@ jobs:
         run: |
           AVDMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/avdmanager"
           echo no | "$AVDMANAGER" create avd --force --name pf16k --package "${ANDROID_16K_IMAGE}" --device pixel_6
+          test -f "${ANDROID_AVD_HOME}/pf16k.ini"
           if [ -e /dev/kvm ]; then sudo chown "$USER" /dev/kvm; fi
           nohup "${ANDROID_HOME}/emulator/emulator" -avd pf16k -no-window -no-audio -no-snapshot -no-boot-anim -gpu swiftshader_indirect >"${RUNNER_TEMP}/emulator.log" 2>&1 &
           timeout 180 adb wait-for-device
@@ -100,4 +103,5 @@ jobs:
         run: |
           adb shell getprop ro.build.version.release || true
           adb shell getconf PAGE_SIZE || true
+          ls -la "${ANDROID_AVD_HOME:-${RUNNER_TEMP}/android-avd}" || true
           tail -200 "${RUNNER_TEMP}/emulator.log" || true
