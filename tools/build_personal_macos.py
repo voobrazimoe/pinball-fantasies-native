@@ -49,12 +49,10 @@ def main():
             run('codesign', '--force', '--sign', '-', str(app))
             run('codesign', '--verify', '--strict', str(app))
             run('lipo', '-verify_arch', arch, str(app/'Contents/MacOS/pinballfantasies'))
-            shutil.copy2(public/'RunWithTiming.command', output/'RunWithTiming.command')
             archive = output/f'PinballFantasies-personal-{arch}-{revision}.zip'
             if archive.exists():
                 archive.unlink()
             run('ditto', '-c', '-k', '--sequesterRsrc', '--keepParent', str(app), str(archive))
-            run('zip', '-q', '-j', str(archive), str(output/'RunWithTiming.command'))
             artifacts[str(archive.relative_to(ROOT))] = hashlib.sha256(archive.read_bytes()).hexdigest()
         for record in records:
             if hashlib.sha256((data/record['name']).read_bytes()).hexdigest() != record['sha256']:

@@ -77,8 +77,7 @@ sided modifier support for remote events that omit those details.
 
 ## Distribution details
 
-Packages contain the public app and optional timing launcher, without commercial
-originals. They are ad-hoc signed; Developer ID signing and notarization have not
+Public packages contain only the app, without commercial originals. They are ad-hoc signed; Developer ID signing and notarization have not
 been performed. Settings and scores stay outside the bundle. The owner accepts
 the release based on the reported gameplay checks; this record does not claim
 exhaustive testing of every audio route, display topology or sleep duration.

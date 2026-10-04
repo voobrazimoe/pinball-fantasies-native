@@ -39,16 +39,15 @@ match. Cross-building on Apple Silicon verifies compile/link, architecture,
 ad-hoc signature and bundle structure, but does not establish Intel runtime or
 physical keyboard acceptance. Hosted CI continues to test the default arm64 target.
 
-For input-lag investigation, extract the zip and launch `RunWithTiming.command`
-beside the app, then play with the built-in or attached keyboard. This writes
-`~/Desktop/PinballFantasies-timing.csv` with one summary per second: source ticks,
+For input-lag investigation, launch the executable from Terminal with
+`--pacing-log /path/to/report.csv`, then play with the built-in or attached
+keyboard. The CSV records one summary per second: source ticks,
 raster/draw/event counts and maximum timer gap, engine advance, frame copy, drawing,
 event-queue delay and event-to-draw time. Event-to-draw waits for a source tick
 after receipt; it measures layer submission completion, not physical screen scanout
 or remote video latency. The log includes the build revision and timer policy;
 the zip is also saved with its revision in the filename to distinguish test builds.
-Normal launches do not open a log. The equivalent CLI
-option is `--pacing-log /path/to/report.csv`; `PF_PACING_LOG` also works.
+Normal launches do not open a log. `PF_PACING_LOG` also works.
 
 The script selects Apple's compiler/SDK through `xcrun`, passes the SDK to cgo,
 builds both `bin/macos/libpfengine.a` and `libpfengine.dylib`, and keeps the stable
