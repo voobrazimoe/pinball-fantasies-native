@@ -30,7 +30,11 @@ jobs:
         run: |
           SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
           test -x "$SDKMANAGER"
+          set +o pipefail
           yes | "$SDKMANAGER" --licenses >/dev/null
+          license_status=${PIPESTATUS[1]}
+          set -o pipefail
+          test "$license_status" -eq 0
           "$SDKMANAGER" "ndk;${ANDROID_NDK_VERSION}" platform-tools
           echo "ANDROID_NDK_HOME=${ANDROID_HOME}/ndk/${ANDROID_NDK_VERSION}" >> "$GITHUB_ENV"
           echo "${ANDROID_HOME}/platform-tools" >> "$GITHUB_PATH"
@@ -65,7 +69,11 @@ jobs:
         run: |
           SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
           test -x "$SDKMANAGER"
+          set +o pipefail
           yes | "$SDKMANAGER" --licenses >/dev/null
+          license_status=${PIPESTATUS[1]}
+          set -o pipefail
+          test "$license_status" -eq 0
           "$SDKMANAGER" "ndk;${ANDROID_NDK_VERSION}" platform-tools emulator "${ANDROID_16K_IMAGE}"
           echo "ANDROID_NDK_HOME=${ANDROID_HOME}/ndk/${ANDROID_NDK_VERSION}" >> "$GITHUB_ENV"
           echo "${ANDROID_HOME}/platform-tools" >> "$GITHUB_PATH"
