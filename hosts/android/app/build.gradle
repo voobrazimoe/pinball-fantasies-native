@@ -32,6 +32,11 @@ android {
         }
     }
 
+    // CMake links the generated library; explicitly package both ABI outputs.
+    sourceSets {
+        main.jniLibs.srcDirs = ['../../../bin/android']
+    }
+
     buildFeatures {
         prefab true
     }

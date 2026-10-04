@@ -92,6 +92,7 @@ jobs:
           rm -rf "${RUNNER_TEMP}/a1-apk"
           mkdir -p "${RUNNER_TEMP}/a1-apk"
           unzip -q "$APK" 'lib/*/*.so' -d "${RUNNER_TEMP}/a1-apk"
+          unzip -Z1 "$APK" | grep '^lib/'
           for abi in arm64-v8a x86_64; do
             test -f "${RUNNER_TEMP}/a1-apk/lib/$abi/libpfengine.so"
             test -f "${RUNNER_TEMP}/a1-apk/lib/$abi/libpinball_android.so"
