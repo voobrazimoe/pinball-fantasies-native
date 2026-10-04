@@ -24,6 +24,7 @@ cp "$(./tools/go.sh env GOROOT)/LICENSE" "$app/Contents/Resources/Go-LICENSE.txt
 common=(-arch arm64 -isysroot "$sdk" -mmacosx-version-min=13.0 -Wall -Wextra -Werror -O2)
 objc=(-fobjc-arc -fblocks -framework AppKit -framework AudioToolbox -framework CoreAudio -framework IOKit -framework Security -framework CoreFoundation -framework CoreGraphics)
 "$CC" "${common[@]}" -std=c11 -pthread hosts/macos/host_logic.c hosts/macos/logic_tests.c -o bin/macos/logic-tests
+python3 tools/test_engine_abi_contract.py --library "$PWD/bin/macos/libpfengine.dylib"
 "$CC" "${common[@]}" "${objc[@]}" hosts/macos/main.m hosts/macos/frame_view.m hosts/macos/storage.m hosts/macos/audio_host.m hosts/macos/native_input.m hosts/macos/host_logic.c bin/macos/libpfengine.a -o "$app/Contents/MacOS/pinballfantasies"
 "$CC" "${common[@]}" "${objc[@]}" hosts/macos/native_tests.m hosts/macos/frame_view.m hosts/macos/storage.m hosts/macos/audio_host.m hosts/macos/native_input.m hosts/macos/host_logic.c bin/macos/libpfengine.a -o bin/macos/native-tests
 codesign --force --sign - "$app"
@@ -33,6 +34,7 @@ test "$(lipo -archs "$app/Contents/MacOS/pinballfantasies")" = arm64
 otool -L "$app/Contents/MacOS/pinballfantasies"
 plutil -lint "$app/Contents/Info.plist"
 bin/macos/logic-tests
+python3 tools/test_engine_abi_contract.py --library "$PWD/bin/macos/libpfengine.dylib"
 if [ -n "${PF_ENGINE_DATA_DIR:-}" ]; then
     bin/macos/native-tests "$PF_ENGINE_DATA_DIR"
 else

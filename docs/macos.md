@@ -63,7 +63,7 @@ The Go desktop CLI and `internal/platform` adapter target Linux/Windows; macOS
 uses the C archive plus AppKit rather than introducing fake Go platform stubs.
 CI runs every other Go package. Tests requiring absent originals/reference
 captures explicitly skip. Those skips **do not satisfy** the original-backed
-macOS conformance gate. Asset-free C tests check ABI version, missing-data errors
+macOS conformance gate. Asset-free native C archive and loaded C shared-library tests check ABI version, missing-data errors
 and every invalid-handle export; they do not claim successful gameplay replay.
 
 ## Window, time and input
