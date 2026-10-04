@@ -1,5 +1,14 @@
 # Native host phase validation status
 
+**Historical foundation report below.** The foundation was independently
+revalidated, fast-forwarded and pushed to public `main` at
+`8bc62e361832ac2ae76b2da251d335eef533c9cc` on 2026-10-03 under the new task
+authorization. Its former main-integration restriction below is superseded for
+that foundation milestone. Native macOS work now lives exclusively on
+`codex/macos-arm64-host`; see [current macOS implementation and pending acceptance](macos.md).
+The macOS branch is not authorized for merge before original-backed/physical
+acceptance. Android remains unimplemented.
+
 Validated on 2026-10-03. Engine work is ready for native host development;
 macOS and Android applications are **not implemented or accepted**. The feature
 branch must not be merged into main as a completed platform phase.

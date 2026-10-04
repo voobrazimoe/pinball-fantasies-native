@@ -4,7 +4,7 @@ import argparse, hashlib, json, pathlib, plistlib, sys
 p=argparse.ArgumentParser(); p.add_argument('app',type=pathlib.Path); p.add_argument('--originals',type=pathlib.Path); a=p.parse_args()
 root=pathlib.Path(__file__).resolve().parent.parent
 allowed={'Contents/Info.plist','Contents/MacOS/pinballfantasies','Contents/Resources/LICENSE.txt',
-         'Contents/Resources/Go-version.txt','Contents/_CodeSignature/CodeResources'}
+         'Contents/Resources/Go-version.txt','Contents/Resources/Go-LICENSE.txt','Contents/_CodeSignature/CodeResources'}
 files={str(f.relative_to(a.app)):f for f in a.app.rglob('*') if f.is_file()}
 assert set(files)==allowed,(set(files)-allowed,allowed-set(files))
 assert not any(f.is_symlink() for f in a.app.rglob('*'))

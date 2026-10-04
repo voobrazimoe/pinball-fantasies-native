@@ -22,7 +22,7 @@ Linux consumes unscaled SDL relative Y motion and left-button presses. Relative 
 
 `Suspend` clears held controls, queued gameplay edges and pending mouse fire without updating the game or tracker. `Advance` does nothing while suspended; a close request can still complete shutdown. `Resume` clears input and re-anchors the next deadline to the current monotonic time, so elapsed suspended wall time never causes catch-up. Desktop focus loss additionally submits the existing frontend focus-loss pause request and suspends source advancement. Focus gain re-anchors the clock but leaves the game's pause in place until the existing resume key. Hosts may suspend/flush their audio devices independently. No game/tracker state is rewritten merely to implement suspension.
 
-The tiny `internal/engine` facade and `cmd/pfengine` C ABI expose this same Runner to foreign hosts. See [native engine ownership, timing, threading and conformance](native-engine.md). macOS and Android hosts remain pending; no second game implementation is introduced.
+The tiny `internal/engine` facade and `cmd/pfengine` C ABI expose this same Runner to foreign hosts. See [native engine ownership, timing, threading and conformance](native-engine.md). The Objective-C AppKit macOS arm64 host in `hosts/macos` uses ABI 1 with CoreGraphics presentation and AudioUnit buffering; original-backed and physical-Mac acceptance remain pending. See [macOS build and validation](macos.md). Android remains unimplemented; no second game implementation is introduced.
 
 The public repository contains no DOS/x86 execution path. Original game files are read only as data containers and are never executed.
 Matrix pixels belong to source scheduling. The shared presentation layer retains

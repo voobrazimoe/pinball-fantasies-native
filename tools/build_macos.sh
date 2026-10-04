@@ -19,6 +19,7 @@ app='release/macos/Pinball Fantasies.app'
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 cp hosts/macos/Info.plist "$app/Contents/Info.plist"
 cp LICENSE "$app/Contents/Resources/LICENSE.txt"
+cp "$(./tools/go.sh env GOROOT)/LICENSE" "$app/Contents/Resources/Go-LICENSE.txt"
 ./tools/go.sh env GOVERSION > "$app/Contents/Resources/Go-version.txt"
 common=(-arch arm64 -isysroot "$sdk" -mmacosx-version-min=13.0 -Wall -Wextra -Werror -O2)
 objc=(-fobjc-arc -fblocks -framework AppKit -framework AudioToolbox -framework CoreAudio -framework IOKit -framework Security -framework CoreFoundation -framework CoreGraphics)
@@ -32,7 +33,11 @@ test "$(lipo -archs "$app/Contents/MacOS/pinballfantasies")" = arm64
 otool -L "$app/Contents/MacOS/pinballfantasies"
 plutil -lint "$app/Contents/Info.plist"
 bin/macos/logic-tests
-bin/macos/native-tests ${PF_ENGINE_DATA_DIR:+"$PF_ENGINE_DATA_DIR"}
+if [ -n "${PF_ENGINE_DATA_DIR:-}" ]; then
+    bin/macos/native-tests "$PF_ENGINE_DATA_DIR"
+else
+    bin/macos/native-tests
+fi
 if [ -n "${PF_ENGINE_DATA_DIR:-}" ]; then
     python3 tools/test_engine_abi.py --library "$PWD/bin/macos/libpfengine.dylib" --oracle "$PWD/bin/macos/pftrace" --data "$PF_ENGINE_DATA_DIR"
 else

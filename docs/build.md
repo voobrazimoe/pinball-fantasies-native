@@ -42,5 +42,7 @@ Linux AppImage packaging additionally needs Debian/Ubuntu package metadata,
 The host-independent engine can also be built as a C archive/shared library
 using `tools/build_engine.sh`. See [native engine build and conformance](native-engine.md)
 for the stable header, ownership rules and original-backed replay command. Linux
-CI builds both C interfaces without commercial assets. macOS/Android applications
-are not available yet; their SDK and runtime acceptance remain pending.
+CI builds both C interfaces without commercial assets. The macOS arm64 host is built with Apple tools by `tools/build_macos.sh`; see
+[macOS prerequisites, packaging and acceptance](macos.md). Hosted native build/tests
+are available; original-backed and physical-Mac acceptance are pending. Android
+remains unimplemented.
