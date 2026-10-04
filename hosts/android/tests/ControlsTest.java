@@ -3,7 +3,13 @@ import java.util.ArrayList;
 import java.util.List;
 public final class ControlsTest {
     static void check(boolean b) { if (!b) throw new AssertionError(); }
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
+        if (args.length>0) try (java.util.Scanner mappings=new java.util.Scanner(new java.io.File(args[0]))) {
+            while(mappings.hasNextInt()) {
+                int key=mappings.nextInt(), expected=mappings.nextInt();
+                if (Controls.make(key)!=expected) throw new AssertionError("Desktop make parity for Android key "+key);
+            }
+        }
         List<String> events=new ArrayList<>();
         Controls c=new Controls((kind,a,b)->events.add(kind+":"+a+":"+b)); c.enabled=true;
         check(Controls.hit(.1f,.8f)==0 && Controls.hit(.6f,.8f)==1);

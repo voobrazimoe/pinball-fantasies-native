@@ -46,6 +46,16 @@ This is an asset-free platform prototype, not a playable Android release.
   and persistent engine creation. Successful original-backed Android import/bootstrap
   and physical-device acceptance remain unverified for A6. A3 implementation is described below; A4–A7 remain outstanding.
 
+- A3 implementation passed [hosted Android CI at `382a03d`](https://github.com/voobrazimoe/pinball-fantasies-native/actions/runs/37205273569):
+  both-ABI APK/exports/16 KB checks, payload scan, A2 import transactions, A3
+  controls/frame/native-session tests, real MotionEvent instrumentation and
+  no-data rotation/lifecycle/keyboard/Back smoke. Required boundary regressions
+  also passed: [A0](https://github.com/voobrazimoe/pinball-fantasies-native/actions/runs/37205273560),
+  [shared source matrix](https://github.com/voobrazimoe/pinball-fantasies-native/actions/runs/37205273587),
+  and [native macOS](https://github.com/voobrazimoe/pinball-fantasies-native/actions/runs/37205273566).
+  Private-original Go render/cadence comparisons passed locally; original-backed
+  Android gameplay and physical-device acceptance remain unverified for A6.
+
 Build the engine first with an installed Go 1.27.1, SDK/NDK/JDK and Gradle 9.6.0:
 
 ```sh
@@ -256,6 +266,8 @@ or a large motion packet cannot make charging faster than engine rules allow.
 `Controls` is an Android-framework-independent translation policy shared by
 hardware dispatch, menu controls and tests. Each physical key contributes
 independently, and repeated/duplicate down events do not emit extra makes.
+Tests compare every mapped key against the compiled macOS host make-code
+implementation rather than a second expected scan-code table.
 Action key-up removes only that contributor; Down release follows the engine's
 existing spring release edge. Enter also calls `pf_engine_release` on its make,
 matching the desktop native host.
@@ -296,8 +308,10 @@ checks, packaged ABI exports, payload scan, all ELF/ZIP 16 KB checks and A1
 rotation/background/resume smoke. Smoke now issues hardware/menu/Back and touch
 input in the no-data shell and requires the same host to survive.
 
-Asset-free Go regressions cover every saved scrolling mode/resolution without
-mutating settings. The optional private-original engine regression compares
+Asset-free Go regressions exercise the actual Engine → Runtime → four-table
+render/composition path using invented zero indexed pixels, verify 320×609 and
+restored landscape pixels without moving source time, and cover every saved
+scrolling mode/resolution without mutating settings. The optional private-original engine regression compares
 portrait/landscape rendering for all four tables and saved modes against a second
 Runner, including source state, PCM and restored landscape pixels; public CI
 explicitly skips commercial fixtures. Shared source/macOS regressions and A0

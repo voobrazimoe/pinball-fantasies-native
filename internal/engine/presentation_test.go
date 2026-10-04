@@ -3,8 +3,15 @@ package engine
 import (
 	"bytes"
 	"fmt"
+	"pinballfantasies/internal/assets"
 	"pinballfantasies/internal/frontend"
+	"pinballfantasies/internal/gameshow"
+	"pinballfantasies/internal/partyland"
+	"pinballfantasies/internal/physics"
+	"pinballfantasies/internal/presentation"
 	"pinballfantasies/internal/settings"
+	"pinballfantasies/internal/speeddevils"
+	"pinballfantasies/internal/stones"
 	"reflect"
 	"testing"
 )
@@ -69,7 +76,60 @@ func TestTransientPresentationAllTables(t *testing.T) {
 				if b.runner.Runtime.Model.Settings != saved {
 					t.Fatal("shutdown mutated settings")
 				}
+				stored, err := b.runner.Runtime.Model.SettingsStore.Load()
+				if err != nil || stored != saved {
+					t.Fatal("persisted portrait preference", stored, err)
+				}
 			})
+		}
+	}
+}
+
+// Exercise the actual Engine -> Runtime -> table -> physics -> composition path
+// with invented zero indexed pixels; no loader or commercial assets are used.
+func TestSyntheticTransientFrameAndSavedPreference(t *testing.T) {
+	for table := 1; table <= 4; table++ {
+		for scroll := settings.ScrollHard; scroll <= settings.ScrollOff; scroll++ {
+			saved := settings.Config{ScrollMode: scroll, Resolution: 1, Music: 1}
+			p := physics.New(&physics.Table{Initial: &assets.InitialTable{Playfield: &assets.Playfield{Indices: make([]byte, 320*576)}}})
+			p.Settings = saved
+			display := &presentation.Display{}
+			var session frontend.Session
+			switch table {
+			case 1:
+				session = &partyland.Game{Physics: p, Display: display}
+			case 2:
+				session = &speeddevils.Game{Physics: p, Display: display}
+			case 3:
+				session = &gameshow.Game{Physics: p, Display: display}
+			case 4:
+				session = &stones.Game{Physics: p, Display: display}
+			}
+			rt := &frontend.Runtime{Model: &frontend.Model{Mode: frontend.Playing, Selected: table, Session: session, Settings: saved}, View: &frontend.View{}}
+			e := New(rt, 100)
+			before := e.State()
+			next := e.runner.Next
+			landscape := append([]byte(nil), e.Frame().Pix...)
+			for _, portrait := range []bool{true, false, true, true, false} {
+				e.SetPresentation(portrait)
+				frame := e.Frame()
+				height := saved.RenderHeight() + 33
+				if portrait {
+					height = 609
+				}
+				if frame.Rect.Dx() != 320 || frame.Rect.Dy() != height {
+					t.Fatal(table, scroll, portrait, frame.Rect)
+				}
+				if !portrait && !bytes.Equal(frame.Pix, landscape) {
+					t.Fatal("landscape changed")
+				}
+				if p.PresentationFullTable || p.Settings != saved || rt.Model.Settings != saved {
+					t.Fatal("override leaked or settings changed")
+				}
+				if e.State() != before || e.runner.Next != next || e.last != 100 {
+					t.Fatal("frame changed source state/time")
+				}
+			}
 		}
 	}
 }
