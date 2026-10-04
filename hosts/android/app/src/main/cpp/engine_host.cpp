@@ -13,7 +13,8 @@ std::mutex lock;
 uint64_t persistent = 0;
 jlong generation = 0;
 bool opened = false;
-bool resumed = false, focused = false;
+bool resumed = false, focused = false, audioFocus = false;
+void syncAudio() { androidAudioBuffer().setActive(opened && persistent && resumed && focused && audioFocus); }
 bool active() { return resumed && focused; }
 int64_t now() {
     timespec value{};
@@ -54,7 +55,7 @@ extern "C" JNIEXPORT void JNICALL JNI_METHOD(nativeDiagnostics)(JNIEnv*, jclass,
 }
 extern "C" JNIEXPORT jlong JNICALL JNI_METHOD(nativeOpen)(JNIEnv*, jclass) {
     std::lock_guard<std::mutex> guard(lock);
-    stop(); opened = true; resumed = focused = false;
+    stop(); opened = true; resumed = focused = audioFocus = false;
     return ++generation;
 }
 extern "C" JNIEXPORT void JNICALL JNI_METHOD(nativeClose)(JNIEnv*, jclass, jlong token) {
@@ -79,7 +80,7 @@ extern "C" JNIEXPORT jstring JNICALL JNI_METHOD(nativeEngine)(
         PF_LOGI("A2_CANDIDATE_VALIDATED");
     } else {
         persistent = handle;
-        androidAudioBuffer().setActive(active());
+        syncAudio();
         if (!active()) pf_engine_suspend(persistent);
         PF_LOGI("A2_ENGINE_BOOTSTRAPPED ABI=1");
     }
@@ -96,8 +97,8 @@ extern "C" JNIEXPORT void JNICALL JNI_METHOD(nativeActive)(JNIEnv*, jclass, jlon
  if (persistent && before != active()) {
   if (active()) pf_engine_resume(persistent, now());
   else pf_engine_suspend(persistent);
-  androidAudioBuffer().setActive(active());
  }
+ syncAudio();
 }
 extern "C" JNIEXPORT void JNICALL JNI_METHOD(nativeInput)(JNIEnv*, jclass, jlong token, jint kind, jint a, jint b) {
  std::lock_guard<std::mutex> guard(lock);
@@ -123,4 +124,17 @@ bool androidEngineFrame(bool portrait, std::vector<uint8_t>& pixels, int& width,
      !a3::copyFrame(borrowed, w, h, stride, pixels)) return false;
  width = w; height = h;
  return true;
+}
+
+extern "C" JNIEXPORT jboolean JNICALL JNI_METHOD(nativeHasEngine)(JNIEnv*, jclass, jlong token) {
+ std::lock_guard<std::mutex> guard(lock);
+ return opened && token == generation && persistent != 0;
+}
+extern "C" JNIEXPORT void JNICALL JNI_METHOD(nativeAudio)(JNIEnv*, jclass, jlong token, jboolean granted, jboolean route) {
+ std::lock_guard<std::mutex> guard(lock);
+ if (!opened || token != generation) return;
+ if (route) {
+  androidAudioBuffer().refresh();
+  PF_LOGI("A5_ROUTE_GENERATION epoch=%llu", static_cast<unsigned long long>(androidAudioBuffer().current()));
+ } else { audioFocus = granted; syncAudio(); }
 }

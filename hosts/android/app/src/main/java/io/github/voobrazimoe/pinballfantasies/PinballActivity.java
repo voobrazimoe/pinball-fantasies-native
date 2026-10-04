@@ -40,6 +40,12 @@ public final class PinballActivity extends GameActivity {
     private boolean resumed, focused;
     private Controls controls;
     private boolean diagnostics;
+    private AndroidAudio audio;
+    static native boolean nativeHasEngine(long session);
+    static native void nativeAudio(long session, boolean granted, boolean route);
+    private void syncAudio() {
+        if (audio != null) audio.eligible(!closed && resumed && focused && nativeHasEngine(session));
+    }
     static native void nativeDiagnostics(boolean enabled);
     private void diagnostic(String message) {
         if (diagnostics) Log.i("PinballFantasies", message);
@@ -55,12 +61,14 @@ public final class PinballActivity extends GameActivity {
                 data == null ? null : data.getAbsolutePath().getBytes(StandardCharsets.UTF_8),
                 state == null ? null : state.getAbsolutePath().getBytes(StandardCharsets.UTF_8));
         if (failure != null) throw new IOException(failure);
+        if (operation == 2) runOnUiThread(() -> { if (!closed) audio.eligible(false); });
     }
     private void status(String event, String message) {
         if (event.endsWith("REJECTED")) Log.e("PinballFantasies", event + " " + message);
         else diagnostic(event + " " + message);
         runOnUiThread(() -> {
             if (!closed) {
+                syncAudio();
                 importButton.setEnabled(true);
                 if (event.equals("A2_DATA_READY") || event.equals("A2_IMPORT_FINISHED"))
                     importButton.setVisibility(android.view.View.GONE);
@@ -121,6 +129,7 @@ public final class PinballActivity extends GameActivity {
     }
     @Override
     protected void onDestroy() {
+        if (audio != null) audio.close();
         closed = true;
         worker.shutdownNow();
         nativeClose(session);
@@ -141,6 +150,7 @@ public final class PinballActivity extends GameActivity {
         }
         applyImmersiveMode();
         session = nativeOpen();
+        audio = new AndroidAudio(this, (enabled, route) -> nativeAudio(session, enabled, route), this::diagnostic);
         controls = new Controls((kind,a,b) -> nativeInput(session,kind,a,b));
         getOnBackPressedDispatcher().addCallback(this,new androidx.activity.OnBackPressedCallback(true) {
             @Override public void handleOnBackPressed() { controls.tap(1); }
@@ -237,6 +247,7 @@ public final class PinballActivity extends GameActivity {
         // Suspend under the native mutex before clearing Java ownership. Pending
         // spring/mouse edges are discarded by the engine, not fired on focus loss.
         nativeActive(session,resumed,focused);
+        syncAudio();
         controls.enabled=resumed && focused;
         if (!controls.enabled) controls.clear();
     }

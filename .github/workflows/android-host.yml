@@ -11,6 +11,7 @@ on:
       - 'tools/test_android_import.sh'
       - 'tools/test_android_a3.sh'
       - 'tools/test_android_a4.sh'
+      - 'tools/test_android_a5.sh'
       - 'tools/build_android_engine.sh'
       - 'tools/build_engine.sh'
       - 'cmd/pfengine/**'
@@ -26,6 +27,7 @@ on:
       - 'tools/test_android_import.sh'
       - 'tools/test_android_a3.sh'
       - 'tools/test_android_a4.sh'
+      - 'tools/test_android_a5.sh'
       - 'tools/build_android_engine.sh'
       - 'tools/build_engine.sh'
       - 'cmd/pfengine/**'
@@ -42,7 +44,7 @@ env:
   ANDROID_AVD_HOME: ${{ github.workspace }}/.android-avd
 
 jobs:
-  a4-engine-host:
+  a5-engine-host:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -87,23 +89,25 @@ jobs:
 
       - name: Asset-free import transaction tests
         run: sh tools/test_android_import.sh
-      - name: Asset-free A3 controls, framebuffer and native serialization tests
-        run: sh tools/test_android_a3.sh
-      - name: Asset-free A4 PCM ring and Oboe controller tests
-        run: sh tools/test_android_a4.sh
+      - name: Asset-free A5 focus policy and native route coordination
+        run: sh tools/test_android_a5.sh
       - name: A4 concurrent ring under ThreadSanitizer
         run: |
           # Keep the dedicated runner address space compatible with GCC TSAN.
           sudo sysctl -w vm.mmap_rnd_bits=28
           c++ -std=c++17 -pthread -fsanitize=thread -g -O1 -Ihosts/android/app/src/main/cpp hosts/android/tests/pcm_ring_test.cpp -o "${RUNNER_TEMP}/a4-ring-tsan"
           "${RUNNER_TEMP}/a4-ring-tsan"
+      - name: A5 native coordination under ThreadSanitizer
+        run: |
+          PF_A3_TEST_FLAGS='-fsanitize=thread -g -O1' sh tools/test_android_a3.sh
+          PF_A4_TEST_FLAGS='-fsanitize=thread -g -O1' sh tools/test_android_a4.sh
       - name: Shared presentation policy regressions
         run: go test -count=1 ./internal/physics ./internal/presentation ./internal/engine ./internal/frontend ./internal/source
       - name: Build ABI 1 engine for both public ABIs
         run: |
           export ANDROID_NDK_HOME="${ANDROID_HOME}/ndk/${ANDROID_NDK_VERSION}"
           sh tools/build_android_engine.sh all
-      - name: Build A4 debug APK
+      - name: Build A5 debug APK
         id: apk-build
         run: gradle -p hosts/android :app:assembleDebug :app:assembleDebugAndroidTest --stacktrace
 
@@ -211,6 +215,7 @@ jobs:
           adb install -r hosts/android/app/build/outputs/apk/debug/app-debug.apk
           adb install -r hosts/android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
           timeout 90 adb shell am instrument -w io.github.voobrazimoe.pinballfantasies.test/io.github.voobrazimoe.pinballfantasies.ImportInstrumentation | tee "${RUNNER_TEMP}/a2-instrumentation.txt"
+          grep -q 'PASS: A5 foreground focus' "${RUNNER_TEMP}/a2-instrumentation.txt"
           grep -q 'PASS: A4 packaged Oboe' "${RUNNER_TEMP}/a2-instrumentation.txt"
           grep -q 'PASS: packaged ABI 1 JNI' "${RUNNER_TEMP}/a2-instrumentation.txt"
           if grep -q 'FAIL:' "${RUNNER_TEMP}/a2-instrumentation.txt"; then exit 1; fi
@@ -219,11 +224,11 @@ jobs:
       - name: Exercise A1 rendering, rotation and lifecycle
         run: sh tools/run_android_host_smoke.sh
 
-      - name: Upload A4 APK
+      - name: Upload A5 APK
         if: ${{ !cancelled() && steps.apk-build.outcome == 'success' }}
         uses: actions/upload-artifact@v4
         with:
-          name: pinball-fantasies-android-a4-debug
+          name: pinball-fantasies-android-a5-debug
           if-no-files-found: error
           path: hosts/android/app/build/outputs/apk/debug/app-debug.apk
 

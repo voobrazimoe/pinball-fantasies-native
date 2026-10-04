@@ -7,6 +7,8 @@
 #include <thread>
 #include <cstdint>
 namespace oboe {
+enum class Usage { Game };
+enum class ContentType { Music };
 enum class Direction { Output };
 enum class AudioFormat { I16 };
 enum class PerformanceMode { LowLatency };
@@ -56,6 +58,8 @@ class AudioStreamBuilder {
     std::shared_ptr<AudioStreamErrorCallback> error;
     SharingMode sharing=SharingMode::Exclusive;
 public:
+    AudioStreamBuilder* setUsage(Usage) { return this; }
+    AudioStreamBuilder* setContentType(ContentType) { return this; }
     AudioStreamBuilder* setDirection(Direction) { return this; }
     AudioStreamBuilder* setSampleRate(int n) { if(n!=48000) std::abort(); return this; }
     AudioStreamBuilder* setChannelCount(int n) { if(n!=2) std::abort(); return this; }

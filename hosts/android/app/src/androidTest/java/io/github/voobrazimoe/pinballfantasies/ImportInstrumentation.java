@@ -46,6 +46,42 @@ public final class ImportInstrumentation extends Instrumentation {
                 android.view.InputDevice.SOURCE_TOUCHSCREEN,0);
         try { view.dispatchTouchEvent(event); } finally { event.recycle(); }
     }
+    private void testFocus() throws Exception {
+        android.content.Intent intent=new android.content.Intent(getTargetContext(),AudioTestActivity.class);
+        intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+        AudioTestActivity activity=(AudioTestActivity)startActivitySync(intent);
+        try {
+            long end=android.os.SystemClock.uptimeMillis()+5000;
+            while(AudioTestActivity.nativeTestAudio(4)==0 && android.os.SystemClock.uptimeMillis()<end) Thread.sleep(20);
+            check(AudioTestActivity.nativeTestAudio(4)>0); // real top-Activity AudioManager grant
+            consumeFresh();
+            long before=AudioTestActivity.nativeTestAudio(5);
+            runOnMainSync(()->activity.injectFocus(-2));
+            check((AudioTestActivity.nativeTestAudio(5)&1)==0 && AudioTestActivity.nativeTestAudio(5)>before);
+            Thread.sleep(150); long consumed=AudioTestActivity.nativeTestAudio(3);
+            Thread.sleep(50); check(AudioTestActivity.nativeTestAudio(3)==consumed);
+            runOnMainSync(()->activity.injectFocus(1)); consumeFresh();
+            long opens=AudioTestActivity.nativeTestAudio(4);
+            runOnMainSync(activity::injectRoute);
+            end=android.os.SystemClock.uptimeMillis()+5000;
+            while(AudioTestActivity.nativeTestAudio(4)<=opens && android.os.SystemClock.uptimeMillis()<end) Thread.sleep(20);
+            check(AudioTestActivity.nativeTestAudio(4)>opens); consumeFresh();
+            runOnMainSync(()->activity.injectBackground(true));
+            check((AudioTestActivity.nativeTestAudio(5)&1)==0);
+            runOnMainSync(()->activity.injectFocus(1)); check((AudioTestActivity.nativeTestAudio(5)&1)==0);
+            runOnMainSync(()->activity.injectBackground(false)); consumeFresh();
+            runOnMainSync(()->activity.injectFocus(-1));
+            runOnMainSync(()->activity.injectFocus(1)); check((AudioTestActivity.nativeTestAudio(5)&1)==0);
+        } finally { runOnMainSync(activity::finish); waitForIdleSync(); }
+    }
+    private static void consumeFresh() throws Exception {
+        long baseline=AudioTestActivity.nativeTestAudio(3), end=android.os.SystemClock.uptimeMillis()+5000;
+        while(android.os.SystemClock.uptimeMillis()<end) {
+            if(AudioTestActivity.nativeTestAudio(3)>baseline) return;
+            Thread.sleep(20);
+        }
+        throw new AssertionError("A5 fresh PCM consumption timed out");
+    }
     @Override public void onStart() {
         Bundle result = new Bundle();
         File root = null;
@@ -83,7 +119,8 @@ public final class ImportInstrumentation extends Instrumentation {
             for (int kind=0;kind<5;kind++) PinballActivity.nativeInput(session,kind,0,1);
             testOverlay();
             check(nativeAudioSmoke());
-            result.putString("stream", "PASS: A4 packaged Oboe 48 kHz stereo opens, callbacks, synthetic PCM, pause/resume and close\nPASS: A3 real Android MotionEvent pointer/cancel/plunger dispatch and no-data lifecycle/input JNI\nPASS: packaged ABI 1 JNI missing/malformed rejection, bounded error, URI/session guards\n");
+            testFocus();
+            result.putString("stream", "PASS: A5 foreground focus, injected interruption/gain, background/resume and deferred route reopen\nPASS: A4 packaged Oboe 48 kHz stereo opens, callbacks, synthetic PCM, pause/resume and close\nPASS: A3 real Android MotionEvent pointer/cancel/plunger dispatch and no-data lifecycle/input JNI\nPASS: packaged ABI 1 JNI missing/malformed rejection, bounded error, URI/session guards\n");
             outcome = Activity.RESULT_OK;
         } catch (Throwable failure) {
             result.putString("stream", "FAIL: " + failure + "\n");

@@ -40,6 +40,8 @@ int main() {
     // Simulate the already-validated A2 bootstrap; no commercial loader fixture.
     { std::lock_guard<std::mutex> guard(lock); persistent=42; }
     JNI_METHOD(nativeActive)(nullptr,nullptr,token,true,true);
+    assert(!(androidAudioBuffer().current()&1));
+    JNI_METHOD(nativeAudio)(nullptr,nullptr,token,true,false);
     assert(pfTestInfoLogs == 0);
     JNI_METHOD(nativeDiagnostics)(nullptr,nullptr,true);
     JNI_METHOD(nativeActive)(nullptr,nullptr,token,true,true);
@@ -61,13 +63,25 @@ int main() {
     androidAudioBuffer().render(audio,1); assert(audio[0]==0 && audio[1]==0);
     assert(androidEngineFrame(true,pixels,w,h));
     androidAudioBuffer().render(audio,1); assert(audio[0]==12 && audio[1]==-12);
+    const auto sourceSuspends=suspends.load();
+    assert(androidEngineFrame(true,pixels,w,h));
+    JNI_METHOD(nativeAudio)(nullptr,nullptr,token,false,false);
+    androidAudioBuffer().render(audio,1); assert(audio[0]==0);
+    assert(androidEngineFrame(true,pixels,w,h) && suspends==sourceSuspends);
+    JNI_METHOD(nativeAudio)(nullptr,nullptr,token,true,false);
+    androidAudioBuffer().render(audio,1); assert(audio[0]==0);
+    assert(androidEngineFrame(true,pixels,w,h));
+    JNI_METHOD(nativeAudio)(nullptr,nullptr,token,false,true);
+    androidAudioBuffer().render(audio,1); assert(audio[0]==0 && suspends==sourceSuspends);
+    std::thread focusEvents([&] { for(int i=0;i<1000;i++)
+        JNI_METHOD(nativeAudio)(nullptr,nullptr,token,i%2,i%3==0); });
     std::thread render([&] { std::vector<uint8_t> out; int fw=0,fh=0;
         for(int i=0;i<1000;i++) androidEngineFrame(i%2,out,fw,fh); });
     std::thread input([&] { for(int i=0;i<1000;i++)
         JNI_METHOD(nativeInput)(nullptr,nullptr,token,i%5,0,i%2); });
     std::thread lifecycle([&] { for(int i=0;i<1000;i++)
         JNI_METHOD(nativeActive)(nullptr,nullptr,token,i%2,true); });
-    render.join(); input.join(); lifecycle.join();
+    render.join(); input.join(); lifecycle.join(); focusEvents.join();
     JNI_METHOD(nativeClose)(nullptr,nullptr,token);
     assert(destroys==1 && persistent==0);
     androidAudioBuffer().render(audio,1); assert(audio[0]==0 && audio[1]==0);
@@ -77,5 +91,7 @@ int main() {
     assert(!androidEngineFrame(true,pixels,w,h) && calls==closedCalls);
     const auto next=JNI_METHOD(nativeOpen)(nullptr,nullptr);
     JNI_METHOD(nativeClose)(nullptr,nullptr,token); assert(opened && next!=token);
+    JNI_METHOD(nativeAudio)(nullptr,nullptr,token,true,true);
+    assert(!(androidAudioBuffer().current()&1));
     JNI_METHOD(nativeClose)(nullptr,nullptr,next);
 }

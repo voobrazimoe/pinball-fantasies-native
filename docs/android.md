@@ -44,7 +44,7 @@ This is an asset-free platform prototype, not a playable Android release.
   and [macOS native hosts](https://github.com/voobrazimoe/pinball-fantasies-native/actions/runs/37202017274)
   also passed. A2 supplies SAF import, private Data/State, shared-loader validation
   and persistent engine creation. Successful original-backed Android import/bootstrap
-  and physical-device acceptance remain unverified for A6. A3 implementation is described below; A4 output is implemented below; A5–A7 remain outstanding.
+  and physical-device acceptance remain unverified for A6. A3 implementation is described below; A4 output is implemented below; A5 focus and route coordination is implemented below; A6–A7 remain outstanding.
 
 - A3 implementation passed [hosted Android CI at `806d4de`](https://github.com/voobrazimoe/pinball-fantasies-native/actions/runs/37206531433):
   both-ABI APK/exports/16 KB checks, payload scan, A2 import transactions, A3
@@ -191,7 +191,7 @@ its cached frame, but no engine input/advance/frame calls occur. Rotation and EG
 only replace graphics resources; they neither destroy the engine nor reset
 source/table/player state. A brief surface gap while otherwise active is caught
 up by the Runner at the next presentation. Process restart uses A2 bootstrap.
-There is no A5 audio-focus policy in this milestone.
+A5 extends this lifecycle with the independent output-focus policy described below.
 
 ### Real frame upload
 
@@ -397,8 +397,8 @@ or grow memory. No queue-depth feedback enters gameplay.
 
 ### Pause, close and ordinary stream errors
 
-Audio is eligible only with a persistent engine and A3’s existing resumed AND
-focused state. Bootstrap may make it available; an active session starts output.
+A4 introduced persistent-engine and resumed AND focused eligibility. A5 additionally
+requires a live session and granted Android audio focus; background bootstrap never requests focus.
 Suspension atomically disables consumption and changes the PCM generation while
 preserving the engine and its source/game time. A callback racing that transition
 silences its current block if it observes the generation change. The controller
@@ -415,7 +415,7 @@ The application takes responsibility for closing the failed stream; the control
 thread closes it, then retries after 250 ms if the engine is still active. Failed
 opens retry no faster than once per second; pause/close cancels that retry. All
 construction/destruction/waits stay outside realtime callbacks and the engine
-mutex. Comprehensive route changes and interruptions remain A5.
+mutex. A5 adds focus, route events and a finite recovery budget below.
 
 ### Diagnostics and asset-free checks
 
@@ -456,10 +456,119 @@ are not required for A4.
 
 This is host/output evidence, **not physical-device audio acceptance**. Physical
 latency, original-backed Android audio/playability and normal compiled ART remain
-unverified. A5 still owns audio focus, interruptions, route changes,
-Bluetooth/headset policy and comprehensive lifecycle recovery; A6 owns
+unverified. A5 adds audio focus, interruptions, route changes and
+Bluetooth/headset recovery below; A6 owns
 original-backed parity and physical-device acceptance; A7 owns signed release
 packaging.
+
+## A5 audio focus, interruption and route recovery
+
+The UI-looper `AudioPolicy` reducer requests focus only on an ineligible → eligible
+transition. Eligibility means session open, persistent engine available, Activity
+resumed and window focused. The platform request result is authoritative: failure
+leaves gameplay/render/input valid but output silent, without repeated requests.
+A later foreground/playback transition can request again. Import stop and Activity
+teardown abandon focus; a background bootstrap cannot acquire it. Native output
+independently requires all these prerequisites AND the published focus grant.
+
+One `AudioFocusRequest` instance is reused for request/abandon: `AUDIOFOCUS_GAIN`,
+`USAGE_GAME`, `CONTENT_TYPE_MUSIC`, `setWillPauseWhenDucked(true)` and
+`setAcceptsDelayedFocusGain(false)`, with a UI Handler listener. Oboe uses matching
+`Usage::Game` / `ContentType::Music`. For targetSdk 35+ (this app targets 36),
+[Android requires the top app or a foreground service](https://developer.android.com/media/optimize/audio-focus).
+This host requires resumed/window-focused playback and adds no foreground service.
+Even eligible requests may fail; the host stays silent in that case.
+
+| Event | Output policy | Focus request policy |
+| --- | --- | --- |
+| Eligible foreground transition | Enable only after platform grant | Request once |
+| Transient loss, including call/notification style interruptions | Disable and invalidate PCM; retain engine | Await gain while eligible |
+| CAN_DUCK | Same temporary silence; no sample mixer | Await gain while eligible |
+| Gain | Enable a fresh PCM generation only while eligible and requested | No duplicate request |
+| Permanent loss | Disable and invalidate; retain engine | Abandon; ignore late gain until later eligible transition |
+| Pause, window loss, engine/session close | Disable and invalidate | Abandon |
+| Route/device/noisy event | Invalidate and defer reopen if still eligible | Retain current grant |
+
+Focus callbacks never suspend/reset/recreate the engine, generate game pause keys,
+or change settings. A3 lifecycle/window state alone still governs engine suspension
+and source progression. Gain-before-resume, resume-before-gain, loss-while-paused,
+duplicate notifications and close-before-callback are harmless. Closed UI reducers
+ignore late listeners; native JNI guards every publication with the session token.
+Dedicated handler messages queued before abandon are removed. Ordinary rotation
+uses the existing manifest configuration handling, retains the Activity, engine,
+request and grant, and causes no duplicate focus request or new game.
+
+While granted playback is relevant, `AudioDeviceCallback` tracks output-device
+addition/removal, including built-in, wired, USB and Bluetooth A2DP devices, and a
+receiver tracks `ACTION_AUDIO_BECOMING_NOISY`. Input-only devices are ignored.
+The system selects the route; there is no picker or pinned device ID. Notifications
+publish generation changes only. Becoming-noisy is a route transition: it never
+pauses/resets gameplay, emits input keys or mutates persistent settings. Removed
+headphones may lead to speaker playback if the system selects it and focus remains
+held. No Bluetooth latency compensation, resampling of progression or time stretching
+is introduced. Oboe disconnect recovery also covers a changed route without a
+Java notification.
+
+### Ownership and recovery
+
+* Java/UI looper owns lifecycle, AudioManager request/abandon, focus listener,
+  receiver and device notifications. It publishes bounded token-checked native
+  state; it never opens, closes or waits for an Oboe stream.
+* Native engine/session mutex serializes ABI calls, lifecycle/input, PCM production
+  and session-associated output publications. Focus affects audio eligibility only.
+* The shared `PcmBuffer` atomic epoch is the sole generation authority. UI/native
+  transitions, lightweight Oboe errors and control startup use atomic updates so
+  concurrent invalidations cannot lose an epoch. Live SPSC cursors are never reset.
+* The Oboe data callback only consumes PCM, fills silence and updates atomics. It
+  never calls Go/Java, locks an engine/host mutex or allocates. Error callbacks
+  invalidate and signal control, ignore retired stream identities, and never close.
+* The existing audio control thread alone opens/closes/restarts streams. Only after
+  close joins the callback may control discard ring entries. No close/join happens
+  while holding the engine/session mutex, so these domains have no circular wait.
+
+Route bursts coalesce over a 50 ms controller settling interval. Every reopened
+stream starts with a fresh epoch. The PCM sink also requires stream readiness:
+failed opens cannot continuously refill a silent ring, and unavailable-device PCM
+cannot suddenly play later. Each activation/route recovery has at most three open
+attempts (each retains Exclusive → Shared → conversion fallback). Failed opens
+back off one second; disconnect recovery backs off 250 ms. Repeated immediate
+stream disconnects share that budget; five seconds of stable playback renews it.
+After exhaustion, only a meaningful lifecycle/focus/route transition renews recovery.
+The accepted 4096-frame capacity, tail-drop overflow, 48 kHz stereo I16 callback,
+LowLatency, Exclusive preference and two-burst target remain unchanged.
+
+### Diagnostics, tests and scope
+
+Normal public launches remain quiet. Opt-in `PF_DIAGNOSTICS=1` (or the existing
+boolean intent extra) adds `A5_FOCUS_REQUEST`, focus class and cumulative loss/gain
+counters, route/device type/ID, noisy event, native route epoch and deferred stream
+transition/reopen diagnostics. A4 aggregate callback/ring counters remain throttled
+to five seconds. No callback-by-callback logging is added.
+
+`sh tools/test_android_a5.sh` runs the asset-free UI reducer and retains A3/A4
+native tests. Coverage includes rejected requests, transient/duck/permanent loss,
+fresh gain, lifecycle ordering, rotation idempotence, closed/old listeners and JNI
+tokens, route invalidation, route-burst coalescing, deferred disconnect, finite
+open-failure budget, no failed-device accumulation, unchanged engine timing and
+concurrent render/input/lifecycle/focus/route publication. Hosted CI runs both the
+native session and Oboe-controller double under ThreadSanitizer, retaining the A4
+SPSC tests and callback allocation guard.
+
+Debug-only `AudioTestActivity` shares the production Android focus/device adapter
+but uses an isolated synthetic PCM controller with no engine/assets. Instrumentation
+requires a real foreground AudioManager grant, injects transient/permanent/gain
+notifications into that adapter, checks silence/fresh callback consumption,
+background/resume and deferred route reopen. Its Java Activity/manifest and native
+JNI hooks are excluded from release builds; no production intent extra enables them.
+All A1–A4 packaged ABI, controls, framebuffer, rotation, quiet-launch, background and
+16 KiB checks remain. Host-only changes do not trigger A0 or desktop/macOS matrices.
+
+**Hosted A5 tests do not certify physical Bluetooth behavior, actual wired/USB
+route behavior, device-specific latency, normal compiled ART performance, or
+original-backed gameplay/import parity.** The hosted ps16k emulator still uses
+interpreted ART and a dummy host audio backend. These remain A6 physical/original
+acceptance, followed by A7 signing/packaging/release work, both requiring owner
+approval. A5 does not start either milestone or merge to main.
 
 ## Fixed platform decisions
 
@@ -501,8 +610,8 @@ The second argument is the required device page size. Omit it for a normal 4 KB 
 
 A3 implements cadence, framebuffer upload, touch/keyboard translation and transient
 portrait presentation on the A2 engine. A4 implements Oboe plus a bounded host PCM
-ring/device output. A5 remains broader lifecycle and
+ring/device output. A5 implements lifecycle, interruption and
 audio-focus handling. A6 remains original-backed Android parity, practical touch
 charging/layout acceptance, normal compiled ART, hardware keyboards and physical
 devices. A7 remains signed APK/AAB packaging and release payload scanning.
-A5 and a main merge require owner approval. No physical-device audio acceptance is claimed.
+A6/A7 and a main merge require owner approval. No physical-device audio acceptance is claimed.

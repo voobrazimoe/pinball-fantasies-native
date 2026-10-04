@@ -12,7 +12,7 @@ ${CXX:-c++} -std=c++17 -Wall -Wextra -Werror -Ihosts/android/app/src/main/cpp ho
 echo 'PASS: A3 frame validation, stride copy, allocation reuse, aspect and orientation'
 java_home=$(java -XshowSettings:properties -version 2>&1 | awk '/java.home =/ {print $3}')
 case "$(uname -s)" in Darwin) jni_platform=darwin ;; *) jni_platform=linux ;; esac
-${CXX:-c++} -std=c++17 -pthread -Wall -Wextra -Werror \
+${CXX:-c++} -std=c++17 -pthread ${PF_A3_TEST_FLAGS:-} -Wall -Wextra -Werror \
     -Ihosts/android/tests/stubs -Icmd/pfengine \
     -I"$java_home/include" -I"$java_home/include/$jni_platform" \
     hosts/android/tests/session_test.cpp -o "$scratch/session-test"

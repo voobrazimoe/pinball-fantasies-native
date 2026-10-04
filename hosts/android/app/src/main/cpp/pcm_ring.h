@@ -81,20 +81,20 @@ class PcmBuffer {
     std::atomic<uint64_t> state{0};
 public:
     PcmRing<> ring;
+    std::atomic<bool> ready{true};
     void setActive(bool active) noexcept {
         auto old=state.load(std::memory_order_relaxed);
-        if (bool(old&1)==active) return;
-        state.store(((old&~uint64_t{1})+2) | uint64_t(active), std::memory_order_release);
+        do {
+            if (bool(old&1)==active) return;
+        } while (!state.compare_exchange_weak(old, ((old&~uint64_t{1})+2) | uint64_t(active), std::memory_order_release));
     }
-    void reset() noexcept {
-        auto old=state.load(std::memory_order_relaxed);
-        state.store((old&~uint64_t{1})+2, std::memory_order_release);
-    }
+    void refresh() noexcept { state.fetch_add(2, std::memory_order_acq_rel); }
+    void reset() noexcept { setActive(false); refresh(); }
     uint64_t current() const noexcept { return state.load(std::memory_order_acquire); }
     static void sink(void* context, const uint8_t* pcm, uint32_t bytes) noexcept {
         auto& self=*static_cast<PcmBuffer*>(context);
         const auto epoch=self.current();
-        if ((epoch&1) && pcm && bytes%4==0) self.ring.push(pcm, bytes/4, epoch);
+        if ((epoch&1) && self.ready.load(std::memory_order_acquire) && pcm && bytes%4==0) self.ring.push(pcm, bytes/4, epoch);
     }
     void render(void* output, size_t frames) noexcept {
         const auto epoch=current();

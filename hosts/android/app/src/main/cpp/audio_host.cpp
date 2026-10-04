@@ -14,16 +14,20 @@ class AudioCallbacks final : public oboe::AudioStreamDataCallback, public oboe::
 public:
     PcmBuffer buffer;
     std::atomic<bool> restart{false};
+    std::atomic<oboe::AudioStream*> currentStream{nullptr};
     std::atomic<uint64_t> callbacks{0}, opens{0}, errors{0}, restarts{0};
     oboe::DataCallbackResult onAudioReady(oboe::AudioStream*, void* output, int32_t frames) override {
         buffer.render(output, static_cast<size_t>(frames));
         callbacks.fetch_add(1, std::memory_order_relaxed);
         return oboe::DataCallbackResult::Continue;
     }
-    bool onError(oboe::AudioStream*, oboe::Result) override {
+    bool onError(oboe::AudioStream* source, oboe::Result) override {
         // Application takes responsibility for close. Signal control; never
         // construct/destroy streams or race Oboe's automatic close thread.
+        if (currentStream.load(std::memory_order_acquire)!=source) return true;
         errors.fetch_add(1, std::memory_order_relaxed);
+        buffer.ready.store(false, std::memory_order_release);
+        buffer.refresh();
         restart.store(true, std::memory_order_release);
         return true;
     }
@@ -34,6 +38,8 @@ class AudioOutput final {
     std::shared_ptr<oboe::AudioStream> stream;
     std::thread control;
     void close() {
+        buffer.ready.store(false, std::memory_order_release);
+        state->currentStream.store(nullptr, std::memory_order_release);
         if (stream) { stream->close(); stream.reset(); }
         // close joins the data callback. Control temporarily owns consumption.
         buffer.ring.discardBefore(buffer.current());
@@ -42,6 +48,7 @@ class AudioOutput final {
         oboe::AudioStreamBuilder builder;
         builder.setDirection(oboe::Direction::Output)
             ->setSampleRate(48000)->setChannelCount(2)->setFormat(oboe::AudioFormat::I16)
+            ->setUsage(oboe::Usage::Game)->setContentType(oboe::ContentType::Music)
             ->setPerformanceMode(oboe::PerformanceMode::LowLatency)
             ->setSharingMode(oboe::SharingMode::Exclusive)
             ->setDataCallback(state)->setErrorCallback(state);
@@ -63,26 +70,40 @@ class AudioOutput final {
         stream->setBufferSizeInFrames(stream->getFramesPerBurst()*2);
         PF_LOGI("A4_STREAM_OPEN rate=48000 channels=2 format=I16 sharing=%d performance=%d burst=%d",
             int(stream->getSharingMode()), int(stream->getPerformanceMode()), stream->getFramesPerBurst());
+        state->currentStream.store(stream.get(), std::memory_order_release);
         if (stream->requestStart()!=oboe::Result::OK) { close(); return false; }
+        // Discard all pre-open PCM; a failed device never accumulates audio.
+        buffer.ready.store(true, std::memory_order_release);
         opens.fetch_add(1);
         return true;
     }
     void run() {
         using namespace std::chrono;
         uint64_t epoch=0;
-        auto retry=steady_clock::now(), report=retry+seconds(5);
+        unsigned attempts=0;
+        auto retry=steady_clock::now(), report=retry+seconds(5), started=retry;
         while (!exiting.load()) {
             const auto desired=buffer.current();
             const bool failed=state->restart.exchange(false);
             if (desired!=epoch || failed) {
                 close(); epoch=desired;
+                if (!failed) attempts=0;
                 if (failed) { restarts.fetch_add(1); retry=steady_clock::now()+milliseconds(250); }
-                else retry=steady_clock::now();
+                else retry=steady_clock::now()+milliseconds(50);
+                PF_LOGI("A5_STREAM_TRANSITION epoch=%llu disconnect=%d attempts=%u",
+                    static_cast<unsigned long long>(epoch), failed, attempts);
             }
-            if ((epoch&1) && !stream && steady_clock::now()>=retry) {
-                if (!open()) { errors.fetch_add(1); restarts.fetch_add(1); }
+            if ((epoch&1) && !stream && attempts<3 && steady_clock::now()>=retry) {
+                buffer.refresh(); epoch=buffer.current();
+                buffer.ring.discardBefore(epoch);
+                if (epoch&1) {
+                    ++attempts;
+                    if (!open()) { errors.fetch_add(1); restarts.fetch_add(1); }
+                    else started=steady_clock::now();
+                }
                 retry=steady_clock::now()+seconds(1);
             }
+            if (stream && steady_clock::now()-started>=seconds(5)) attempts=0;
             if (steady_clock::now()>=report) {
                 PF_LOGI("A4_AUDIO produced=%llu consumed=%llu callbacks=%llu underruns=%llu missing=%llu overflows=%llu dropped=%llu invalidated=%llu depth=%zu high=%llu opens=%llu errors=%llu restarts=%llu",
                     value(buffer.ring.produced),value(buffer.ring.consumed),value(callbacks),
@@ -102,7 +123,7 @@ public:
     std::atomic<uint64_t>& opens=state->opens;
     std::atomic<uint64_t>& errors=state->errors;
     std::atomic<uint64_t>& restarts=state->restarts;
-    AudioOutput() { control=std::thread([this] { run(); }); }
+    AudioOutput() { buffer.ready.store(false); control=std::thread([this] { run(); }); }
     ~AudioOutput() { exiting.store(true); control.join(); }
 
 };
@@ -142,3 +163,27 @@ Java_io_github_voobrazimoe_pinballfantasies_ImportInstrumentation_nativeAudioSmo
     output.buffer.reset();
     return output.opens.load()>=2 && output.errors.load()==0;
 }
+
+#ifndef NDEBUG
+// Debug-only instrumentation PCM/controller. Production session/engine is untouched.
+extern "C" JNIEXPORT jlong JNICALL
+Java_io_github_voobrazimoe_pinballfantasies_AudioTestActivity_nativeTestAudio(JNIEnv*, jclass, jint operation) {
+    static a4::AudioOutput output;
+    switch(operation) {
+    case 0: output.buffer.setActive(false); break;
+    case 1: output.buffer.setActive(true); break;
+    case 2: output.buffer.refresh(); break;
+    case 3: {
+        std::array<int16_t,960> pcm{};
+        for(size_t i=0;i<pcm.size();i+=2) { pcm[i]=32; pcm[i+1]=-32; }
+        a4::PcmBuffer::sink(&output.buffer,reinterpret_cast<const uint8_t*>(pcm.data()),sizeof(pcm));
+        return output.buffer.ring.consumed.load();
+    }
+    case 4: return output.opens.load();
+    case 5: return output.buffer.current();
+    case 6: return output.callbacks.load();
+    case 7: return output.buffer.ring.depth();
+    }
+    return 0;
+}
+#endif
