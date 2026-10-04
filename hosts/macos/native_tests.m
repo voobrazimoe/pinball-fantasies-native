@@ -27,7 +27,7 @@ static void storageTests(void) {
     NSString *input=[source stringByAppendingPathComponent:@"TABLE4.PRG"];
     assert([fm removeItemAtPath:input error:&error]);
     assert(!pf_import_assets(source,data,acceptTestFiles,&error));
-    assert([fm contentsOfDirectoryAtPath:data error:nil].count==11); /* original adopted set preserved */
+    assert([fm contentsOfDirectoryAtPath:data error:NULL].count==11); /* original adopted set preserved */
     assert([fm createSymbolicLinkAtPath:input withDestinationPath:[source stringByAppendingPathComponent:@"TABLE3.PRG"] error:&error]);
     assert(!pf_import_assets(source,data,acceptTestFiles,&error));
     assert(!pf_validate_assets(data,&error)); /* real ABI rejects synthetic commercial files */
@@ -85,7 +85,7 @@ static void journey(NSString *data) {
     for (unsigned table=1;table<=4;table++) for (unsigned scroll=0;scroll<4;scroll++) {
         NSString *state=[NSTemporaryDirectory() stringByAppendingPathComponent:NSUUID.UUID.UUIDString];
         NSFileManager *fm=NSFileManager.defaultManager;
-        assert([fm createDirectoryAtPath:state withIntermediateDirectories:NO attributes:nil error:nil]);
+        assert([fm createDirectoryAtPath:state withIntermediateDirectories:NO attributes:nil error:NULL]);
         uint8_t cfg[]={'P','F','N','C',1,5,0,1,(uint8_t)scroll,0,1};
         assert([[NSData dataWithBytes:cfg length:sizeof(cfg)] writeToFile:[state stringByAppendingPathComponent:@"PINBALL.CFG"] atomically:YES]);
         char error[1024]; uint64_t engine=pf_engine_create((char *)data.fileSystemRepresentation,(char *)state.fileSystemRepresentation,0,error,sizeof(error));
@@ -115,7 +115,7 @@ static void journey(NSString *data) {
         assert(ticks>150 && selected==table && !(flags&1));
         assert(pf_engine_destroy(engine)==PF_OK); free(ring);
         assert([fm fileExistsAtPath:[state stringByAppendingPathComponent:@"PINBALL.CFG"]]);
-        assert([fm removeItemAtPath:state error:nil]);
+        assert([fm removeItemAtPath:state error:NULL]);
         printf("PASS Apple ABI host journey table=%u scroll=%u ticks=%llu mode=%u\n",table,scroll,(unsigned long long)ticks,mode);
     }
 }

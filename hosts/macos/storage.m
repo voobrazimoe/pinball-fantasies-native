@@ -18,7 +18,7 @@ BOOL pf_validate_assets(NSString *data,NSError **error) {
     uint64_t engine=pf_engine_create((char *)data.fileSystemRepresentation,(char *)state.fileSystemRepresentation,0,message,sizeof(message));
     BOOL valid=engine!=0;
     if (engine && pf_engine_destroy(engine)!=PF_OK) { valid=NO; strcpy(message,"Shared settings validation failed"); }
-    [fm removeItemAtPath:state error:nil];
+    [fm removeItemAtPath:state error:NULL];
     if (!valid && error) *error=failure([NSString stringWithUTF8String:message]);
     return valid;
 }
@@ -50,13 +50,13 @@ BOOL pf_import_assets(NSString *source,NSString *destination,PFValidateAssets va
         NSString *backup=[@".previous-" stringByAppendingString:NSUUID.UUID.UUIDString];
         BOOL result=[fm replaceItemAtURL:[NSURL fileURLWithPath:destination]
             withItemAtURL:[NSURL fileURLWithPath:stage] backupItemName:backup
-            options:0 resultingItemURL:nil error:error];
+            options:0 resultingItemURL:NULL error:error];
         if (!result) goto cleanup;
-        [fm removeItemAtPath:[parent stringByAppendingPathComponent:backup] error:nil];
+        [fm removeItemAtPath:[parent stringByAppendingPathComponent:backup] error:NULL];
         ok=YES;
     } else ok=[fm moveItemAtPath:stage toPath:destination error:error];
 cleanup:
-    if (!ok) [fm removeItemAtPath:stage error:nil];
+    if (!ok) [fm removeItemAtPath:stage error:NULL];
     return ok;
 }
 BOOL pf_storage_prepare(NSString **data,NSString **state,NSError **error) {
@@ -80,7 +80,7 @@ BOOL pf_storage_prepare(NSString **data,NSString **state,NSError **error) {
         panel.message=@"Choose the original game folder or any required file inside it";
         if ([panel runModal]!=NSModalResponseOK) return NO;
         NSNumber *directory=nil;
-        [panel.URL getResourceValue:&directory forKey:NSURLIsDirectoryKey error:nil];
+        [panel.URL getResourceValue:&directory forKey:NSURLIsDirectoryKey error:NULL];
         NSString *source=directory.boolValue?panel.URL.path:panel.URL.path.stringByDeletingLastPathComponent;
         NSError *importError=nil;
         if (pf_import_assets(source,*data,pf_validate_assets,&importError)) return YES;

@@ -35,15 +35,16 @@ void pf_input_init(PFInput *p, PFEmit emit, void *context) {
 void pf_input_key(PFInput *p, uint16_t k, bool down, bool repeat, bool command, bool option) {
     if (!p->focused || k>=128 || repeat) return;
     if (p->down[k]==down) return;
+    bool fullscreen=(k==36 && option) || (k==3 && command);
+    if (command && down && !fullscreen) return;
     p->down[k]=down;
-    if (down && ((k==36 && option) || (k==3 && command))) {
+    if (down && fullscreen) {
         if (!p->fullscreenPending) {
             p->fullscreenPending=true; event(p,PF_EVENT_FULLSCREEN,0,0);
         }
         return;
     }
-    /* Leave Command menu shortcuts to AppKit; never turn Cmd-Q into a cheat. */
-    if (command && down) return;
+    /* Command menu shortcuts never become gameplay contributors. */
     holds(p);
     if (down) {
         if (k==36 || k==76) event(p,PF_EVENT_RELEASE,0,0);

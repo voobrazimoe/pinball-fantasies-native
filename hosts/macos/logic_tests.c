@@ -22,6 +22,10 @@ static void input_tests(void) {
     }
     assert(count==5);
     for (unsigned i=0;i<5;i++) assert(events[i].type==PF_EVENT_KEY && events[i].a==(int)dos[i]);
+    pf_input_key(&p,49,true,false,true,false);
+    bool noModifiers[6]={0}; pf_input_modifiers(&p,noModifiers);
+    assert(!p.held[3] && !p.down[49]);
+    pf_input_key(&p,49,false,false,false,false); assert(count==5);
     count=0; bool sides[6]={true,false,false,false,false,false};
     pf_input_modifiers(&p,sides); assert(p.held[0] && !p.held[1]);
     sides[1]=true; pf_input_modifiers(&p,sides); assert(p.held[0] && p.held[1]);

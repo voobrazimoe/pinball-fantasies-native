@@ -23,7 +23,8 @@ static void inputEvent(void *context,PFHostEvent event,int32_t a,int32_t b) {
     mach_timebase_info_data_t _timebase;
     PFInput _input;
     PFAudio _audio;
-    BOOL _focused, _mouseActive, _cursorHidden, _failed;
+    BOOL _focused, _mouseActive, _cursorHidden, _failed, _sleeping;
+    id _sleepObserver, _wakeObserver;
 }
 - (int64_t)now { return pf_clock_ns(mach_absolute_time(),_epoch,_timebase.numer,_timebase.denom); }
 - (void)fail:(NSString *)message {
@@ -65,17 +66,27 @@ static void inputEvent(void *context,PFHostEvent event,int32_t a,int32_t b) {
     if (!pf_audio_open(&_audio)) NSLog(@"CoreAudio unavailable: %d (game remains playable)",_audio.error);
     __weak PFApp *weakSelf=self;
     pf_audio_watch_device(&_audio, ^{ [weakSelf deviceChanged]; });
+    NSNotificationCenter *workspace=NSWorkspace.sharedWorkspace.notificationCenter;
+    _sleepObserver=[workspace addObserverForName:NSWorkspaceWillSleepNotification object:nil
+        queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *n) {
+            (void)n; [weakSelf sleeping:YES];
+        }];
+    _wakeObserver=[workspace addObserverForName:NSWorkspaceDidWakeNotification object:nil
+        queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *n) {
+            (void)n; [weakSelf sleeping:NO];
+        }];
     _timer=[NSTimer timerWithTimeInterval:1.0/120 target:self selector:@selector(step) userInfo:nil repeats:YES];
     _timer.tolerance=.001; [NSRunLoop.mainRunLoop addTimer:_timer forMode:NSRunLoopCommonModes];
     [self step];
 }
+- (void)sleeping:(BOOL)sleeping { _sleeping=sleeping; [self syncFocus]; }
 - (void)deviceChanged {
     pf_audio_close(&_audio); pf_ring_reset(&_audio.ring);
     if (!pf_audio_open(&_audio)) NSLog(@"CoreAudio route recovery failed: %d",_audio.error);
     /* Next source wake restarts only if currently audible; no engine mutation. */
 }
 - (void)syncFocus {
-    BOOL next=NSApp.isActive && _window.isKeyWindow && !_window.isMiniaturized;
+    BOOL next=NSApp.isActive && _window.isKeyWindow && !_window.isMiniaturized && !_sleeping;
     if (!_engine || next==_focused) return;
     _focused=next;
     if (next) {
@@ -159,6 +170,9 @@ static void inputEvent(void *context,PFHostEvent event,int32_t a,int32_t b) {
 - (void)applicationWillTerminate:(NSNotification *)n {
     (void)n; [_timer invalidate];
     _focused=NO; _mouseActive=NO; [self updateCursor];
+    NSNotificationCenter *workspace=NSWorkspace.sharedWorkspace.notificationCenter;
+    if (_sleepObserver) [workspace removeObserver:_sleepObserver];
+    if (_wakeObserver) [workspace removeObserver:_wakeObserver];
     pf_audio_unwatch_device(&_audio); pf_audio_close(&_audio);
     if (_engine) { int32_t result=pf_engine_destroy(_engine); _engine=0;
         if (result!=PF_OK) NSLog(@"Settings save failed: %d",result); }
