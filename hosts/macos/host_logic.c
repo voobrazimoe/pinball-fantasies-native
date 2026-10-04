@@ -22,8 +22,8 @@ static void event(PFInput *p, PFHostEvent e, int32_t a, int32_t b) {
     if (p->emit) p->emit(p->context, e, a, b);
 }
 static void holds(PFInput *p) {
-    bool h[4] = {p->down[56] || p->down[59] || p->down[58],
-                 p->down[60] || p->down[62] || p->down[61],
+    bool h[4] = {p->down[56] || p->down[59] || p->down[58] || p->down[123] || p->down[6],
+                 p->down[60] || p->down[62] || p->down[61] || p->down[124] || p->down[44],
                  p->down[125], p->down[49]};
     for (int i=0;i<4;i++) if (h[i]!=p->held[i]) {
         p->held[i]=h[i]; event(p,PF_EVENT_ACTION,i,h[i]);

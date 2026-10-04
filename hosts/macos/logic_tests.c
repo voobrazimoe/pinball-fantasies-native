@@ -37,6 +37,55 @@ static void input_tests(void) {
     pf_input_focus(&p,false); assert(!p.held[1] && !p.fire);
     count=0; pf_input_key(&p,125,true,false,false,false); assert(count==0);
     pf_input_focus(&p,true); assert(!p.down[125]);
+    /* Parsec can omit side keycodes from modifier events. Ordinary arrow
+       keys remain independent contributors without changing sided modifiers. */
+    count=0;
+    pf_input_key(&p,123,true,false,false,false);
+    assert(p.held[PF_LEFT] && !p.held[PF_RIGHT]);
+    pf_input_key(&p,123,true,true,false,false);
+    pf_input_key(&p,123,true,false,false,false);
+    assert(count==2); /* one action and one generic pause/quit make */
+    pf_input_key(&p,124,true,false,false,false);
+    assert(p.held[PF_LEFT] && p.held[PF_RIGHT]);
+    bool overlap[6]={true,false,false,false,false,false};
+    pf_input_modifiers(&p,overlap);
+    pf_input_key(&p,123,false,false,false,false);
+    assert(p.held[PF_LEFT] && p.held[PF_RIGHT]);
+    overlap[0]=false; pf_input_modifiers(&p,overlap);
+    assert(!p.held[PF_LEFT] && p.held[PF_RIGHT]);
+    pf_input_key(&p,124,false,false,false,false);
+    assert(!p.held[PF_LEFT] && !p.held[PF_RIGHT]);
+    pf_input_key(&p,123,true,false,false,false);
+    pf_input_key(&p,124,true,false,false,false);
+    pf_input_focus(&p,false); pf_input_focus(&p,true);
+    assert(!p.held[PF_LEFT] && !p.held[PF_RIGHT] && !p.down[123] && !p.down[124]);
+    pf_input_key(&p,123,true,false,true,false); /* Command shortcut suppressed */
+    assert(!p.held[PF_LEFT]);
+    pf_input_key(&p,124,true,false,false,false); assert(p.held[PF_RIGHT]);
+    pf_input_key(&p,124,false,false,false,false); assert(!p.held[PF_RIGHT]);
+    count=0;
+    pf_input_key(&p,6,true,false,false,false); /* physical Z */
+    assert(p.held[PF_LEFT] && !p.held[PF_RIGHT]);
+    assert(events[1].type==PF_EVENT_KEY && events[1].a==44); /* DOS Z retained */
+    pf_input_key(&p,44,true,false,false,false); /* physical slash */
+    assert(p.held[PF_LEFT] && p.held[PF_RIGHT]);
+    assert(events[3].type==PF_EVENT_KEY && events[3].a==127);
+    pf_input_key(&p,6,true,true,false,false);
+    pf_input_key(&p,44,true,true,false,false); assert(count==4);
+    pf_input_key(&p,123,true,false,false,false);
+    pf_input_key(&p,124,true,false,false,false);
+    pf_input_key(&p,6,false,false,false,false);
+    pf_input_key(&p,44,false,false,false,false);
+    assert(p.held[PF_LEFT] && p.held[PF_RIGHT]); /* arrows still held */
+    pf_input_key(&p,123,false,false,false,false);
+    pf_input_key(&p,124,false,false,false,false);
+    assert(!p.held[PF_LEFT] && !p.held[PF_RIGHT]);
+    pf_input_key(&p,6,true,false,false,false);
+    pf_input_key(&p,44,true,false,false,false);
+    pf_input_focus(&p,false); pf_input_focus(&p,true);
+    assert(!p.held[PF_LEFT] && !p.held[PF_RIGHT] && !p.down[6] && !p.down[44]);
+    pf_input_key(&p,6,true,false,false,false); assert(p.held[PF_LEFT]);
+    pf_input_key(&p,6,false,false,false,false); assert(!p.held[PF_LEFT]);
     pf_input_key(&p,125,true,false,false,false); assert(p.held[2]);
     pf_input_key(&p,125,false,false,false,false); assert(!p.held[2]);
     count=0;
@@ -51,7 +100,7 @@ static void input_tests(void) {
     assert(count==1); pf_input_fullscreen_done(&p);
     pf_input_key(&p,36,false,false,false,false); pf_input_key(&p,36,true,false,false,true);
     assert(count==2);
-    puts("PASS key mapping, ordered cheat makes, repeat, sided modifiers, focus, fullscreen, plunger/fire");
+    puts("PASS key mapping, ordered cheat makes, repeat, sided modifiers, arrow/Z/slash flippers, focus, fullscreen, plunger/fire");
 }
 static void *produce(void *ctx) {
     PFRing *r=ctx;

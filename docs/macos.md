@@ -94,6 +94,15 @@ filtered. Cheat letters follow physical QWERTY make mapping, exactly as the
 shared DOS key boundary; no cheat menu is added. Unknown ordinary keys map to
 the shared generic resume/quit make.
 
+Left Arrow and Right Arrow also hold the left and right flippers respectively.
+Z and `/` provide the same left and right controls using physical key positions.
+These alternate controls combine with sided Shift/Control/Option holds and clear
+on focus loss. They support remote desktop input that omits modifier side
+identity. In the observed Parsec session, both AppKit and CoreGraphics modifier
+events used keycode zero with only aggregate flags; exact sided modifier input
+cannot be recovered from those events. The original sided controls remain
+available when the input source supplies modifier keycodes.
+
 Modifier-only input uses `flagsChanged`, public AppKit modifier-class flags and
 the physical modifier keycode. Physical side bookkeeping survives focus loss
 while gameplay holds are cleared; an aggregate snapshot on focus transitions
