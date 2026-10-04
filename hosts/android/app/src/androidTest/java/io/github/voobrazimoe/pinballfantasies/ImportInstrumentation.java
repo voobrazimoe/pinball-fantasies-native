@@ -71,7 +71,7 @@ public final class ImportInstrumentation extends Instrumentation {
             check(menu.menu.getLeft()>=safe.left && menu.menu.getRight()<=shape[0]-safe.right);
             menu.menu.performClick(); measure(root,shape[0],shape[1]);
             check(menu.sheet.getVisibility()==android.view.View.VISIBLE);
-            check(menu.sheet.getTop()>=shape[1]/2); // No top matrix toolbar.
+            check(menu.sheet.getTop()>=(safe.top+shape[1]-safe.bottom)/2); // No top matrix toolbar.
             findButton(menu.sheet,"Advanced keyboard").performClick(); measure(root,shape[0],shape[1]);
             check(findButton(menu.sheet,"F8")!=null && findButton(menu.sheet,"Z")!=null);
             check(menu.dismiss()); measure(root,shape[0],shape[1]);
