@@ -281,27 +281,51 @@ Orientation never writes or temporarily assigns saved settings.
 
 ### Touch layout and gestures
 
-The translucent full-window overlay uses normalized coordinates. Pointer IDs
-own regions until up/cancel; moving across regions does not transfer a flipper.
+The fullscreen framebuffer remains edge-to-edge and immersive. Interactive UI
+uses the union of `WindowInsetsCompat` system-bar, display-cutout and system-gesture
+insets, including asymmetric landscape edges. The menu begins inside that safe
+rectangle. Gameplay geometry starts at the measured menu bottom, ends above the
+bottom safe inset and uses the remaining safe width. It updates on resize,
+rotation, inset changes and keyboard expansion; it has no phone-specific pixels.
 
 | Region | Operation |
 | --- | --- |
-| Bottom 35%, left 40% of width | Hold left flipper |
-| Bottom 35%, middle 40% | Hold right flipper |
-| Bottom 35%, rightmost 20% | Pull plunger downward, release to fire |
-| Rightmost 20%, between 20% and 65% height | Hold nudge/tilt |
-| Top menu rows | Enter, Esc, P, M, Y, N, F1–F8; Data opens the existing import picker; Keys reveals a scrollable alphabet for initials |
+| Bottom 35% of the safe area below the menu, left half | Hold left flipper |
+| Same bottom strip, right half | Hold right flipper |
+| Gameplay above the strip, either side | Short tap/release nudges once |
+| Right half of gameplay above the strip | Downward drag classifies as plunger |
+| One default 44 dp top row | Enter, Esc, P, M, Y, N, Data, Keys |
+| Keys expanded panel | One horizontally scrollable row containing F1–F8 and A–Z |
 
-Multiple pointers contribute independently; releasing one never releases a
-control another pointer or physical key still holds. Flipper presses also send
-the desktop modifier make 127; nudge sends Space's make. Plunger has one pointer
-owner: downward displacement from its initial position is clamped to 0..25% of
-screen height, quantized to 0..128 relative counts, and consecutive absolute
-positions produce `pf_engine_plunger_delta` differences. A second plunger finger
-is ignored and cannot release the first. Up samples the final position and calls
-`pf_engine_plunger_fire`. `ACTION_CANCEL` clears touch owners and calls the same
-existing fire/release semantics for a held touch plunger. Focus/pause instead
-suspend first, discarding pending motion/fire without launching the spring.
+Keys starts collapsed on every Activity creation; toggling it adds/removes the
+auxiliary row and its occupied gameplay area. Narrow screens can scroll the
+compact toolbar horizontally. Data retains the existing SAF picker. The normal
+overlay paints only L/R labels, with no permanent Pull/Nudge labels or rectangles.
+A lightweight Pull ↓ indication exists only while a plunger pointer is owned,
+and disappears on up/cancel/focus loss.
+
+Pointer IDs own flippers until up/cancel, including when crossing other regions.
+Multiple pointers and physical keys contribute independently. Flipper presses
+retain modifier make 127. Gameplay pointers begin undecided and emit nothing on
+down. A tap must stay within Android's scaled touch slop and release within its
+long-press timeout. On qualifying release it submits one Space make and a 50 ms
+momentary existing Tilt-action press; releasing that host input pulse preserves
+other owners, including a held hardware Space. Focus/pause discards pending
+pulses after native suspension. No source/engine clock is changed.
+
+A right-side candidate becomes Plunger when downward displacement strictly
+exceeds scaled touch slop and exceeds absolute horizontal displacement. It then
+keeps ownership despite horizontal movement or crossing the bottom strip, and
+never nudges. Only one pointer can own the spring; competing candidates cannot
+fire it or turn into nudges. New gameplay touches during a pull are ignored,
+while flippers remain available. Absolute downward displacement is clamped and
+quantized to 0..128 relative counts over 25% of the safe height below the menu
+(with a two-slop minimum). Signed differences use the existing delta operation;
+up samples the final position and fires once. A start near the middle/top-right
+has ample travel without starting at the bottom edge. No ball/launch state is
+inferred. `ACTION_CANCEL` retains existing host spring fire/release semantics
+and cancels undecided taps. Focus/pause instead suspends first, discarding
+pending motion/fire without launching the spring.
 The source mouse/plunger tasks remain authoritative: eight relative counts per
 adjustment, at most one sign-based adjustment per source task. Event frequency
 or a large motion packet cannot make charging faster than engine rules allow.

@@ -151,45 +151,38 @@ public final class PinballActivity extends GameActivity {
         applyImmersiveMode();
         session = nativeOpen();
         audio = new AndroidAudio(this, (enabled, route) -> nativeAudio(session, enabled, route), this::diagnostic);
-        controls = new Controls((kind,a,b) -> nativeInput(session,kind,a,b));
+        android.os.Handler inputHandler = new android.os.Handler(getMainLooper());
+        controls = new Controls((kind,a,b) -> nativeInput(session,kind,a,b),
+                (milliseconds,release) -> inputHandler.postDelayed(release,milliseconds));
         getOnBackPressedDispatcher().addCallback(this,new androidx.activity.OnBackPressedCallback(true) {
             @Override public void handleOnBackPressed() { controls.tap(1); }
         });
-        addContentView(new ControlOverlay(this,controls), new FrameLayout.LayoutParams(
+        FrameLayout interaction = new FrameLayout(this);
+        ControlOverlay overlay = new ControlOverlay(this,controls);
+        interaction.addView(overlay,new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,FrameLayout.LayoutParams.MATCH_PARENT));
-        android.widget.LinearLayout menu = new android.widget.LinearLayout(this);
-        menu.setOrientation(android.widget.LinearLayout.VERTICAL);
-        android.widget.LinearLayout row = new android.widget.LinearLayout(this);
-        menu.addView(row);
-        String[] labels={"Enter","Esc","P","M","Y","N"};
-        int[] codes={28,1,25,50,21,49};
-        for (int i=0;i<labels.length;i++) addKey(row,labels[i],codes[i]);
-        Button more = new Button(this); more.setText("Keys"); more.setTextSize(11);
-        more.setAlpha(.65f); more.setFocusable(false);
-        android.widget.HorizontalScrollView alphabet = new android.widget.HorizontalScrollView(this);
-        android.widget.LinearLayout letters = new android.widget.LinearLayout(this);
-        alphabet.addView(letters);
-        for (int k=29;k<=54;k++) {
-            final int code=Controls.make(k);
-            Button letter=new Button(this); letter.setText(Character.toString((char)('A'+k-29)));
-            letter.setAlpha(.65f); letter.setFocusable(false);
-            letter.setOnClickListener(v -> controls.tap(code)); letters.addView(letter);
-        }
-        alphabet.setVisibility(android.view.View.GONE);
-        more.setOnClickListener(v -> alphabet.setVisibility(
-                alphabet.getVisibility()==android.view.View.GONE ? android.view.View.VISIBLE : android.view.View.GONE));
-        row.addView(more,new android.widget.LinearLayout.LayoutParams(0,
-                (int)(40*getResources().getDisplayMetrics().density),1));
-        row = new android.widget.LinearLayout(this); menu.addView(row);
-        for (int i=0;i<8;i++) addKey(row,"F"+(i+1),59+i);
-        Button dataButton=new Button(this); dataButton.setText("Data"); dataButton.setTextSize(11);
-        dataButton.setAlpha(.65f); dataButton.setFocusable(false);
-        dataButton.setOnClickListener(v -> requestImport());
-        row.addView(dataButton,new android.widget.LinearLayout.LayoutParams(0,
-                (int)(40*getResources().getDisplayMetrics().density),1));
-        menu.addView(alphabet);
-        addContentView(menu,new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,
+        ControlMenu menu = new ControlMenu(this,controls,this::requestImport);
+        interaction.addView(menu,new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.WRAP_CONTENT,Gravity.TOP));
+        // Keep framebuffer edge-to-edge. Only interactive UI uses these insets.
+        final androidx.core.graphics.Insets[] safe = {androidx.core.graphics.Insets.NONE};
+        Runnable geometry = () -> overlay.safeArea(safe[0].left,safe[0].top,
+                safe[0].right,safe[0].bottom,menu.getBottom());
+        menu.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->geometry.run());
+        interaction.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->geometry.run());
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(interaction,(v,insets)->{
+            safe[0]=ControlMenu.interactiveInsets(insets);
+            menu.safeInsets(safe[0].left,safe[0].top,safe[0].right);
+            if (importButton!=null) {
+                FrameLayout.LayoutParams lp=(FrameLayout.LayoutParams)importButton.getLayoutParams();
+                lp.setMargins(safe[0].left,safe[0].top,safe[0].right,safe[0].bottom);
+                importButton.setLayoutParams(lp);
+            }
+            geometry.run(); return insets;
+        });
+        addContentView(interaction,new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT));
+        androidx.core.view.ViewCompat.requestApplyInsets(interaction);
         importer = new DataImport(getNoBackupFilesDir(), new File(getFilesDir(), "State"),
                 new DataImport.Engine() {
                     public void validate(File data, File state) throws IOException { engineCall(0, data, state); }
@@ -204,7 +197,8 @@ public final class PinballActivity extends GameActivity {
         FrameLayout.LayoutParams layout = new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT,
                 Gravity.CENTER);
-        addContentView(importButton, layout);
+        interaction.addView(importButton, layout);
+        androidx.core.view.ViewCompat.requestApplyInsets(interaction);
         worker.execute(() -> {
             try {
                 importer.recover();
@@ -242,15 +236,6 @@ public final class PinballActivity extends GameActivity {
         }
     }
 
-    private void addKey(android.widget.LinearLayout row,String text,int code) {
-        Button button=new Button(this);
-        button.setText(text); button.setTextSize(11); button.setMinWidth(0);
-        button.setMinimumWidth(0); button.setPadding(0,0,0,0); button.setAlpha(.65f);
-        button.setFocusable(false);
-        button.setOnClickListener(v -> controls.tap(code));
-        row.addView(button,new android.widget.LinearLayout.LayoutParams(0,
-                (int)(40*getResources().getDisplayMetrics().density),1));
-    }
     private void syncInputs() {
         if (controls==null) return;
         // Suspend under the native mutex before clearing Java ownership. Pending

@@ -6,69 +6,115 @@ import java.util.Map;
 // Android-independent translation policy, used by the overlay and hardware keys.
 final class Controls {
     interface Sink { void send(int kind, int a, int b); }
+    interface Delay { void after(long milliseconds, Runnable release); }
+    static final long NUDGE_PRESS_MS=50;
+    private final Delay delay;
+    private boolean touchNudge;
+    private int nudgeGeneration;
     final Sink sink;
     final Map<Integer, Pointer> pointers = new HashMap<>();
     final boolean[] keys = new boolean[256], held = new boolean[4];
     boolean enabled;
-    static final int LEFT=0, RIGHT=1, PLUNGER=4, NUDGE=3, NONE=-1;
+    static final int LEFT=0, RIGHT=1, PLUNGER=4, NUDGE=3, NONE=-1, PENDING=5;
+    Runnable changed = () -> {};
+    // Pixel coordinates supplied by the measured overlay; no device dimensions.
+    float left, top, right, bottom, stripTop, slop, pullTravel;
+    long tapTimeout;
     static final class Pointer {
-        final int region;
-        final float origin;
+        int region;
+        final float x, y, travel;
+        final long started;
+        final boolean eligible;
+        boolean tap=true;
         int position;
-        Pointer(int region, float y) { this.region=region; origin=y; }
+        Pointer(int region, float x, float y, long time, boolean eligible, float travel) {
+            this.region=region; this.x=x; this.y=y; started=time;
+            this.eligible=eligible; this.travel=travel;
+        }
     }
-    Controls(Sink sink) { this.sink=sink; }
-    // Bottom 35%: left 40%, right 40%, plunger rightmost 20%.
-    // Middle right edge: nudge. Top 20% is reserved for the menu overlay.
-    static int hit(float x, float y) {
-        if (x<0 || x>1 || y<0 || y>1) return NONE;
-        if (y>=.65f) return x<.4f ? LEFT : x<.8f ? RIGHT : PLUNGER;
-        return x>=.8f && y>=.2f ? NUDGE : NONE;
+    Controls(Sink sink, Delay delay) { this.sink=sink; this.delay=delay; }
+    void geometry(float width, float height, float safeLeft, float safeTop,
+                  float safeRight, float safeBottom, float menuBottom, float touchSlop, long timeout) {
+        left=safeLeft; right=width-safeRight; top=Math.max(safeTop,menuBottom);
+        bottom=height-safeBottom;
+        stripTop=top+Math.max(0,bottom-top)*.65f;
+        slop=touchSlop; tapTimeout=timeout;
+        pullTravel=Math.max(2*slop,(bottom-top)*.25f);
     }
-    void down(int id, float x, float y) {
+    int hit(float x, float y) {
+        if (x<left || x>=right || y<top || y>=bottom || top>=bottom) return NONE;
+        if (y>=stripTop) return x<(left+right)/2 ? LEFT : RIGHT;
+        return PENDING;
+    }
+    boolean pulling() {
+        for (Pointer p:pointers.values()) if (p.region==PLUNGER) return true;
+        return false;
+    }
+    void down(int id, float x, float y, long time) {
         if (!enabled || pointers.containsKey(id)) return;
         int region=hit(x,y);
-        if (region==PLUNGER) {
-            for (Pointer p:pointers.values()) if (p.region==PLUNGER) return;
-        }
-        pointers.put(id,new Pointer(region,y));
+        if (region==NONE) return;
+        // Starts during another spring owner's gesture cannot become taps/pulls.
+        if (region==PENDING && pulling()) return;
+        pointers.put(id,new Pointer(region,x,y,time,x>=(left+right)/2,pullTravel));
         actions();
-        // Like physical makes, touch presses can dismiss startup/pause prompts.
         if (region==LEFT || region==RIGHT) sink.send(1,127,0);
-        if (region==NUDGE) sink.send(1,57,0);
+        changed.run();
     }
-    void move(int id, float y) {
+    void move(int id, float x, float y) {
         Pointer p=pointers.get(id);
-        if (!enabled || p==null || p.region!=PLUNGER) return;
-        // Pull downward up to 25% of screen height = 128 relative counts.
-        // Absolute quantization makes total delta independent of callback count.
-        int position=Math.round(Math.max(0,Math.min(1,(y-p.origin)/.25f))*128);
-        int delta=position-p.position;
-        p.position=position;
-        if (delta!=0) sink.send(3,delta,0);
+        if (!enabled || p==null) return;
+        float dx=x-p.x, dy=y-p.y;
+        if (dx*dx+dy*dy>slop*slop) p.tap=false;
+        if (p.region==PENDING && p.eligible && dy>slop && dy>Math.abs(dx)) {
+            // Resolve at classification, not down: only one spring owner.
+            p.region=pulling() ? NONE : PLUNGER;
+        }
+        if (p.region==PLUNGER) {
+            // Absolute quantization makes total delta independent of callback count.
+            int position=Math.round(Math.max(0,Math.min(1,dy/p.travel))*128);
+            int delta=position-p.position;
+            p.position=position;
+            if (delta!=0) sink.send(3,delta,0);
+        }
+        changed.run();
     }
-    void up(int id) {
+    void up(int id, long time) {
         Pointer p=pointers.remove(id);
         if (p==null) return;
         if (p.region==PLUNGER) sink.send(4,0,0);
-        actions();
+        if (p.region==PENDING && p.tap && time-p.started<=tapTimeout && !pulling())
+            nudge(); // One momentary Tilt press and Space make, only on release.
+        actions(); changed.run();
+    }
+    private void nudge() {
+        touchNudge=true; actions(); sink.send(1,57,0);
+        final int generation=++nudgeGeneration;
+        // Input press duration only; source cadence/physics remain engine-owned.
+        delay.after(NUDGE_PRESS_MS,()->{
+            if (generation!=nudgeGeneration) return;
+            touchNudge=false; actions();
+        });
     }
     void cancel() {
-        boolean plunger=false;
-        for (Pointer p:pointers.values()) plunger |= p.region==PLUNGER;
+        boolean plunger=pulling();
         pointers.clear();
-        // Existing mouse fire releases a charged spring; no host physics.
+        touchNudge=false; nudgeGeneration++;
+        // Retain existing host cancel/fire semantics; no host spring physics.
         if (plunger) sink.send(4,0,0);
-        actions();
+        actions(); changed.run();
     }
     void clear() {
         pointers.clear();
+        touchNudge=false; nudgeGeneration++;
         java.util.Arrays.fill(keys,false);
         java.util.Arrays.fill(held,false);
+        changed.run();
         // Native suspend clears both pending mouse deltas and all held actions.
     }
     void actions() {
         boolean[] next=new boolean[4];
+        next[NUDGE]=touchNudge;
         for (Pointer p:pointers.values()) if (p.region>=0 && p.region<4) next[p.region]=true;
         for (int k=0;k<keys.length;k++) if (keys[k]) {
             int a=action(k); if (a>=0) next[a]=true;

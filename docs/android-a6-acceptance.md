@@ -206,10 +206,20 @@ FAIL or NOT TESTED and short notes. Any unperformed component remains NOT TESTED
 | 3 Billion Dollar Gameshow | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED |
 | 4 Stones 'N Bones | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED | NOT TESTED |
 
-Touch overlay: bottom 35% left 40% = left flipper, middle 40% = right flipper,
-rightmost 20% = plunger drag; rightmost strip at 20–65% height = nudge. Top menu
-provides desktop-equivalent keys, Data import and initials. Verify pointer
-cancellation and no held controls after focus loss. If a physical keyboard is
+Touch polish retest: the owner reports the first personal APK launches and works,
+but camera-cutout overlap, the permanent F-row and bottom-right Pull geometry
+require a new physical pass. A6 remains incomplete; this report does not fill
+individual acceptance cells.
+
+Touch overlay: the menu respects system/cutout/gesture safe insets, with one
+compact Enter/Esc/P/M/Y/N/Data/Keys row. Keys toggles F1–F8 plus A–Z and starts
+collapsed. Bottom 35% of the safe area below the measured menu is split into
+left/right flipper halves. Above it, a short tap nudges only on release; a
+right-half downward drag beyond Android touch slop (vertical-dominant initially)
+owns the plunger until release. Full travel is 25% of that safe height for 128
+relative counts. Pull ↓ appears only while dragging. Verify safe toolbar access,
+matrix visibility, a full practical pull, L+R, L+Nudge, flipper+Pull, cancellation
+and no held controls after focus loss, in portrait and landscape. If a physical keyboard is
 available, check equivalent controls and Back; otherwise record that hardware
 check NOT TESTED while still testing touch equivalents.
 
