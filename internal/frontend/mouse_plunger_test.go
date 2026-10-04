@@ -72,3 +72,44 @@ func TestFourTablesUseOneDOSMouseAndKeyboardSpring(t *testing.T) {
 		})
 	}
 }
+
+// Original-backed integration: the additive touch edge reaches all four real
+// spring tasks and uses their existing release callbacks/physics.
+func TestFourTablesUseAbsoluteTouchSpring(t *testing.T) {
+	for table := 1; table <= 4; table++ {
+		for _, target := range []int{16, 32} {
+			t.Run(fmt.Sprintf("%d/%d", table, target), func(t *testing.T) {
+				r := configured(t, settings.Legacy())
+				runKey(t, r, Space)
+				runKey(t, r, Key(int(F1)+table-1))
+				runKey(t, r, F1)
+				runTicks(t, r, 200)
+				var p *physics.Game
+				switch g := r.Model.Session.(type) {
+				case *partyland.Game:
+					p = g.Physics
+				case *speeddevils.Game:
+					p = g.Physics
+				case *gameshow.Game:
+					p = g.Physics
+				case *stones.Game:
+					p = g.Physics
+				default:
+					t.Fatal("missing table")
+				}
+				if err := r.Update(Input{Gameplay: gameplay.Controls{TouchSet: true, TouchTarget: target}}); err != nil {
+					t.Fatal(err)
+				}
+				if int(p.SpringPosition) != target {
+					t.Fatal("touch charge", p.SpringPosition, target)
+				}
+				if err := r.Update(Input{Gameplay: gameplay.Controls{MouseFire: true}}); err != nil {
+					t.Fatal(err)
+				}
+				if p.SpringPosition != 0 || p.Ball.VY >= 0 {
+					t.Fatal("touch release physics", p.SpringPosition, p.Ball.VY)
+				}
+			})
+		}
+	}
+}

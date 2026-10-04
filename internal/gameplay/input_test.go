@@ -103,3 +103,30 @@ func TestSpringupSkipsFurtherPullAndMotion(t *testing.T) {
 		t.Fatal("SPRINGUP ran SPRINGSTEEN/SPRINGIT", charge, pos)
 	}
 }
+
+func TestAbsoluteTouchTargetIsClampedAndValidOnly(t *testing.T) {
+	for _, target := range []int{-100, 0, 16, 32, 100} {
+		var position uint8
+		launches := 0
+		release := func(uint8) { launches++ }
+		gameplay.Spring(&position, true, gameplay.Controls{TouchSet: true, TouchTarget: target}, release)
+		want := target
+		if want < 0 {
+			want = 0
+		}
+		if want > 32 {
+			want = 32
+		}
+		if int(position) != want || launches != 0 {
+			t.Fatal(target, position, launches)
+		}
+		gameplay.Spring(&position, false, gameplay.Controls{TouchSet: true, TouchTarget: 32}, release)
+		if int(position) != want {
+			t.Fatal("invalid touch changed spring")
+		}
+		gameplay.Spring(&position, true, gameplay.Controls{TouchSet: true, TouchTarget: 0}, release)
+		if position != 0 || launches != 0 {
+			t.Fatal("cancel launched")
+		}
+	}
+}

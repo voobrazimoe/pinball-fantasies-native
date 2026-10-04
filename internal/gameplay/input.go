@@ -8,6 +8,8 @@ type Controls struct {
 	Left, Right, Down, Release, Tilt bool
 	MouseY                           int
 	MouseFire                        bool
+	TouchSet                         bool
+	TouchTarget                      int
 }
 
 // Spring reproduces SPRINGSTEEN/SPRINGIT and SPRINGUP's reset. Both devices
@@ -21,6 +23,19 @@ func Spring(position *uint8, valid bool, in Controls, release func(uint8)) {
 			release(*position)
 			*position = 0
 		}
+		return
+	}
+	// Additive touch input selects charge on the source task; desktop inputs
+	// retain their relative adjustment and release ordering.
+	if valid && in.TouchSet {
+		target := in.TouchTarget
+		if target < 0 {
+			target = 0
+		}
+		if target > 32 {
+			target = 32
+		}
+		*position = uint8(target)
 		return
 	}
 	if valid {

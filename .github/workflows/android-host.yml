@@ -142,7 +142,7 @@ jobs:
             python3 tools/check_android_elf.py "$library" --objdump "$OBJDUMP"
             if [[ "$library" == */libpfengine.so ]]; then
               "$OBJDUMP" -T "$library" > "${RUNNER_TEMP}/engine-symbols.txt"
-              for symbol in pf_engine_abi_version pf_engine_create pf_engine_destroy pf_engine_advance pf_engine_frame pf_engine_set_presentation pf_engine_suspend pf_engine_resume pf_engine_set_action pf_engine_key pf_engine_release pf_engine_plunger_delta pf_engine_plunger_fire; do
+              for symbol in pf_engine_abi_version pf_engine_create pf_engine_destroy pf_engine_advance pf_engine_frame pf_engine_set_presentation pf_engine_suspend pf_engine_resume pf_engine_set_action pf_engine_key pf_engine_release pf_engine_plunger_delta pf_engine_plunger_target pf_engine_plunger_fire pf_engine_state; do
                 grep -E "[[:space:]]\\.text[[:space:]].*[[:space:]]${symbol}$" "${RUNNER_TEMP}/engine-symbols.txt"
               done
             fi

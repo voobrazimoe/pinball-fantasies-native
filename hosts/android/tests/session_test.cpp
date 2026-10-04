@@ -23,6 +23,8 @@ int32_t pf_engine_set_action(uint64_t,uint32_t,int32_t) { Call c; assert(!suspen
 int32_t pf_engine_key(uint64_t,uint8_t) { Call c; assert(!suspended); return PF_OK; }
 int32_t pf_engine_release(uint64_t) { Call c; assert(!suspended); return PF_OK; }
 int32_t pf_engine_plunger_delta(uint64_t,int32_t) { Call c; assert(!suspended); return PF_OK; }
+int32_t pf_engine_plunger_target(uint64_t,int32_t) { Call c; assert(!suspended); return PF_OK; }
+int32_t pf_engine_state(uint64_t,uint64_t* tick,uint32_t* mode,uint32_t* table,uint32_t* flags) { Call c; *tick=12; *mode=PF_MODE_PLAYING; *table=2; *flags=4; return PF_OK; }
 int32_t pf_engine_plunger_fire(uint64_t) { Call c; assert(!suspended); return PF_OK; }
 int32_t pf_engine_set_presentation(uint64_t,int32_t) { Call c; return PF_OK; }
 int32_t pf_engine_advance(uint64_t,int64_t ns,pf_pcm_sink sink,void* context) {
@@ -47,6 +49,9 @@ int main() {
     JNI_METHOD(nativeActive)(nullptr,nullptr,token,true,true);
     assert(pfTestInfoLogs == 1);
     JNI_METHOD(nativeDiagnostics)(nullptr,nullptr,false);
+    assert(JNI_METHOD(nativeState)(nullptr,nullptr,token)==(PF_MODE_PLAYING | (2<<8) | (4<<16)));
+    assert(JNI_METHOD(nativeState)(nullptr,nullptr,token-1)==-1);
+    JNI_METHOD(nativeInput)(nullptr,nullptr,token,5,32,0);
     std::vector<uint8_t> pixels; int w=0,h=0;
     assert(androidEngineFrame(true,pixels,w,h) && w==1 && h==2 && pixels[4]==5);
     assert(pixels.data()!=framePixels);
@@ -90,11 +95,16 @@ int main() {
     std::thread render([&] { std::vector<uint8_t> out; int fw=0,fh=0;
         for(int i=0;i<1000;i++) androidEngineFrame(i%2,out,fw,fh); });
     std::thread input([&] { for(int i=0;i<1000;i++)
-        JNI_METHOD(nativeInput)(nullptr,nullptr,token,i%5,0,i%2); });
+        JNI_METHOD(nativeInput)(nullptr,nullptr,token,i%6,0,i%2); });
     std::thread lifecycle([&] { for(int i=0;i<1000;i++)
         JNI_METHOD(nativeActive)(nullptr,nullptr,token,i%2,true); });
     render.join(); input.join(); lifecycle.join(); focusEvents.join();
-    JNI_METHOD(nativeClose)(nullptr,nullptr,token);
+    JNI_METHOD(nativeDetach)(nullptr,nullptr,token);
+    assert(persistent==42 && destroys==0 && retained);
+    const auto recreated=JNI_METHOD(nativeOpen)(nullptr,nullptr);
+    assert(persistent==42 && destroys==0 && recreated!=token);
+    JNI_METHOD(nativeActive)(nullptr,nullptr,recreated,true,true);
+    JNI_METHOD(nativeClose)(nullptr,nullptr,recreated);
     assert(destroys==1 && persistent==0);
     androidAudioBuffer().render(audio,1); assert(audio[0]==0 && audio[1]==0);
     const auto closedCalls=calls.load();

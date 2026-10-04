@@ -23,14 +23,16 @@ const (
 // Engine operations, including Frame and PCM sinks, must be serialized by the
 // host. A PCM sink may copy/enqueue samples but must not reenter the engine.
 type Engine struct {
-	runner    *source.Runner
-	now       time.Time
-	last      int64
-	held      gameplay.Controls
-	mouse     gameplay.Mouse
-	delta     int
-	fire      bool
-	fullTable bool
+	runner      *source.Runner
+	now         time.Time
+	last        int64
+	held        gameplay.Controls
+	mouse       gameplay.Mouse
+	delta       int
+	fire        bool
+	fullTable   bool
+	touchSet    bool
+	touchTarget int
 }
 
 func Load(data, state string, ns int64) (*Engine, error) {
@@ -97,12 +99,29 @@ func (e *Engine) PlungerDelta(delta int32) {
 		e.clearMouse()
 	}
 }
+
+// PlungerTarget is an additive touch-only absolute charge input. It is latched
+// until the next source task, never applied directly to a table from host code.
+func (e *Engine) PlungerTarget(target int32) {
+	if !e.MouseActive() {
+		e.clearMouse()
+		return
+	}
+	if target < 0 {
+		target = 0
+	}
+	if target > 32 {
+		target = 32
+	}
+	e.touchTarget = int(target)
+	e.touchSet = true
+}
 func (e *Engine) PlungerFire() {
 	if e.MouseActive() {
 		e.fire = true
 	}
 }
-func (e *Engine) clearMouse() { e.mouse.Clear(); e.delta = 0; e.fire = false }
+func (e *Engine) clearMouse() { e.mouse.Clear(); e.delta = 0; e.fire = false; e.touchSet = false }
 func (e *Engine) Suspend() error {
 	e.held = gameplay.Controls{}
 	e.clearMouse()
@@ -135,7 +154,8 @@ func (e *Engine) Advance(ns int64, pcm func([]byte) error) error {
 		if !e.MouseActive() {
 			e.clearMouse()
 		}
-		e.submit(gameplay.Controls{MouseY: e.mouse.Motion(e.delta), MouseFire: e.fire})
+		e.submit(gameplay.Controls{MouseY: e.mouse.Motion(e.delta), MouseFire: e.fire, TouchSet: e.touchSet, TouchTarget: e.touchTarget})
+		e.touchSet = false
 		e.delta = 0
 		e.fire = false
 	}, pcm)

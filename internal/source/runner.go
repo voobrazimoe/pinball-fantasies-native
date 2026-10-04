@@ -47,6 +47,10 @@ func (r *Runner) Submit(in frontend.Input) {
 	r.input.Gameplay.Release = r.input.Gameplay.Release || in.Gameplay.Release
 	r.input.Gameplay.MouseFire = r.input.Gameplay.MouseFire || in.Gameplay.MouseFire
 	r.input.Gameplay.MouseY += in.Gameplay.MouseY
+	if in.Gameplay.TouchSet {
+		r.input.Gameplay.TouchSet = true
+		r.input.Gameplay.TouchTarget = in.Gameplay.TouchTarget
+	}
 	r.input.Keys = append(r.input.Keys, in.Keys...)
 	r.input.Close = r.input.Close || in.Close
 }

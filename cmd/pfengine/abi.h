@@ -42,6 +42,10 @@ int32_t pf_engine_set_action(uint64_t handle, uint32_t action, int32_t down);
 int32_t pf_engine_key(uint64_t handle, uint8_t logical_make);
 int32_t pf_engine_release(uint64_t handle);
 int32_t pf_engine_plunger_delta(uint64_t handle, int32_t delta);
+/* Optional additive ABI 1 touch extension: clamped absolute 0..32 charge,
+ * ignored outside active valid spring input. Consumed on the source task.
+ * Existing relative DOS mouse semantics and release timing are unchanged. */
+int32_t pf_engine_plunger_target(uint64_t handle, int32_t target);
 int32_t pf_engine_plunger_fire(uint64_t handle);
 int32_t pf_engine_advance(uint64_t handle, int64_t ns, pf_pcm_sink sink, void *context);
 /* RGBA8, top-down, engine-owned C storage. Valid until next frame retrieval or

@@ -279,56 +279,74 @@ raster. Landscape sets 0 and immediately restores saved HARD/MEDIUM/SOFT/OFF
 presentation, including preferences changed through the normal options screen.
 Orientation never writes or temporarily assigns saved settings.
 
-### Touch layout and gestures
+### A6 touch-first layout and gestures
 
-The fullscreen framebuffer remains edge-to-edge and immersive. Interactive UI
-uses the union of `WindowInsetsCompat` system-bar, display-cutout and system-gesture
-insets, including asymmetric landscape edges. The menu begins inside that safe
-rectangle. Gameplay geometry starts at the measured menu bottom, ends above the
-bottom safe inset and uses the remaining safe width. It updates on resize,
-rotation, inset changes and keyboard expansion; it has no phone-specific pixels.
+A6 physical acceptance remains **NOT TESTED** for this revision. The second
+owner test found the keyboard-toolbar model intrusive and the relative mouse
+swipe undercharged. The default UI now exposes semantic actions driven only by
+`pf_engine_state()`. `nativeState` reads mode/table/flags under the existing native
+session mutex; the main looper refreshes `SemanticUi` every 100 ms. This single,
+framework-free mapper drives the sheets and gameplay overlay idempotently.
 
-| Region | Operation |
+| Engine mode | Default touch UI |
 | --- | --- |
-| Bottom 35% of the safe area below the menu, left half | Hold left flipper |
-| Same bottom strip, right half | Hold right flipper |
-| Gameplay above the strip, either side | Short tap/release nudges once |
-| Right half of gameplay above the strip | Downward drag classifies as plunger |
-| One default 44 dp top row | Enter, Esc, P, M, Y, N, Data, Keys |
-| Keys expanded panel | One horizontally scrollable row containing F1–F8 and A–Z |
+| STARTUP | Tap to continue (Space underneath) |
+| SELECTOR / SELECTOR_TEXT | Named four tables and Options (F1–F5) |
+| ATTRACT | Players − / 1..8 / + and Play (selected F1–F8); entry defaults to 1 |
+| PLAYING | L/R, tiny mobile menu, Pull ↓ only while flag bit 2 is active |
+| OPTIONS | Up / Down / Select / Back |
+| PAUSED | Resume / Exit table (Enter / Escape) |
+| QUIT_QUESTION | Yes / No (Y / N) |
+| INITIALS | Temporary QWERTY letters using existing DOS makes |
+| GAME_END / ENTRY_WAIT / QUIT | No contextual controls |
 
-Keys starts collapsed on every Activity creation; toggling it adds/removes the
-auxiliary row and its occupied gameplay area. The toolbar fits its eight
-buttons in the safe width; the auxiliary row scrolls. Data retains the existing SAF picker. The normal
-overlay paints only L/R labels, with no permanent Pull/Nudge labels or rectangles.
-A lightweight Pull ↓ indication exists only while a plunger pointer is owned,
-and disappears on up/cancel/focus loss.
+The framebuffer remains centered, aspect-correct and unchanged. There is no
+keyboard row or reserved control header over its 320×33 matrix. Sheets occupy
+at most the bottom half. The 44 dp menu sits in top letterbox space when it fits,
+otherwise at the safe bottom right (above a visible sheet). Controls respect the
+union of system-bar, display-cutout and gesture insets, including landscape edges.
+Menu → Advanced keyboard temporarily exposes Enter/Esc/P/M/Y/N, arrows, Space,
+F1–F8 and A–Z; Close/Back restores the normal view. These are Views in the same
+Activity, never another Window. Opening/closing them does not alter focus, audio
+eligibility, Oboe, engine suspension or source cadence. Data invokes the existing
+SAF transaction/picker. Utilities are contextual: Pause/Music during Playing; Exit table on the Paused sheet,
+Back to tables during Attract. A mode transition dismisses transient sheets.
 
-Pointer IDs own flippers until up/cancel, including when crossing other regions.
-Multiple pointers and physical keys contribute independently. Flipper presses
-retain modifier make 127. Gameplay pointers begin undecided and emit nothing on
-down. A tap must stay within Android's scaled touch slop and release within its
-long-press timeout. On qualifying release it submits one Space make and a 50 ms
-momentary existing Tilt-action press; releasing that host input pulse preserves
-other owners, including a held hardware Space. Focus/pause discards pending
-pulses after native suspension. No source/engine clock is changed.
+The bottom 35% of the safe touch area has independent left/right halves. Their
+hit geometry also defines centered label positions: 25% / 75% horizontally and
+the vertical strip center. Pointer IDs retain ownership across crossings;
+multiple pointers and hardware keys contribute independently. L+R, L/R+Nudge
+and L/R+plunger remain supported. Neutral taps submit exactly one Space make and
+50 ms Tilt pulse on qualifying release, after rejecting drags/long presses.
+Flipper and plunger owners never nudge; candidates competing with a claimed
+plunger cannot later turn into nudges. Lifecycle suspension discards ownership
+and stale pulse callbacks. Rotation resizes Views without resetting the engine;
+configuration recreation retains the suspended native engine, obtains a fresh
+session token and rebuilds the mapper from its snapshot.
 
-A right-side candidate becomes Plunger when downward displacement strictly
-exceeds scaled touch slop and exceeds absolute horizontal displacement. It then
-keeps ownership despite horizontal movement or crossing the bottom strip, and
-never nudges. Only one pointer can own the spring; competing candidates cannot
-fire it or turn into nudges. New gameplay touches during a pull are ignored,
-while flippers remain available. Absolute downward displacement is clamped and
-quantized to 0..128 relative counts over 25% of the safe height below the menu
-(with a two-slop minimum). Signed differences use the existing delta operation;
-up samples the final position and fires once. A start near the middle/top-right
-has ample travel without starting at the bottom edge. No ball/launch state is
-inferred. `ACTION_CANCEL` retains existing host spring fire/release semantics
-and cancels undecided taps. Focus/pause instead suspends first, discarding
-pending motion/fire without launching the spring.
-The source mouse/plunger tasks remain authoritative: eight relative counts per
-adjustment, at most one sign-based adjustment per source task. Event frequency
-or a large motion packet cannot make charging faster than engine rules allow.
+Only the engine's mouse-active flag makes a right-side neutral pointer eligible
+for a pull. Downward, initially vertical-dominant movement exceeding touch slop
+claims the single plunger owner. Horizontal jitter thereafter retains ownership.
+Downward distance over 25% of safe height (minimum two touch slops) maps directly
+and monotonically to rounded 0..32 charge. Up samples the final target and fires
+once; cancel submits target zero without firing. When unavailable, a right-side
+neutral tap is an ordinary Nudge tap. No chute or mode inference uses pixels.
+
+`pf_engine_plunger_target(handle, target)` is an optional additive ABI 1 extension;
+old consumers and `pf_engine_plunger_delta` keep their existing behavior. Targets
+are clamped at the engine and source spring boundary, accepted only with active,
+valid spring input, latched through Runner input, and applied by the existing
+shared spring task. Release uses the existing following-source-task mouse fire
+and table release physics. Fast swipes and 2 versus 20 MOVE callbacks produce
+the same requested charge. No source deadlines or launch velocity formulas change.
+
+Local validation of this redesign passed the A2 import transactions, A3/A4/A5
+asset-free tests, the shared package matrix (with the repository's macOS platform
+exclusions), and both-ABI engine/APK builds and 16 KB ELF checks. Privately staged
+originals passed the unchanged four-table DOS mouse/keyboard regression and new
+four-table half/full touch-target release checks. Hosted A0 still runs the real
+16 KB ABI loader gate. None of these checks certify this revision on a physical
+phone; A6 remains NOT TESTED and A7 is not started.
 
 ### Physical keyboard and Back
 
@@ -367,8 +385,8 @@ implementation against mock ABI functions. The session stress test races native
 presentation, UI input and pause/focus transitions and asserts no overlapping
 ABI calls, advancement while suspended, borrowed-pointer retention, destruction
 races or stale-token revival. Java tests cover hit regions, simultaneous flippers,
-multiple contributors, pointer-ID changes, cancellation, bounded signed plunger
-deltas, release, repeat suppression, make codes, Back and focus clearing.
+multiple contributors, pointer-ID changes, cancellation, absolute touch targets, semantic mode/action mapping,
+plunger callback-count independence, release, repeat suppression, make codes, Back and focus clearing.
 
 Android instrumentation additionally dispatches real multi-pointer `MotionEvent`
 objects through `ControlOverlay`, verifies cancellation/plunger dispatch, and

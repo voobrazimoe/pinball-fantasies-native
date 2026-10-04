@@ -15,6 +15,7 @@ final class Controls {
     final Map<Integer, Pointer> pointers = new HashMap<>();
     final boolean[] keys = new boolean[256], held = new boolean[4];
     boolean enabled;
+    boolean gameplay=true, plungerAvailable;
     static final int LEFT=0, RIGHT=1, PLUNGER=4, NUDGE=3, NONE=-1, PENDING=5;
     Runnable changed = () -> {};
     // Pixel coordinates supplied by the measured overlay; no device dimensions.
@@ -34,13 +35,15 @@ final class Controls {
     }
     Controls(Sink sink, Delay delay) { this.sink=sink; this.delay=delay; }
     void geometry(float width, float height, float safeLeft, float safeTop,
-                  float safeRight, float safeBottom, float menuBottom, float touchSlop, long timeout) {
-        left=safeLeft; right=width-safeRight; top=Math.max(safeTop,menuBottom);
+                  float safeRight, float safeBottom, float touchSlop, long timeout) {
+        left=safeLeft; right=width-safeRight; top=safeTop;
         bottom=height-safeBottom;
         stripTop=top+Math.max(0,bottom-top)*.65f;
         slop=touchSlop; tapTimeout=timeout;
         pullTravel=Math.max(2*slop,(bottom-top)*.25f);
     }
+    float labelX(int region) { return left+(right-left)*(region==LEFT ? .25f : .75f); }
+    float labelY() { return (stripTop+bottom)/2; }
     int hit(float x, float y) {
         if (x<left || x>=right || y<top || y>=bottom || top>=bottom) return NONE;
         if (y>=stripTop) return x<(left+right)/2 ? LEFT : RIGHT;
@@ -51,12 +54,12 @@ final class Controls {
         return false;
     }
     void down(int id, float x, float y, long time) {
-        if (!enabled || pointers.containsKey(id)) return;
+        if (!enabled || !gameplay || pointers.containsKey(id)) return;
         int region=hit(x,y);
         if (region==NONE) return;
         // Starts during another spring owner's gesture cannot become taps/pulls.
         if (region==PENDING && pulling()) return;
-        pointers.put(id,new Pointer(region,x,y,time,x>=(left+right)/2,pullTravel));
+        pointers.put(id,new Pointer(region,x,y,time,plungerAvailable && x>=(left+right)/2,pullTravel));
         actions();
         if (region==LEFT || region==RIGHT) sink.send(1,127,0);
         changed.run();
@@ -66,16 +69,18 @@ final class Controls {
         if (!enabled || p==null) return;
         float dx=x-p.x, dy=y-p.y;
         if (dx*dx+dy*dy>slop*slop) p.tap=false;
-        if (p.region==PENDING && p.eligible && dy>slop && dy>Math.abs(dx)) {
+        if (p.region==PENDING && p.eligible && plungerAvailable && dy>slop && dy>Math.abs(dx)) {
             // Resolve at classification, not down: only one spring owner.
             p.region=pulling() ? NONE : PLUNGER;
+            if (p.region==PLUNGER) for (Pointer other:pointers.values())
+                if (other!=p && other.region==PENDING) other.region=NONE;
         }
         if (p.region==PLUNGER) {
-            // Absolute quantization makes total delta independent of callback count.
-            int position=Math.round(Math.max(0,Math.min(1,dy/p.travel))*128);
+            // Absolute charge follows finger position, independent of callback count.
+            int position=Math.round(Math.max(0,Math.min(1,dy/p.travel))*32);
             int delta=position-p.position;
             p.position=position;
-            if (delta!=0) sink.send(3,delta,0);
+            if (delta!=0) sink.send(5,position,0);
         }
         changed.run();
     }
@@ -100,8 +105,8 @@ final class Controls {
         boolean plunger=pulling();
         pointers.clear();
         touchNudge=false; nudgeGeneration++;
-        // Retain existing host cancel/fire semantics; no host spring physics.
-        if (plunger) sink.send(4,0,0);
+        // Cancel resets the touch target without scheduling a release.
+        if (plunger) sink.send(5,0,0);
         actions(); changed.run();
     }
     void clear() {
@@ -169,7 +174,7 @@ final class Controls {
         return true;
     }
     void tap(int code) {
-        if (!enabled) return;
+        if (!enabled || code<0) return;
         if (code==28) sink.send(2,0,0);
         sink.send(1,code,0);
     }

@@ -3,7 +3,8 @@ set -eu
 cd "$(dirname "$0")/.."
 scratch=$(mktemp -d)
 trap 'rm -rf "$scratch"' EXIT HUP INT TERM
-javac -d "$scratch" hosts/android/app/src/main/java/io/github/voobrazimoe/pinballfantasies/Controls.java hosts/android/tests/ControlsTest.java
+javac -d "$scratch" hosts/android/app/src/main/java/io/github/voobrazimoe/pinballfantasies/Controls.java hosts/android/app/src/main/java/io/github/voobrazimoe/pinballfantasies/SemanticUi.java hosts/android/tests/ControlsTest.java hosts/android/tests/SemanticUiTest.java
+java -cp "$scratch" io.github.voobrazimoe.pinballfantasies.SemanticUiTest
 ${CC:-cc} -std=c11 -Wall -Wextra -Werror -Ihosts/macos hosts/macos/host_logic.c hosts/android/tests/keyboard_parity.c -o "$scratch/keyboard-parity"
 "$scratch/keyboard-parity" > "$scratch/desktop-makes"
 java -cp "$scratch" io.github.voobrazimoe.pinballfantasies.ControlsTest "$scratch/desktop-makes"

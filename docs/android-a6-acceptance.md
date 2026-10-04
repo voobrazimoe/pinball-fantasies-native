@@ -211,17 +211,24 @@ but camera-cutout overlap, the permanent F-row and bottom-right Pull geometry
 require a new physical pass. A6 remains incomplete; this report does not fill
 individual acceptance cells.
 
-Touch overlay: the menu respects system/cutout/gesture safe insets, with one
-compact Enter/Esc/P/M/Y/N/Data/Keys row. Keys toggles F1–F8 plus A–Z and starts
-collapsed. Bottom 35% of the safe area below the measured menu is split into
-left/right flipper halves. Above it, a short tap nudges only on release; a
-right-half downward drag beyond Android touch slop (vertical-dominant initially)
-owns the plunger until release. Full travel is 25% of that safe height for 128
-relative counts. Pull ↓ appears only while dragging. Verify safe toolbar access,
-matrix visibility, a full practical pull, L+R, L+Nudge, flipper+Pull, cancellation
-and no held controls after focus loss, in portrait and landscape. If a physical keyboard is
-available, check equivalent controls and Back; otherwise record that hardware
-check NOT TESTED while still testing touch equivalents.
+Touch-first revision after the second physical report: **NOT TESTED**.
+The permanent keyboard toolbar and F row are removed. Verify Tap to continue,
+named tables/Options, attract Players 1..8 + Play, contextual options,
+Resume/Exit, Yes/No and temporary initials letters. During Playing verify an
+unobstructed 320×33 matrix, tiny safe menu, centered L at 25% and R at 75%, and
+Pull ↓ only when the authoritative engine flag is active. Menu → Advanced
+keyboard is a dismissible in-Activity overlay; opening/closing it must not
+interrupt audio or suspend gameplay.
+
+Bottom 35% of the safe area is split into left/right flipper halves. Neutral
+short taps nudge once on release. A right-side downward drag can claim the
+plunger only while available; 25% of safe height maps to full **32** charge.
+Test half/full fast and slow swipes, immediate release at full charge, no
+Nudge contamination, horizontal jitter, cancel without launch, L+R,
+L/R+Nudge and L/R+Pull. Verify safe menu access and matrix visibility in
+portrait and landscape, no held controls after focus loss, and reconstruction
+from the current engine state after rotation. Check physical keyboard
+compatibility when available; otherwise leave that check NOT TESTED.
 
 ## Orientation, lifecycle and persistent state
 

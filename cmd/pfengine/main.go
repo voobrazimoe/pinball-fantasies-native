@@ -124,6 +124,11 @@ func pf_engine_plunger_delta(h C.uint64_t, d C.int32_t) C.int32_t {
 	return invoke(h, func(i *instance) C.int32_t { i.engine.PlungerDelta(int32(d)); return C.PF_OK })
 }
 
+//export pf_engine_plunger_target
+func pf_engine_plunger_target(h C.uint64_t, target C.int32_t) C.int32_t {
+	return invoke(h, func(i *instance) C.int32_t { i.engine.PlungerTarget(int32(target)); return C.PF_OK })
+}
+
 //export pf_engine_plunger_fire
 func pf_engine_plunger_fire(h C.uint64_t) C.int32_t {
 	return invoke(h, func(i *instance) C.int32_t { i.engine.PlungerFire(); return C.PF_OK })

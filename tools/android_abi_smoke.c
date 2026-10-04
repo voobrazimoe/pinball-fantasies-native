@@ -31,7 +31,8 @@ int main(int argc, char **argv) {
     abi_version_fn abi_version =
         (abi_version_fn)require_symbol(library, "pf_engine_abi_version");
     create_fn create = (create_fn)require_symbol(library, "pf_engine_create");
-    if (abi_version == NULL || create == NULL) {
+    if (abi_version == NULL || create == NULL ||
+        require_symbol(library, "pf_engine_plunger_target") == NULL) {
         dlclose(library);
         return 1;
     }

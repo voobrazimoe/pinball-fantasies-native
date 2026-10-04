@@ -135,3 +135,118 @@ func TestNativeLifecycleClearsScheduledFireAndReanchors(t *testing.T) {
 		t.Fatal("duplicate active resume cleared valid hold")
 	}
 }
+
+func TestTouchTargetClampsAndReleasesRequestedCharge(t *testing.T) {
+	for _, target := range []int32{-10, 0, 16, 32, 100} {
+		e, s := inputEngine(t)
+		e.PlungerTarget(target)
+		if s.position != 0 {
+			t.Fatal("host mutated table before source task")
+		}
+		tickEngine(t, e)
+		want := target
+		if want < 0 {
+			want = 0
+		}
+		if want > 32 {
+			want = 32
+		}
+		if int32(s.position) != want {
+			t.Fatal(target, s.position)
+		}
+		if want == 0 {
+			continue
+		}
+		e.PlungerTarget(target)
+		e.PlungerFire()
+		tickEngine(t, e)
+		if len(s.launches) != 0 {
+			t.Fatal("changed release timing")
+		}
+		tickEngine(t, e)
+		tickEngine(t, e)
+		if len(s.launches) != 1 || int32(s.launches[0]) != want {
+			t.Fatal(s.launches, want)
+		}
+	}
+}
+func TestTouchTargetEventCountAndInactiveCancellation(t *testing.T) {
+	for _, events := range []int{2, 20} {
+		e, s := inputEngine(t)
+		e.SetAction(Left, true)
+		e.SetAction(Right, true)
+		for i := 1; i <= events; i++ {
+			e.PlungerTarget(int32(32 * i / events))
+		}
+		e.PlungerFire()
+		tickEngine(t, e)
+		tickEngine(t, e)
+		if len(s.launches) != 1 || s.launches[0] != 32 || !s.inputs[0].Left || !s.inputs[0].Right || s.inputs[0].Tilt {
+			t.Fatal(events, s)
+		}
+	}
+	e, s := inputEngine(t)
+	e.PlungerTarget(32)
+	tickEngine(t, e)
+	e.PlungerTarget(0)
+	tickEngine(t, e)
+	tickEngine(t, e)
+	if s.position != 0 || len(s.launches) != 0 {
+		t.Fatal("cancel fired", s)
+	}
+	s.valid = false
+	e.PlungerTarget(32)
+	e.PlungerFire()
+	tickEngine(t, e)
+	s.valid = true
+	tickEngine(t, e)
+	if s.position != 0 || len(s.launches) != 0 {
+		t.Fatal("invalid target banked", s)
+	}
+	e.runner.Runtime.Model.Mode = frontend.TableAttract
+	e.PlungerTarget(32)
+	e.runner.Runtime.Model.Mode = frontend.Playing
+	tickEngine(t, e)
+	if s.position != 0 {
+		t.Fatal("inactive target banked", s)
+	}
+	e.PlungerTarget(32)
+	e.Suspend()
+	e.PlungerTarget(32)
+	e.Resume(e.last)
+	e.Key(uint8(frontend.Enter))
+	tickEngine(t, e)
+	tickEngine(t, e)
+	if s.position != 0 || len(s.launches) != 0 {
+		t.Fatal("suspended target banked", s)
+	}
+}
+
+func TestTouchSlowAndFastSwipesSelectSameCharge(t *testing.T) {
+	for _, slow := range []bool{false, true} {
+		for _, events := range []int{2, 20} {
+			e, s := inputEngine(t)
+			for i := 1; i <= events; i++ {
+				e.PlungerTarget(int32(32 * i / events))
+				if slow {
+					tickEngine(t, e)
+				}
+			}
+			e.PlungerFire()
+			tickEngine(t, e)
+			tickEngine(t, e)
+			if len(s.launches) != 1 || s.launches[0] != 32 {
+				t.Fatal(slow, events, s.launches)
+			}
+		}
+	}
+	e, s := inputEngine(t)
+	e.PlungerTarget(32)
+	s.valid = false
+	tickEngine(t, e)
+	s.valid = true
+	tickEngine(t, e)
+	if s.position != 0 {
+		t.Fatal("validity changed before consume banked target")
+	}
+}

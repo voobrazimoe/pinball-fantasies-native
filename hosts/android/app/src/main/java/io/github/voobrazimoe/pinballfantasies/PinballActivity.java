@@ -39,6 +39,19 @@ public final class PinballActivity extends GameActivity {
     private volatile boolean closed;
     private boolean resumed, focused;
     private Controls controls;
+    private ControlMenu menu;
+    private final android.os.Handler uiHandler=new android.os.Handler(android.os.Looper.getMainLooper());
+    private final Runnable refreshUi=new Runnable() {
+        public void run() {
+            if (closed) return;
+            long state=nativeState(session);
+            menu.snapshot(state<0 ? -1 : (int)(state&255),
+                    state<0 ? 0 : (int)((state>>8)&255), state<0 ? 0 : (int)((state>>16)&255));
+            uiHandler.postDelayed(this,100);
+        }
+    };
+    static native long nativeState(long session);
+    static native void nativeDetach(long session);
     private boolean diagnostics;
     private AndroidAudio audio;
     static native boolean nativeHasEngine(long session);
@@ -132,7 +145,8 @@ public final class PinballActivity extends GameActivity {
         if (audio != null) audio.close();
         closed = true;
         worker.shutdownNow();
-        nativeClose(session);
+        uiHandler.removeCallbacks(refreshUi);
+        if (isChangingConfigurations()) nativeDetach(session); else nativeClose(session);
         super.onDestroy();
     }
 
@@ -155,24 +169,26 @@ public final class PinballActivity extends GameActivity {
         controls = new Controls((kind,a,b) -> nativeInput(session,kind,a,b),
                 (milliseconds,release) -> inputHandler.postDelayed(release,milliseconds));
         getOnBackPressedDispatcher().addCallback(this,new androidx.activity.OnBackPressedCallback(true) {
-            @Override public void handleOnBackPressed() { controls.tap(1); }
+            @Override public void handleOnBackPressed() { if (!menu.dismiss()) controls.tap(1); }
         });
         FrameLayout interaction = new FrameLayout(this);
         ControlOverlay overlay = new ControlOverlay(this,controls);
         interaction.addView(overlay,new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,FrameLayout.LayoutParams.MATCH_PARENT));
-        ControlMenu menu = new ControlMenu(this,controls,this::requestImport);
+        menu = new ControlMenu(this,controls,this::requestImport);
         interaction.addView(menu,new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT,Gravity.TOP));
+                FrameLayout.LayoutParams.MATCH_PARENT));
+        overlay.state=menu.state;
+        controls.gameplay=false;
+        uiHandler.post(refreshUi);
         // Keep framebuffer edge-to-edge. Only interactive UI uses these insets.
         final androidx.core.graphics.Insets[] safe = {androidx.core.graphics.Insets.NONE};
         Runnable geometry = () -> overlay.safeArea(safe[0].left,safe[0].top,
-                safe[0].right,safe[0].bottom,menu.getBottom());
-        menu.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->geometry.run());
+                safe[0].right,safe[0].bottom);
         interaction.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->geometry.run());
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(interaction,(v,insets)->{
             safe[0]=ControlMenu.interactiveInsets(insets);
-            menu.safeInsets(safe[0].left,safe[0].top,safe[0].right);
+            menu.safeInsets(safe[0].left,safe[0].top,safe[0].right,safe[0].bottom);
             if (importButton!=null) {
                 FrameLayout.LayoutParams lp=(FrameLayout.LayoutParams)importButton.getLayoutParams();
                 lp.setMargins(safe[0].left,safe[0].top,safe[0].right,safe[0].bottom);
@@ -256,7 +272,7 @@ public final class PinballActivity extends GameActivity {
         return super.dispatchKeyEvent(event);
     }
     @Override public void onBackPressed() {
-        if (controls!=null) controls.tap(1);
+        if (controls!=null && !menu.dismiss()) controls.tap(1);
     }
 
     private void applyImmersiveMode() {

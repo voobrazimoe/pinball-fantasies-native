@@ -9,33 +9,46 @@ import android.view.ViewConfiguration;
 
 final class ControlOverlay extends View {
     private final Controls controls;
+    SemanticUi state;
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private int safeLeft, safeTop, safeRight, safeBottom, menuBottom;
+    private int safeLeft, safeTop, safeRight, safeBottom;
     ControlOverlay(Context context, Controls controls) {
         super(context); this.controls=controls;
         controls.changed=this::invalidate;
         setContentDescription("Game controls: bottom left/right flippers; table tap nudge; right table downward drag plunger");
     }
-    void safeArea(int left, int top, int right, int bottom, int occupiedTop) {
-        safeLeft=left; safeTop=top; safeRight=right; safeBottom=bottom; menuBottom=occupiedTop;
+    void safeArea(int left, int top, int right, int bottom) {
+        safeLeft=left; safeTop=top; safeRight=right; safeBottom=bottom;
         updateGeometry();
     }
     private void updateGeometry() {
-        controls.geometry(getWidth(),getHeight(),safeLeft,safeTop,safeRight,safeBottom,menuBottom,
+        controls.geometry(getWidth(),getHeight(),safeLeft,safeTop,safeRight,safeBottom,
                 ViewConfiguration.get(getContext()).getScaledTouchSlop(),ViewConfiguration.getLongPressTimeout());
         invalidate();
     }
-    @Override protected void onSizeChanged(int w,int h,int oldw,int oldh) { updateGeometry(); }
+    @Override protected void onSizeChanged(int w,int h,int oldw,int oldh) {
+        if (oldw>0 && oldh>0) controls.cancel();
+        updateGeometry();
+    }
     @Override protected void onDraw(Canvas canvas) {
         paint.setColor(0x99ffffff); paint.setTextSize(14*getResources().getDisplayMetrics().scaledDensity);
-        float width=controls.right-controls.left;
-        float baseline=controls.stripTop+(controls.bottom-controls.stripTop)*.85f;
-        canvas.drawText("L",controls.left+.05f*width,baseline,paint);
-        canvas.drawText("R",controls.left+.55f*width,baseline,paint);
-        if (controls.pulling()) canvas.drawText("Pull ↓",controls.left+.75f*width,
+        paint.setTextAlign(Paint.Align.CENTER);
+        if (state!=null && state.mode==SemanticUi.STARTUP) {
+            canvas.drawText("Tap to continue",getWidth()/2f,getHeight()*.8f,paint);
+        }
+        if (!controls.gameplay) return;
+        float baseline=controls.labelY()-(paint.ascent()+paint.descent())/2;
+        canvas.drawText("L",controls.labelX(Controls.LEFT),baseline,paint);
+        canvas.drawText("R",controls.labelX(Controls.RIGHT),baseline,paint);
+        if (controls.plungerAvailable) canvas.drawText("Pull ↓",controls.labelX(Controls.RIGHT),
                 controls.top+(controls.stripTop-controls.top)*.5f,paint);
     }
     @Override public boolean onTouchEvent(MotionEvent event) {
+        if (!controls.gameplay) {
+            if (state!=null && state.mode==SemanticUi.STARTUP && event.getActionMasked()==MotionEvent.ACTION_UP)
+                controls.tap(57);
+            return true;
+        }
         int index=event.getActionIndex(), id=event.getPointerId(index);
         switch(event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN: case MotionEvent.ACTION_POINTER_DOWN:

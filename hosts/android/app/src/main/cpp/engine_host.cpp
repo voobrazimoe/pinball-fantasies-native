@@ -12,7 +12,7 @@ namespace {
 std::mutex lock;
 uint64_t persistent = 0;
 jlong generation = 0;
-bool opened = false;
+bool opened = false, retained = false;
 bool resumed = false, focused = false, audioFocus = false;
 void syncAudio() { androidAudioBuffer().setActive(opened && persistent && resumed && focused && audioFocus); }
 bool active() { return resumed && focused; }
@@ -55,12 +55,13 @@ extern "C" JNIEXPORT void JNICALL JNI_METHOD(nativeDiagnostics)(JNIEnv*, jclass,
 }
 extern "C" JNIEXPORT jlong JNICALL JNI_METHOD(nativeOpen)(JNIEnv*, jclass) {
     std::lock_guard<std::mutex> guard(lock);
-    stop(); opened = true; resumed = focused = audioFocus = false;
+    if (!retained) stop();
+    retained = false; opened = true; resumed = focused = audioFocus = false;
     return ++generation;
 }
 extern "C" JNIEXPORT void JNICALL JNI_METHOD(nativeClose)(JNIEnv*, jclass, jlong token) {
     std::lock_guard<std::mutex> guard(lock);
-    if (token == generation) { stop(); opened = false; }
+    if (token == generation) { stop(); opened = false; retained = false; }
 }
 extern "C" JNIEXPORT jstring JNICALL JNI_METHOD(nativeEngine)(
         JNIEnv* env, jclass, jlong token, jint operation, jbyteArray dataBytes, jbyteArray stateBytes) {
@@ -109,6 +110,7 @@ extern "C" JNIEXPORT void JNICALL JNI_METHOD(nativeInput)(JNIEnv*, jclass, jlong
  case 2: pf_engine_release(persistent); break;
  case 3: pf_engine_plunger_delta(persistent, a); break;
  case 4: pf_engine_plunger_fire(persistent); break;
+ case 5: pf_engine_plunger_target(persistent, a); break;
  }
 }
 bool androidEngineFrame(bool portrait, std::vector<uint8_t>& pixels, int& width, int& height) {
@@ -137,4 +139,20 @@ extern "C" JNIEXPORT void JNICALL JNI_METHOD(nativeAudio)(JNIEnv*, jclass, jlong
   androidAudioBuffer().refresh();
   PF_LOGI("A5_ROUTE_GENERATION epoch=%llu", static_cast<unsigned long long>(androidAudioBuffer().current()));
  } else { audioFocus = granted; syncAudio(); }
+}
+
+// Packed authoritative snapshot, observed at 10 Hz by the UI looper. No mode
+// inference and no unprotected table access. -1 means no current engine.
+extern "C" JNIEXPORT jlong JNICALL JNI_METHOD(nativeState)(JNIEnv*, jclass, jlong token) {
+ std::lock_guard<std::mutex> guard(lock);
+ if (!opened || token != generation || !persistent) return -1;
+ uint64_t tick=0; uint32_t mode=0, table=0, flags=0;
+ if (pf_engine_state(persistent,&tick,&mode,&table,&flags)!=PF_OK) return -1;
+ return static_cast<jlong>(mode | (table<<8) | (flags<<16));
+}
+extern "C" JNIEXPORT void JNICALL JNI_METHOD(nativeDetach)(JNIEnv*, jclass, jlong token) {
+ std::lock_guard<std::mutex> guard(lock);
+ if (!opened || token != generation) return;
+ if (persistent) pf_engine_suspend(persistent);
+ opened=false; retained=true; resumed=focused=audioFocus=false; syncAudio();
 }
