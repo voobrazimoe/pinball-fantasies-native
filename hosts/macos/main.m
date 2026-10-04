@@ -232,6 +232,11 @@ static void inputEvent(void *context,PFHostEvent event,int32_t a,int32_t b) {
 - (void)modifiers:(NSEvent *)e {
     [self noteInput:e];
     pf_macos_modifiers(&_input,e.keyCode,e.modifierFlags);
+    if (_pacing) fprintf(_pacing,"# modifier seconds=%.6f key=%u flags=0x%llx sides=%d%d%d%d%d%d flippers=%d%d\n",
+        [self now]/1e9,e.keyCode,(unsigned long long)e.modifierFlags,
+        _input.physicalModifiers[0],_input.physicalModifiers[1],_input.physicalModifiers[2],
+        _input.physicalModifiers[3],_input.physicalModifiers[4],_input.physicalModifiers[5],
+        _input.held[PF_LEFT],_input.held[PF_RIGHT]);
     [self step];
 }
 - (void)motion:(NSEvent *)e {

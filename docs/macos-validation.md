@@ -159,3 +159,14 @@ journeys PASS for all four tables, four scroll modes and two resolutions (32
 journeys, 708 source ticks each). Live arm64 window and fullscreen/restoration
 show correct pixels and geometry. x86_64 compilation and bundle checks PASS;
 target executable performance is not measured on this arm64 development Mac.
+
+## Built-in Shift follow-up
+
+Owner confirms build 544ce58 is responsive with Control on the Intel MacBook's
+built-in keyboard, while Shift is unreliable. Exact IOKit device side flags now
+make native modifier updates idempotent instead of toggling on each event;
+aggregate-only keycode fallback remains. Native tests cover duplicate makes and
+breaks and missed sibling releases for Shift/Control/Option. Timing mode records
+modifier-only flags and resulting sides/holds for any remaining hardware issue.
+This addresses a found state-tracking weakness; the owner's actual Shift event
+sequence has not yet been captured, so hardware acceptance remains pending.

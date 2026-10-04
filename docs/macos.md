@@ -134,7 +134,12 @@ cannot be recovered from those events. The original sided controls remain
 available when the input source supplies modifier keycodes.
 
 Modifier-only input uses `flagsChanged`, public AppKit modifier-class flags and
-the physical modifier keycode. Physical side bookkeeping survives focus loss
+the physical modifier keycode. When device side flags are present, their exact
+snapshot determines the changed side instead of toggling it. This tolerates
+duplicate events and reconciles a missed sibling release. Aggregate-only events
+with a valid sided keycode retain their existing fallback. Timing logs include
+modifier-only records (keycode, raw flags, tracked sides and flipper holds).
+Physical side bookkeeping survives focus loss
 while gameplay holds are cleared; an aggregate snapshot on focus transitions
 clears classes released while inactive. Independent contributors are combined
 before issuing held actions. Only a fresh press on the event's changed side can

@@ -1,5 +1,6 @@
 #import "frame_view.h"
 #import <QuartzCore/QuartzCore.h>
+#import <IOKit/hidsystem/IOLLEvent.h>
 #import "storage.h"
 #import "audio_host.h"
 #import "native_input.h"
@@ -46,6 +47,31 @@ static void modifierTests(void) {
     const NSEventModifierFlags flags[3]={NSEventModifierFlagShift,
         NSEventModifierFlagControl,NSEventModifierFlagOption};
     PFInput input;
+    const uint64_t sideFlags[3][2]={{NX_DEVICELSHIFTKEYMASK,NX_DEVICERSHIFTKEYMASK},
+        {NX_DEVICELCTLKEYMASK,NX_DEVICERCTLKEYMASK},{NX_DEVICELALTKEYMASK,NX_DEVICERALTKEYMASK}};
+    for (unsigned c=0;c<3;c++) {
+        pf_input_init(&input,modifierEmit,NULL); pf_macos_focus(&input,true,0);
+        modifierMakes=modifierActions=0;
+        modifierEvent(&input,keys[c][0],flags[c]|sideFlags[c][0]);
+        modifierEvent(&input,keys[c][0],flags[c]|sideFlags[c][0]); /* duplicate make */
+        assert(input.held[PF_LEFT] && !input.held[PF_RIGHT] && modifierMakes==1);
+        modifierEvent(&input,keys[c][1],flags[c]|sideFlags[c][0]|sideFlags[c][1]);
+        assert(input.held[PF_LEFT] && input.held[PF_RIGHT]);
+        modifierEvent(&input,keys[c][0],flags[c]|sideFlags[c][1]);
+        modifierEvent(&input,keys[c][0],flags[c]|sideFlags[c][1]); /* duplicate break */
+        assert(!input.held[PF_LEFT] && input.held[PF_RIGHT] && modifierMakes==2);
+        modifierEvent(&input,keys[c][0],flags[c]|sideFlags[c][0]); /* missed right break */
+        assert(input.held[PF_LEFT] && !input.held[PF_RIGHT] && modifierMakes==3);
+        pf_macos_focus(&input,false,flags[c]|sideFlags[c][0]);
+        pf_macos_focus(&input,true,flags[c]|sideFlags[c][0]);
+        modifierEvent(&input,keys[c][0],flags[c]|sideFlags[c][0]);
+        assert(!input.held[PF_LEFT] && !input.held[PF_RIGHT]); /* held-before-focus stays suppressed */
+        modifierEvent(&input,keys[c][0],0);
+        modifierEvent(&input,keys[c][0],flags[c]|sideFlags[c][0]);
+        assert(input.held[PF_LEFT] && !input.held[PF_RIGHT]);
+        modifierEvent(&input,keys[c][0],0);
+        assert(!input.held[PF_LEFT] && !input.held[PF_RIGHT]);
+    }
     for (unsigned c=0;c<3;c++) for (unsigned first=0;first<2;first++) {
         pf_input_init(&input,modifierEmit,NULL); pf_macos_focus(&input,true,0);
         modifierMakes=modifierActions=0;
