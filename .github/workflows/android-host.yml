@@ -6,11 +6,13 @@ on:
       - '.github/workflows/android-host.yml'
       - 'hosts/android/**'
       - 'tools/check_android_elf.py'
+      - 'tools/run_android_host_smoke.sh'
   pull_request:
     paths:
       - '.github/workflows/android-host.yml'
       - 'hosts/android/**'
       - 'tools/check_android_elf.py'
+      - 'tools/run_android_host_smoke.sh'
   workflow_dispatch:
 
 permissions:
@@ -102,33 +104,8 @@ jobs:
           test "$(adb shell getconf PAGE_SIZE | tr -d '\r')" = 16384
           test "$(adb shell getprop dalvik.vm.extra-opts | tr -d '\r')" = '-Xint'
 
-      - name: Install and exercise A1 surface rotation
-        shell: bash
-        run: |
-          APK='hosts/android/app/build/outputs/apk/debug/app-debug.apk'
-          PACKAGE='io.github.voobrazimoe.pinballfantasies'
-          COMPONENT="${PACKAGE}/.PinballActivity"
-          adb install -r "$APK"
-          adb shell settings put system accelerometer_rotation 0
-          adb shell settings put system user_rotation 0
-          adb logcat -c
-          adb shell am start -W -n "$COMPONENT"
-
-          timeout 30 bash -c "until adb logcat -d | grep -q 'A1_FRAME_PRESENTED'; do sleep 1; done"
-          adb logcat -d | grep 'A1_VIEWPORT.*orientation=portrait'
-
-          adb shell settings put system user_rotation 1
-          timeout 30 bash -c "until adb logcat -d | grep -q 'A1_VIEWPORT.*orientation=landscape'; do sleep 1; done"
-
-          adb shell settings put system user_rotation 0
-          sleep 3
-          test "$(adb logcat -d | grep -c 'A1_HOST_STARTED')" -eq 1
-          test "$(adb shell pidof "$PACKAGE" | tr -d '\r')" != ''
-          if adb logcat -d | grep -q 'A1_.*ERROR'; then
-            adb logcat -d | grep 'A1_.*ERROR' >&2
-            exit 1
-          fi
-          adb logcat -d | grep -E 'A1_(HOST_STARTED|SURFACE_READY|VIEWPORT|FRAME_PRESENTED)'
+      - name: Exercise A1 rendering, rotation and lifecycle
+        run: sh tools/run_android_host_smoke.sh
 
       - name: Upload A1 APK
         if: ${{ !cancelled() && steps.apk-build.outcome == 'success' }}

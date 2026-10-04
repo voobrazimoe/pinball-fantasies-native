@@ -291,6 +291,16 @@ public:
                context_ != EGL_NO_CONTEXT && program_ != 0U && texture_ != 0U;
     }
 
+    void setResumed(bool resumed) {
+        resumed_ = resumed;
+        resumeFrame_ = resumed;
+        LOGI("A1_ACTIVITY_%s", resumed ? "RESUMED" : "PAUSED");
+    }
+
+    [[nodiscard]] bool active() const {
+        return resumed_ && ready();
+    }
+
     bool draw() {
         if (!ready()) {
             return false;
@@ -363,6 +373,10 @@ public:
             LOGI("A1_FRAME_PRESENTED surface=%dx%d viewport=%d,%d,%dx%d",
                  surfaceWidth, surfaceHeight, viewportX, viewportY, viewportWidth, viewportHeight);
         }
+        if (resumeFrame_) {
+            resumeFrame_ = false;
+            LOGI("A1_ACTIVE_FRAME");
+        }
         return true;
     }
 
@@ -378,6 +392,8 @@ private:
     int lastSurfaceWidth_ = -1;
     int lastSurfaceHeight_ = -1;
     bool firstFrame_ = true;
+    bool resumed_ = false;
+    bool resumeFrame_ = false;
 };
 
 void handleAppCommand(android_app* app, int32_t command) {
@@ -387,6 +403,12 @@ void handleAppCommand(android_app* app, int32_t command) {
     }
 
     switch (command) {
+        case APP_CMD_RESUME:
+            renderer->setResumed(true);
+            break;
+        case APP_CMD_PAUSE:
+            renderer->setResumed(false);
+            break;
         case APP_CMD_INIT_WINDOW:
             if (app->window != nullptr) {
                 (void)renderer->attach(app->window);
@@ -411,7 +433,7 @@ extern "C" void android_main(struct android_app* app) {
     while (app->destroyRequested == 0) {
         int events = 0;
         android_poll_source* source = nullptr;
-        const int timeoutMillis = renderer.ready() ? 16 : -1;
+        const int timeoutMillis = renderer.active() ? 16 : -1;
         const int result = ALooper_pollOnce(
                 timeoutMillis, nullptr, &events, reinterpret_cast<void**>(&source));
         if (result >= 0 && source != nullptr) {
@@ -420,7 +442,7 @@ extern "C" void android_main(struct android_app* app) {
         if (app->destroyRequested != 0) {
             break;
         }
-        if (renderer.ready()) {
+        if (renderer.active()) {
             (void)renderer.draw();
         }
     }
