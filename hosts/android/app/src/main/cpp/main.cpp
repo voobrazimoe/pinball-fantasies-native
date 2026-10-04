@@ -346,6 +346,7 @@ public:
         glClearColor(0.0F, 0.0F, 0.0F, 1.0F);
         glClear(GL_COLOR_BUFFER_BIT);
         glViewport(viewportX, viewportY, viewportWidth, viewportHeight);
+        androidPublishViewport(viewportX,viewportY,viewportWidth,viewportHeight,surfaceWidth,surfaceHeight);
 
         constexpr GLfloat kVertices[] = {
                 -1.0F, -1.0F, 0.0F, 1.0F,

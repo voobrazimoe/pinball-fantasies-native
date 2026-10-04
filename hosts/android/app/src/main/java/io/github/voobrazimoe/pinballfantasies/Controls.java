@@ -19,7 +19,9 @@ final class Controls {
     static final int LEFT=0, RIGHT=1, PLUNGER=4, NUDGE=3, NONE=-1, PENDING=5;
     Runnable changed = () -> {};
     // Pixel coordinates supplied by the measured overlay; no device dimensions.
-    float left, top, right, bottom, stripTop, slop, pullTravel;
+    float slop, pullTravel;
+    InteractionGeometry layout;
+    InteractionGeometry.Rect panel, menu;
     long tapTimeout;
     static final class Pointer {
         int region;
@@ -34,20 +36,24 @@ final class Controls {
         }
     }
     Controls(Sink sink, Delay delay) { this.sink=sink; this.delay=delay; }
-    void geometry(float width, float height, float safeLeft, float safeTop,
-                  float safeRight, float safeBottom, float touchSlop, long timeout) {
-        left=safeLeft; right=width-safeRight; top=safeTop;
-        bottom=height-safeBottom;
-        stripTop=top+Math.max(0,bottom-top)*.65f;
+    void geometry(float width,float height,float safeLeft,float safeTop,float safeRight,float safeBottom,
+                  float touchSlop,long timeout,float density,InteractionGeometry.Rect viewport) {
+        layout=new InteractionGeometry(width,height,safeLeft,safeTop,safeRight,safeBottom,density,viewport);
         slop=touchSlop; tapTimeout=timeout;
-        pullTravel=Math.max(2*slop,(bottom-top)*.25f);
+        pullTravel=Math.max(2*slop,layout.safe.height()*.25f);
     }
-    float labelX(int region) { return left+(right-left)*(region==LEFT ? .25f : .75f); }
-    float labelY() { return (stripTop+bottom)/2; }
+    InteractionGeometry.Rect region(int control) { return control==LEFT ? layout.left : layout.right; }
+    float labelX(int control) { return region(control).cx(); }
+    float labelY(int control) { return region(control).cy(); }
     int hit(float x, float y) {
-        if (x<left || x>=right || y<top || y>=bottom || top>=bottom) return NONE;
-        if (y>=stripTop) return x<(left+right)/2 ? LEFT : RIGHT;
-        return PENDING;
+        if(layout==null || !layout.safe.contains(x,y) || (panel!=null && panel.contains(x,y))
+                || (menu!=null && menu.contains(x,y))) return NONE;
+        if(layout.left.contains(x,y)) return LEFT;
+        if(layout.right.contains(x,y)) return RIGHT;
+        if(layout.leftGuard.contains(x,y) || layout.rightGuard.contains(x,y)) return NONE;
+        if(plungerAvailable && layout.plunger.contains(x,y)) return PENDING;
+        if(layout.nudge.contains(x,y)) return PENDING;
+        return NONE;
     }
     boolean pulling() {
         for (Pointer p:pointers.values()) if (p.region==PLUNGER) return true;
@@ -58,8 +64,8 @@ final class Controls {
         int region=hit(x,y);
         if (region==NONE) return;
         // Starts during another spring owner's gesture cannot become taps/pulls.
-        if (region==PENDING && pulling()) return;
-        pointers.put(id,new Pointer(region,x,y,time,plungerAvailable && x>=(left+right)/2,pullTravel));
+        if (region==PENDING && layout.plunger.contains(x,y) && pulling()) return;
+        pointers.put(id,new Pointer(region,x,y,time,plungerAvailable && layout.plunger.contains(x,y),pullTravel));
         actions();
         if (region==LEFT || region==RIGHT) sink.send(1,127,0);
         changed.run();
@@ -73,7 +79,7 @@ final class Controls {
             // Resolve at classification, not down: only one spring owner.
             p.region=pulling() ? NONE : PLUNGER;
             if (p.region==PLUNGER) for (Pointer other:pointers.values())
-                if (other!=p && other.region==PENDING) other.region=NONE;
+                if (other!=p && other.region==PENDING && other.eligible) other.region=NONE;
         }
         if (p.region==PLUNGER) {
             // Absolute charge follows finger position, independent of callback count.
@@ -88,7 +94,7 @@ final class Controls {
         Pointer p=pointers.remove(id);
         if (p==null) return;
         if (p.region==PLUNGER) sink.send(4,0,0);
-        if (p.region==PENDING && p.tap && time-p.started<=tapTimeout && !pulling())
+        if (p.region==PENDING && p.tap && time-p.started<=tapTimeout && !p.eligible && layout.nudge.contains(p.x,p.y))
             nudge(); // One momentary Tilt press and Space make, only on release.
         actions(); changed.run();
     }

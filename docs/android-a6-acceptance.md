@@ -46,8 +46,8 @@ Record **personal bundled** versus **public SAF** as the input source for each
 run. A personal APK may support compiled ART, four-table gameplay, touch,
 orientation, Oboe/focus/routes, lifecycle, persistence and practical performance
 observations. These do **not** certify any real SAF picker/provider/transaction
-check below. Leave those NOT TESTED until explicitly exercised through **Data /
-Import DOS folder**, on either APK. Overall A6 stays NOT TESTED until every
+check below. Leave those NOT TESTED until explicitly exercised through the central **Import DOS folder** control in a fresh no-data
+public installation. Normal gameplay has no replacement/reimport menu. Overall A6 stays NOT TESTED until every
 required acceptance area has real evidence.
 
 The evidence helper's `--apk` option deliberately rejects commercial payloads.
@@ -76,8 +76,8 @@ Alternatively `--apk "$APK" --mode session` installs and records its SHA256
 after checking expected native libraries and rejecting commercial filenames.
 Record build provenance and APK hash independently even when using plain adb.
 
-During the session manually select the DOS folder through **Data / Import DOS
-folder**, then perform the observations below. For a representative diagnostic
+During the session manually select the DOS folder through the central no-data **Import DOS
+folder** control, then perform the observations below. For a representative diagnostic
 session, explicitly opt in using the existing Activity diagnostic extra:
 
 ```sh

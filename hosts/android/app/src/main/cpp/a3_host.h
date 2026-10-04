@@ -28,3 +28,6 @@ inline bool copyFrame(const uint8_t* p, int w, int h, int stride, std::vector<ui
 // All engine operations share engine_host.cpp's mutex. Returned pixels belong
 // to the host vector, never to the engine, after this function returns.
 bool androidEngineFrame(bool portrait, std::vector<uint8_t>& pixels, int& width, int& height);
+
+// Renderer publishes the exact GL viewport, with surface dimensions.
+void androidPublishViewport(int x,int y,int w,int h,int sw,int sh);

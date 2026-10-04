@@ -28,9 +28,9 @@ final class SemanticUi {
     }
     String[] utilities() {
         switch(mode) {
-            case PLAYING: return new String[]{"Pause","Music","Data / Import DOS folder","Advanced keyboard"};
-            case ATTRACT: return new String[]{"Back to tables","Data / Import DOS folder","Advanced keyboard"};
-            default: return new String[]{"Data / Import DOS folder","Advanced keyboard"};
+            case PLAYING: return new String[]{"Pause","Music","Advanced keyboard"};
+            case ATTRACT: return new String[]{"Back to tables","Advanced keyboard"};
+            default: return new String[]{"Advanced keyboard"};
         }
     }
     int code(String action) {

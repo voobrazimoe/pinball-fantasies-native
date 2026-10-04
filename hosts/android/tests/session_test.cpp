@@ -38,6 +38,9 @@ int32_t pf_engine_frame(uint64_t,uint8_t** p,int32_t* w,int32_t* h,int32_t* stri
 }
 }
 int main() {
+    androidPublishViewport(481,1,1439,1077,2400,1080);
+    assert((renderedViewport == std::array<jint,6>{481,2,1439,1077,2400,1080}));
+
     const auto token=JNI_METHOD(nativeOpen)(nullptr,nullptr);
     // Simulate the already-validated A2 bootstrap; no commercial loader fixture.
     { std::lock_guard<std::mutex> guard(lock); persistent=42; }

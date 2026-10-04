@@ -105,8 +105,8 @@ Normal Gradle builds remain asset-free, even while the private payload exists.
 
 On first launch, embedded data uses the existing A2 staging, real-engine
 validation and transactional adoption into `noBackupFilesDir/Data`. Valid existing
-Data takes precedence; `filesDir/State` is retained. **Data / Import DOS folder**
-remains available for manual SAF replacement. Bundled gameplay/device checks can
+Data takes precedence; `filesDir/State` is retained. Import is available only in
+the central no-data shell; normal engine modes have no import/replacement command. Bundled gameplay/device checks can
 inform A6, but do not certify real SAF import; see the separate
 [acceptance record](android-a6-acceptance.md). Overall A6 remains NOT TESTED.
 
@@ -300,37 +300,65 @@ framework-free mapper drives the sheets and gameplay overlay idempotently.
 | INITIALS | Temporary QWERTY letters using existing DOS makes |
 | GAME_END / ENTRY_WAIT / QUIT | No contextual controls |
 
-The framebuffer remains centered, aspect-correct and unchanged. There is no
-keyboard row or reserved control header over its 320×33 matrix. Sheets occupy
-at most the bottom half. The 44 dp menu sits in top letterbox space when it fits,
-otherwise at the safe bottom right (above a visible sheet). Controls respect the
-union of system-bar, display-cutout and gesture insets, including landscape edges.
-Menu → Advanced keyboard temporarily exposes Enter/Esc/P/M/Y/N, arrows, Space,
-F1–F8 and A–Z; Close/Back restores the normal view. These are Views in the same
-Activity, never another Window. Opening/closing them does not alter focus, audio
-eligibility, Oboe, engine suspension or source cadence. Data invokes the existing
-SAF transaction/picker. Utilities are contextual: Pause/Music during Playing; Exit table on the Paused sheet,
-Back to tables during Attract. A mode transition dismisses transient sheets.
+The accepted semantic architecture is preserved. This A6 polish adds only host
+geometry; A6 remains **NOT TESTED** pending another physical pass, A7 is not
+started, and `main` is not merged.
 
-The bottom 35% of the safe touch area has independent left/right halves. Their
-hit geometry also defines centered label positions: 25% / 75% horizontally and
-the vertical strip center. Pointer IDs retain ownership across crossings;
-multiple pointers and hardware keys contribute independently. L+R, L/R+Nudge
-and L/R+plunger remain supported. Neutral taps submit exactly one Space make and
-50 ms Tilt pulse on qualifying release, after rejecting drags/long presses.
-Flipper and plunger owners never nudge; candidates competing with a claimed
-plunger cannot later turn into nudges. Lifecycle suspension discards ownership
-and stale pulse callbacks. Rotation resizes Views without resetting the engine;
-configuration recreation retains the suspended native engine, obtains a fresh
-session token and rebuilds the mapper from its snapshot.
+Portrait selector uses two equal 64 dp table rows, two columns, followed by
+Options in the left cell of row three. All five cells have identical dimensions,
+two centered text lines, 8 dp gaps and 8 dp inner margins. The centered panel is
+at most 360 dp wide and leaves at least 12 dp outside each safe edge. Landscape
+uses three columns then Stones 'N Bones / Options, at most 600 dp wide, with the
+same 64 dp cells. Neither selector scrolls. Ordinary contextual panels use 48 dp
+rows and a 360 dp maximum width in both orientations, centered inside safe bounds.
+The playing utility menu (Close / Pause, Music / Advanced keyboard) sits above
+flipper guard areas. Only advanced/initials keyboards may use ScrollView. Hidden
+panels are GONE and clear their touch exclusion rectangle. The 44 dp menu uses
+the safe top right. System bars, cutouts and gesture insets are respected.
 
-Only the engine's mouse-active flag makes a right-side neutral pointer eligible
-for a pull. Downward, initially vertical-dominant movement exceeding touch slop
-claims the single plunger owner. Horizontal jitter thereafter retains ownership.
-Downward distance over 25% of safe height (minimum two touch slops) maps directly
-and monotonically to rounded 0..32 charge. Up samples the final target and fires
-once; cancel submits target zero without firing. When unavailable, a right-side
-neutral tap is an ordinary Nudge tap. No chute or mode inference uses pixels.
+Normal utility menus contain no Data or Import command in any engine mode. The
+central first-run/no-data Import DOS folder button remains the only import UX.
+Menu → Advanced keyboard preserves the existing DOS keys. Panels remain Views
+in the same Activity; focus/audio/cadence ownership is unchanged.
+
+The renderer publishes its exact `a3::letterbox()` viewport and surface size
+under a separate host-only mutex. JNI `nativeViewport(int[6])` returns a coherent
+snapshot, converting GLES bottom-origin y to Android top-origin y. The UI's
+100 ms refresh maps surface pixels to overlay pixels; it does not recalculate
+aspect ratio. Stale-orientation snapshots disable playfield gestures until the
+new surface snapshot arrives. `InteractionGeometry` clips the frame to safe bounds.
+
+L/R are explicit lower-corner rectangles. Height is min(30% of safe height,
+160 dp). Portrait width is min(46% of safe width, 200 dp). Landscape width uses
+actual side-letterbox space plus 48 dp, at least 160 dp, bounded by 40% of safe
+width and 240 dp. Drawing and hit testing use those same rectangle objects:
+faint translucent fill, rounded outline, and L/R at the exact rectangle centers.
+No Nudge region is drawn. Transparent guards extend 24 dp above/inward of each
+flipper; starts in guards stay dead throughout that gesture. Flipper starts are
+immediate and retain pointer ownership, even after crossing or leaving a zone.
+
+Nudge is restricted to the upper/central safe framebuffer, inset 8 dp, ending
+above the guards with an 8 dp gap and before the right plunger corridor. UI/menu
+rectangles are excluded. One short stationary neutral tap yields exactly one
+Space make and 50 ms Tilt pulse; long presses and drags do not. L+R, either
+flipper plus plunger, and deliberate Nudge during a pull coexist. Cancellation,
+focus loss and stale pulse handling retain the existing safe clearing policy.
+
+The rightmost min(25% of safe framebuffer width, 96 dp) above the guards is the
+plunger corridor. Only the authoritative mouse-active flag enables its gesture;
+corridor taps never nudge. The accepted downward, initially vertical-dominant
+movement exceeding touch slop claims one owner; horizontal jitter then retains
+ownership. Downward travel over 25% of safe height (minimum two slops) maps to
+absolute rounded 0..32 charge, independent of MOVE count and speed. Release fires
+once; cancel resets charge without firing. Accelerometer Nudge is deferred to a
+separate sensor/physical-test pass.
+
+Deterministic tests cover 1080×2400, 2400×1080, 1920×1080 and 1080×1920, safe
+insets, renderer bounds, equal selector cells, capped/no-scroll panels, region
+centers, guards, nudge counts, ownership and absolute plunger behavior. Android
+instrumentation checks actual View sizes, no-scroll modes and hidden-panel touch
+pass-through. Local A2/A3/A4/A5 and public source checks pass; hosted runtime
+results are reported separately for the final commit.
 
 `pf_engine_plunger_target(handle, target)` is an optional additive ABI 1 extension;
 old consumers and `pf_engine_plunger_delta` keep their existing behavior. Targets

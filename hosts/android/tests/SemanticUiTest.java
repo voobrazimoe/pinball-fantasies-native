@@ -12,6 +12,7 @@ public final class SemanticUiTest {
         for(int mode=0;mode<12;mode++) {
             check(ui.update(mode,2,4)); check(!ui.update(mode,2,4));
             check(Arrays.equals(ui.actions(),expected[mode]));
+            for(String utility:ui.utilities()) check(!utility.contains("Data") && !utility.contains("Import"));
             check(ui.gameplay()==(mode==5) && ui.plunger()==(mode==5));
             for(String action:ui.actions()) check(!action.matches("F[1-8]|Enter|Esc|P|M|Y|N"));
         }

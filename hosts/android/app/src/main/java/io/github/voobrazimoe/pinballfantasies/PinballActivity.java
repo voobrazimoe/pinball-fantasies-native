@@ -40,10 +40,15 @@ public final class PinballActivity extends GameActivity {
     private boolean resumed, focused;
     private Controls controls;
     private ControlMenu menu;
+    private ControlOverlay overlay;
+    private final int[] viewport=new int[6];
+    static native void nativeViewport(int[] bounds);
     private final android.os.Handler uiHandler=new android.os.Handler(android.os.Looper.getMainLooper());
     private final Runnable refreshUi=new Runnable() {
         public void run() {
             if (closed) return;
+            nativeViewport(viewport);
+            overlay.viewport(viewport);
             long state=nativeState(session);
             menu.snapshot(state<0 ? -1 : (int)(state&255),
                     state<0 ? 0 : (int)((state>>8)&255), state<0 ? 0 : (int)((state>>16)&255));
@@ -172,10 +177,10 @@ public final class PinballActivity extends GameActivity {
             @Override public void handleOnBackPressed() { if (!menu.dismiss()) controls.tap(1); }
         });
         FrameLayout interaction = new FrameLayout(this);
-        ControlOverlay overlay = new ControlOverlay(this,controls);
+        overlay = new ControlOverlay(this,controls);
         interaction.addView(overlay,new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,FrameLayout.LayoutParams.MATCH_PARENT));
-        menu = new ControlMenu(this,controls,this::requestImport);
+        menu = new ControlMenu(this,controls);
         interaction.addView(menu,new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT));
         overlay.state=menu.state;

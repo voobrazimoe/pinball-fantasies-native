@@ -11,11 +11,16 @@ final class ControlOverlay extends View {
     private final Controls controls;
     SemanticUi state;
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final int[] viewport=new int[6];
+    void viewport(int[] bounds) {
+        if(java.util.Arrays.equals(viewport,bounds)) return;
+        System.arraycopy(bounds,0,viewport,0,6); updateGeometry();
+    }
     private int safeLeft, safeTop, safeRight, safeBottom;
     ControlOverlay(Context context, Controls controls) {
         super(context); this.controls=controls;
         controls.changed=this::invalidate;
-        setContentDescription("Game controls: bottom left/right flippers; table tap nudge; right table downward drag plunger");
+        setContentDescription("Game controls: outlined lower corners flippers; upper central playfield tap nudge; Pull corridor downward drag plunger");
     }
     void safeArea(int left, int top, int right, int bottom) {
         safeLeft=left; safeTop=top; safeRight=right; safeBottom=bottom;
@@ -23,8 +28,17 @@ final class ControlOverlay extends View {
     }
     private void updateGeometry() {
         controls.geometry(getWidth(),getHeight(),safeLeft,safeTop,safeRight,safeBottom,
-                ViewConfiguration.get(getContext()).getScaledTouchSlop(),ViewConfiguration.getLongPressTimeout());
+                ViewConfiguration.get(getContext()).getScaledTouchSlop(),ViewConfiguration.getLongPressTimeout(),
+                getResources().getDisplayMetrics().density,frameBounds());
         invalidate();
+    }
+    private InteractionGeometry.Rect frameBounds() {
+        // Snapshot is top-origin surface pixels. Ignore stale orientation during surface recreation.
+        if(viewport[4]<=0 || viewport[5]<=0 || (viewport[4]>viewport[5])!=(getWidth()>getHeight()))
+            return new InteractionGeometry.Rect(0,0,0,0);
+        float sx=(float)getWidth()/viewport[4],sy=(float)getHeight()/viewport[5];
+        return new InteractionGeometry.Rect(viewport[0]*sx,viewport[1]*sy,
+                (viewport[0]+viewport[2])*sx,(viewport[1]+viewport[3])*sy);
     }
     @Override protected void onSizeChanged(int w,int h,int oldw,int oldh) {
         if (oldw>0 && oldh>0) controls.cancel();
@@ -37,11 +51,19 @@ final class ControlOverlay extends View {
             canvas.drawText("Tap to continue",getWidth()/2f,getHeight()*.8f,paint);
         }
         if (!controls.gameplay) return;
-        float baseline=controls.labelY()-(paint.ascent()+paint.descent())/2;
-        canvas.drawText("L",controls.labelX(Controls.LEFT),baseline,paint);
-        canvas.drawText("R",controls.labelX(Controls.RIGHT),baseline,paint);
-        if (controls.plungerAvailable) canvas.drawText("Pull ↓",controls.labelX(Controls.RIGHT),
-                controls.top+(controls.stripTop-controls.top)*.5f,paint);
+        for(int control:new int[]{Controls.LEFT,Controls.RIGHT}) {
+            InteractionGeometry.Rect r=controls.region(control);
+            paint.setStyle(Paint.Style.FILL); paint.setColor(0x18ffffff);
+            canvas.drawRoundRect(r.left,r.top,r.right,r.bottom,12,12,paint);
+            paint.setStyle(Paint.Style.STROKE); paint.setStrokeWidth(getResources().getDisplayMetrics().density);
+            paint.setColor(0x66ffffff); canvas.drawRoundRect(r.left,r.top,r.right,r.bottom,12,12,paint);
+            paint.setStyle(Paint.Style.FILL); paint.setColor(0x99ffffff);
+            canvas.drawText(control==Controls.LEFT?"L":"R",r.cx(),r.cy()-(paint.ascent()+paint.descent())/2,paint);
+        }
+        if (controls.plungerAvailable) {
+            InteractionGeometry.Rect r=controls.layout.plunger;
+            canvas.drawText("Pull ↓",r.cx(),r.cy()-(paint.ascent()+paint.descent())/2,paint);
+        }
     }
     @Override public boolean onTouchEvent(MotionEvent event) {
         if (!controls.gameplay) {

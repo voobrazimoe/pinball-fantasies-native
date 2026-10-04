@@ -21,12 +21,13 @@ public final class ImportInstrumentation extends Instrumentation {
             Controls c=new Controls((kind,a,b)->events.add(kind+":"+a+":"+b),
                     (ms,release)->releases.add(release)); c.enabled=true; c.plungerAvailable=true;
             ControlOverlay view=new ControlOverlay(getTargetContext(),c); view.layout(0,0,1000,1000);
-            motion(view,MotionEvent.ACTION_DOWN,new int[]{17},new float[]{100},new float[]{800});
-            motion(view,MotionEvent.ACTION_POINTER_DOWN | (1<<8),new int[]{17,91},new float[]{100,600},new float[]{800,800});
+            view.viewport(new int[]{0,0,1000,1000,1000,1000});
+            motion(view,MotionEvent.ACTION_DOWN,new int[]{17},new float[]{c.layout.left.cx()},new float[]{c.layout.left.cy()});
+            motion(view,MotionEvent.ACTION_POINTER_DOWN | (1<<8),new int[]{17,91},new float[]{c.layout.left.cx(),c.layout.right.cx()},new float[]{c.layout.left.cy(),c.layout.right.cy()});
             check(c.held[0] && c.held[1]);
-            motion(view,MotionEvent.ACTION_POINTER_UP | (1<<8),new int[]{17,91},new float[]{100,600},new float[]{800,800});
+            motion(view,MotionEvent.ACTION_POINTER_UP | (1<<8),new int[]{17,91},new float[]{c.layout.left.cx(),c.layout.right.cx()},new float[]{c.layout.left.cy(),c.layout.right.cy()});
             check(c.held[0] && !c.held[1]);
-            motion(view,MotionEvent.ACTION_CANCEL,new int[]{17},new float[]{100},new float[]{800});
+            motion(view,MotionEvent.ACTION_CANCEL,new int[]{17},new float[]{c.layout.left.cx()},new float[]{c.layout.left.cy()});
             check(!c.held[0] && c.pointers.isEmpty());
             events.clear();
             motion(view,MotionEvent.ACTION_DOWN,new int[]{37},new float[]{900},new float[]{300});
@@ -48,10 +49,12 @@ public final class ImportInstrumentation extends Instrumentation {
         android.widget.FrameLayout root=new android.widget.FrameLayout(context);
         ControlOverlay overlay=new ControlOverlay(context,c);
         root.addView(overlay,new android.widget.FrameLayout.LayoutParams(-1,-1));
-        ControlMenu menu=new ControlMenu(context,c,()->{});
+        ControlMenu menu=new ControlMenu(context,c);
         root.addView(menu,new android.widget.FrameLayout.LayoutParams(-1,-1));
         overlay.state=menu.state;
         for(int[] shape:new int[][]{{400,900,0,80,0,24},{360,640,12,48,24,16},{900,400,80,0,40,24}}) {
+            float density=context.getResources().getDisplayMetrics().density;
+            for(int i=0;i<shape.length;i++) shape[i]=Math.round(shape[i]*density);
             androidx.core.view.WindowInsetsCompat insets=new androidx.core.view.WindowInsetsCompat.Builder()
                     .setInsets(androidx.core.view.WindowInsetsCompat.Type.displayCutout(),
                             androidx.core.graphics.Insets.of(shape[2],shape[3],shape[4],0))
@@ -66,23 +69,55 @@ public final class ImportInstrumentation extends Instrumentation {
             overlay.safeArea(safe.left,safe.top,safe.right,safe.bottom);
             menu.snapshot(SemanticUi.PLAYING,1,4); measure(root,shape[0],shape[1]);
             check(menu.sheet.getVisibility()==android.view.View.GONE);
-            check(c.top==safe.top && c.labelX(Controls.RIGHT)==c.left+(c.right-c.left)*.75f);
+            check(c.layout.safe.top==safe.top && c.labelX(Controls.RIGHT)==c.layout.right.cx());
             check(menu.menu.getTop()>=safe.top && menu.menu.getBottom()<=shape[1]-safe.bottom);
             check(menu.menu.getLeft()>=safe.left && menu.menu.getRight()<=shape[0]-safe.right);
             menu.menu.performClick(); measure(root,shape[0],shape[1]);
             check(menu.sheet.getVisibility()==android.view.View.VISIBLE);
-            check(menu.sheet.getTop()>=(safe.top+shape[1]-safe.bottom)/2); // No top matrix toolbar.
+            check(menu.sheet.getLeft()>=safe.left && menu.sheet.getRight()<=shape[0]-safe.right);
+            check(menu.sheet.getTop()>=safe.top && menu.sheet.getBottom()<=shape[1]-safe.bottom);
+            check(!c.panel.overlaps(c.layout.left) && !c.panel.overlaps(c.layout.right));
+            check(!hasScroll(menu.sheet));
+            check(findButton(menu.sheet,"Data / Import DOS folder")==null);
             findButton(menu.sheet,"Advanced keyboard").performClick(); measure(root,shape[0],shape[1]);
             check(findButton(menu.sheet,"F8")!=null && findButton(menu.sheet,"Z")!=null);
             check(menu.dismiss()); measure(root,shape[0],shape[1]);
-            check(menu.sheet.getVisibility()==android.view.View.GONE);
+            check(menu.sheet.getVisibility()==android.view.View.GONE && c.panel==null);
+            eventsForHidden(root,c);
             menu.snapshot(SemanticUi.SELECTOR,0,0); measure(root,shape[0],shape[1]);
             check(findButton(menu.sheet,"Party Land")!=null && findButton(menu.sheet,"Options")!=null);
+            check(!hasScroll(menu.sheet));
+            android.widget.Button first=findButton(menu.sheet,"Party Land");
+            for(String label:SemanticUi.TABLES) {
+                android.widget.Button cell=findButton(menu.sheet,label);
+                check(cell.getWidth()==first.getWidth() && cell.getHeight()==first.getHeight());
+            }
+            check(menu.sheet.getTop()>=safe.top && menu.sheet.getBottom()<=shape[1]-safe.bottom);
+            for(int mode:new int[]{SemanticUi.ATTRACT,SemanticUi.OPTIONS,SemanticUi.PAUSED,SemanticUi.QUESTION}) {
+                menu.snapshot(mode,1,0); measure(root,shape[0],shape[1]);
+                check(!hasScroll(menu.sheet));
+                check(menu.sheet.getTop()>=safe.top && menu.sheet.getBottom()<=shape[1]-safe.bottom);
+            }
             menu.snapshot(SemanticUi.INITIALS,1,0); measure(root,shape[0],shape[1]);
             check(findButton(menu.sheet,"A")!=null);
             menu.snapshot(SemanticUi.ENTRY_WAIT,1,0); measure(root,shape[0],shape[1]);
             check(menu.sheet.getVisibility()==android.view.View.GONE && !c.gameplay);
         }
+    }
+    private static boolean hasScroll(android.view.View v) {
+        if(v instanceof android.widget.ScrollView) return true;
+        if(v instanceof android.view.ViewGroup) {
+            android.view.ViewGroup g=(android.view.ViewGroup)v;
+            for(int i=0;i<g.getChildCount();i++) if(hasScroll(g.getChildAt(i))) return true;
+        }
+        return false;
+    }
+    private static void eventsForHidden(android.view.View root,Controls c) {
+        float x=c.layout.left.cx(),y=c.layout.left.cy();
+        MotionEvent down=MotionEvent.obtain(0,1,MotionEvent.ACTION_DOWN,x,y,0);
+        try { check(root.dispatchTouchEvent(down)); check(c.held[Controls.LEFT]); } finally { down.recycle(); }
+        MotionEvent cancel=MotionEvent.obtain(0,2,MotionEvent.ACTION_CANCEL,x,y,0);
+        try { root.dispatchTouchEvent(cancel); check(!c.held[Controls.LEFT]); } finally { cancel.recycle(); }
     }
     private static android.widget.Button findButton(android.view.View view,String text) {
         if(view instanceof android.widget.Button && ((android.widget.Button)view).getText().toString().equals(text))
@@ -97,9 +132,11 @@ public final class ImportInstrumentation extends Instrumentation {
     }
 
     private static void measure(android.view.View view,int w,int h) {
-        view.measure(android.view.View.MeasureSpec.makeMeasureSpec(w,android.view.View.MeasureSpec.EXACTLY),
-                android.view.View.MeasureSpec.makeMeasureSpec(h,android.view.View.MeasureSpec.EXACTLY));
-        view.layout(0,0,w,h);
+        for(int pass=0;pass<2;pass++) {
+            view.measure(android.view.View.MeasureSpec.makeMeasureSpec(w,android.view.View.MeasureSpec.EXACTLY),
+                    android.view.View.MeasureSpec.makeMeasureSpec(h,android.view.View.MeasureSpec.EXACTLY));
+            view.layout(0,0,w,h);
+        }
     }
     private static void motion(ControlOverlay view,int action,int[] ids,float[] xs,float[] ys) {
         MotionEvent.PointerProperties[] properties=new MotionEvent.PointerProperties[ids.length];

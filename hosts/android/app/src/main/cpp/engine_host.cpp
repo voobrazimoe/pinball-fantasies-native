@@ -156,3 +156,17 @@ extern "C" JNIEXPORT void JNICALL JNI_METHOD(nativeDetach)(JNIEnv*, jclass, jlon
  if (persistent) pf_engine_suspend(persistent);
  opened=false; retained=true; resumed=focused=audioFocus=false; syncAudio();
 }
+
+namespace {
+std::mutex viewportLock;
+std::array<jint,6> renderedViewport{};
+}
+void androidPublishViewport(int x,int y,int w,int h,int sw,int sh) {
+ std::lock_guard<std::mutex> guard(viewportLock);
+ renderedViewport={x,sh-y-h,w,h,sw,sh}; // GLES bottom origin -> Android top origin
+}
+extern "C" JNIEXPORT void JNICALL JNI_METHOD(nativeViewport)(JNIEnv* env,jclass,jintArray bounds) {
+ if (!bounds || env->GetArrayLength(bounds)!=6) return;
+ std::lock_guard<std::mutex> guard(viewportLock);
+ env->SetIntArrayRegion(bounds,0,6,renderedViewport.data());
+}
