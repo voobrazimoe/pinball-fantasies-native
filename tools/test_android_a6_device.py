@@ -27,7 +27,8 @@ class FakeDevice(a6.Device):
         if args[:2] == ("shell", "pidof"):
             return self.current_pid
         if args[:2] == ("shell", "date"):
-            return "10-04 12:34:56.000"
+            assert " " not in args[2], "adb shell date format must survive remote argument joining"
+            return "10-04T12:34:56.000"
         if args[:3] == ("shell", "am", "force-stop"):
             self.current_pid = ""
         if args[:3] == ("shell", "am", "start"):

@@ -181,7 +181,9 @@ def main():
     process = None
     reader = None
     try:
-        since = device.run("shell", "date", "+%m-%d %H:%M:%S.000")
+        # adb shell joins remote arguments. Keep the date format space-free;
+        # logcat's own adb command accepts the resulting timestamp argument.
+        since = device.run("shell", "date", "+%m-%dT%H:%M:%S.000").replace("T", " ")
         if not re.fullmatch(r"\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.000", since):
             raise RuntimeError("Cannot establish a device logcat time boundary")
         report["logcat_since_device_time"] = since
