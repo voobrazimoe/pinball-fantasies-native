@@ -182,7 +182,7 @@ python3 tools/validate_macos_originals.py --data /absolute/path/to/originals \
 This command refuses non-Mac/non-arm64 hosts, checks the pinned original hashes,
 builds with Apple tools, runs the actual C-library direct-Runner comparison for
 all four tables in SOFT/OFF (including cheats/lifecycle/PCM/frame checkpoints),
-runs native four-table journeys in HIGH/MEDIUM/SOFT/OFF, runs shared Go tests in
+runs native four-table journeys in HARD/MEDIUM/SOFT/OFF, with NORMAL and HIGH resolution, runs shared Go tests in
 a clean temporary checkout with external originals, exercises shared settings
 and high-score restart validation, scans the app for original blocks, and checks
 that original inputs are unchanged. Missing optional historical captures still
@@ -193,7 +193,8 @@ Then launch the real app, import from NSOpenPanel and complete these currently
 **UNVERIFIED** physical-Mac checks:
 
 - Actual visible framebuffer/window rendering, resize/aspect/crisp pixels and
-  every table in HIGH, MEDIUM, SOFT and OFF/full-table.
+  every table in HARD, MEDIUM, SOFT and OFF/full-table at NORMAL and HIGH resolution.
+  HARD is the scrolling label exposed by shared settings (the task called it HIGH).
 - Keyboard feel, held/released controls, hotseat, pause/quit, original cheat
   sequences, and sided modifiers on real hardware/layouts.
 - Relative mouse-plunger feel, one-shot fire, source-invalid input discard,

@@ -107,47 +107,84 @@ static void abiTests(void) {
     assert(pf_engine_state(0,&ticks,&mode,&table,&flags)==PF_INVALID);
     puts("PASS real Apple-linked C archive: ABI version, load errors, all invalid-handle exports");
 }
+typedef struct { uint64_t engine, pcmFrames; PFRing *ring; } PFJourney;
+static void journeyInput(void *context,PFHostEvent event,int32_t a,int32_t b) {
+    PFJourney *host=context; int32_t result=PF_OK;
+    switch (event) {
+    case PF_EVENT_ACTION: result=pf_engine_set_action(host->engine,a,b); break;
+    case PF_EVENT_KEY: result=pf_engine_key(host->engine,(uint8_t)a); break;
+    case PF_EVENT_RELEASE: result=pf_engine_release(host->engine); break;
+    case PF_EVENT_DELTA: result=pf_engine_plunger_delta(host->engine,a); break;
+    case PF_EVENT_FIRE: result=pf_engine_plunger_fire(host->engine); break;
+    case PF_EVENT_FULLSCREEN: break; /* window command tested separately */
+    }
+    assert(result==PF_OK);
+}
 static void pcm(void *context,const uint8_t *samples,uint32_t bytes) {
-    PFRing *ring=context; assert(bytes%4==0);
-    pf_ring_write(ring,samples,bytes/4);
-    int16_t drain[4096]; while (pf_ring_available(ring)) pf_ring_read(ring,drain,2048);
+    PFJourney *host=context; assert(bytes%4==0); host->pcmFrames+=bytes/4;
+    assert(pf_ring_write(host->ring,samples,bytes/4)==bytes/4);
+    int16_t drain[4096];
+    while (pf_ring_available(host->ring)) pf_ring_read(host->ring,drain,2048);
+}
+static void tap(PFInput *input,uint16_t native) {
+    pf_input_key(input,native,true,false,false,false);
+    pf_input_key(input,native,false,false,false,false);
 }
 static void journey(NSString *data) {
-    for (unsigned table=1;table<=4;table++) for (unsigned scroll=0;scroll<4;scroll++) {
+    for (unsigned table=1;table<=4;table++) for (unsigned scroll=0;scroll<4;scroll++)
+    for (unsigned resolution=0;resolution<2;resolution++) {
+        @autoreleasepool {
         NSString *state=[NSTemporaryDirectory() stringByAppendingPathComponent:NSUUID.UUID.UUIDString];
         NSFileManager *fm=NSFileManager.defaultManager;
         assert([fm createDirectoryAtPath:state withIntermediateDirectories:NO attributes:nil error:NULL]);
-        uint8_t cfg[]={'P','F','N','C',1,5,0,1,(uint8_t)scroll,0,1};
+        uint8_t cfg[]={'P','F','N','C',1,5,0,1,(uint8_t)scroll,0,(uint8_t)resolution};
         assert([[NSData dataWithBytes:cfg length:sizeof(cfg)] writeToFile:[state stringByAppendingPathComponent:@"PINBALL.CFG"] atomically:YES]);
         char error[1024]; uint64_t engine=pf_engine_create((char *)data.fileSystemRepresentation,(char *)state.fileSystemRepresentation,0,error,sizeof(error));
         if (!engine) { fprintf(stderr,"%s\n",error); abort(); }
-        PFRing *ring=calloc(1,sizeof(*ring)); pf_ring_init(ring);
+        PFJourney host={engine,0,calloc(1,sizeof(PFRing))}; assert(host.ring); pf_ring_init(host.ring);
+        PFInput input; pf_input_init(&input,journeyInput,&host); pf_input_focus(&input,true);
         PFFrameView *view=[[PFFrameView alloc] initWithFrame:NSMakeRect(0,0,640,480)];
-        int64_t now=0;
-        for (unsigned step=0;step<180;step++,now+=16666667) {
-            if (step==1) assert(pf_engine_key(engine,pf_make_code(49))==PF_OK);
+        int64_t now=0; uint64_t ticks=0; uint32_t mode=0,selected=0,flags=0;
+        for (unsigned step=0;step<600;step++,now+=16666667) {
+            if (step==1) tap(&input,49);
             const uint16_t nativeF[4]={122,120,99,118};
-            if (step==2) assert(pf_engine_key(engine,pf_make_code(nativeF[table-1]))==PF_OK);
-            if (step==3) assert(pf_engine_key(engine,pf_make_code(122))==PF_OK);
-            if (step==20) assert(pf_engine_set_action(engine,PF_SPRING,1)==PF_OK);
-            if (step==40) assert(pf_engine_set_action(engine,PF_SPRING,0)==PF_OK);
-            if (step==80) {
-                assert(pf_engine_suspend(engine)==PF_OK); now+=3600000000000LL;
-                assert(pf_engine_resume(engine,now)==PF_OK);
-                assert(pf_engine_key(engine,pf_make_code(35))==PF_OK);
+            if (step==2) tap(&input,nativeF[table-1]);
+            if (step==3) tap(&input,122);
+            if (step==220) pf_input_key(&input,125,true,false,false,false);
+            if (step==252) pf_input_key(&input,125,false,false,false,false);
+            bool modifiers[6]={step>=350 && step<370,step>=360 && step<380,false,false,false,false};
+            pf_input_modifiers(&input,modifiers);
+            pf_input_motion(&input,8,(flags&4)!=0);
+            pf_input_button(&input,step==280,(flags&4)!=0);
+            if (step==300) {
+                uint64_t before=ticks, count=host.pcmFrames;
+                assert(pf_engine_suspend(engine)==PF_OK); pf_input_focus(&input,false);
+                now+=3600000000000LL;
+                assert(pf_engine_advance(engine,now,pcm,&host)==PF_OK);
+                assert(pf_engine_state(engine,&ticks,&mode,&selected,&flags)==PF_OK);
+                assert(ticks==before && host.pcmFrames==count && (flags&1));
+                assert(mode==PF_MODE_PAUSED);
+                assert(pf_engine_resume(engine,now)==PF_OK); pf_input_focus(&input,true);
+                assert(pf_engine_state(engine,&ticks,&mode,&selected,&flags)==PF_OK);
+                assert(ticks==before && mode==PF_MODE_PAUSED && !(flags&1));
+                tap(&input,35); /* ordinary P make; no implicit unpause */
             }
-            assert(pf_engine_advance(engine,now,pcm,ring)==PF_OK);
-            uint8_t *pixels; int32_t w,h,s;
-            assert(pf_engine_frame(engine,&pixels,&w,&h,&s)==PF_OK);
-            assert([view acceptPixels:pixels width:w height:h stride:s]);
+            uint64_t before=ticks;
+            assert(pf_engine_advance(engine,now,pcm,&host)==PF_OK);
+            assert(pf_engine_state(engine,&ticks,&mode,&selected,&flags)==PF_OK);
+            if (step==3) assert(mode==PF_MODE_PLAYING && selected==table);
+            if (step==300) assert(ticks<=before+1); /* reanchored, never one-hour catch-up */
+            uint8_t *pixels; int32_t w,h,stride;
+            assert(pf_engine_frame(engine,&pixels,&w,&h,&stride)==PF_OK);
+            assert([view acceptPixels:pixels width:w height:h stride:stride]);
         }
-        uint64_t ticks; uint32_t mode,selected,flags;
-        assert(pf_engine_state(engine,&ticks,&mode,&selected,&flags)==PF_OK);
-        assert(ticks>150 && selected==table && !(flags&1));
-        assert(pf_engine_destroy(engine)==PF_OK); free(ring);
+        assert(ticks>500 && selected==table && !(flags&1) && host.pcmFrames>0);
+        assert(pf_engine_destroy(engine)==PF_OK); free(host.ring);
         assert([fm fileExistsAtPath:[state stringByAppendingPathComponent:@"PINBALL.CFG"]]);
         assert([fm removeItemAtPath:state error:NULL]);
-        printf("PASS Apple ABI host journey table=%u scroll=%u ticks=%llu mode=%u\n",table,scroll,(unsigned long long)ticks,mode);
+        printf("PASS Apple ABI host journey table=%u scroll=%u resolution=%u ticks=%llu mode=%u PCM=%llu\n",
+            table,scroll,resolution,(unsigned long long)ticks,mode,(unsigned long long)host.pcmFrames);
+        }
     }
 }
 int main(int argc,const char **argv) {
