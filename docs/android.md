@@ -36,9 +36,15 @@ This is an asset-free platform prototype, not a playable Android release.
   and macOS native-host workflows also passed at that commit. A1 is an empty
   native-shell gate only; normal compiled-runtime and physical-device testing
   remain outstanding.
-- A2 implementation adds SAF import, private Data/State, packaged ABI 1 validation
-  and persistent engine creation. Hosted acceptance is pending; no original-backed
-  Android acceptance is claimed. A3–A7 remain outstanding.
+- A2 passed [hosted Android CI at `e6c5e70`](https://github.com/voobrazimoe/pinball-fantasies-native/actions/runs/37202017313):
+  both packaged engine ABIs, engine/host symbols, ELF/ZIP 16 KB alignment,
+  commercial filename scan, import transaction tests, packaged-engine JNI rejection,
+  and the retained A1 rendering/rotation/lifecycle checks. [A0](https://github.com/voobrazimoe/pinball-fantasies-native/actions/runs/37202017296),
+  [asset-free source](https://github.com/voobrazimoe/pinball-fantasies-native/actions/runs/37202017329),
+  and [macOS native hosts](https://github.com/voobrazimoe/pinball-fantasies-native/actions/runs/37202017274)
+  also passed. A2 supplies SAF import, private Data/State, shared-loader validation
+  and persistent engine creation. Successful original-backed Android import/bootstrap
+  and physical-device acceptance remain unverified for A6. A3–A7 remain outstanding.
 
 Build the engine first with an installed Go 1.27.1, SDK/NDK/JDK and Gradle 9.6.0:
 
@@ -174,4 +180,4 @@ The second argument is the required device page size. Omit it for a normal 4 KB 
 
 ## Remaining phases
 
-A2 adds SAF staging, app-private Data/State and real engine bootstrap. A3 adds cadence, framebuffer upload and touch/keyboard translation, including the temporary portrait scrolling override. A4 adds Oboe and the bounded host PCM ring. A5 adds engine lifecycle/audio-focus handling. A6 runs original-backed parity and physical-device acceptance. A7 adds signed APK/AAB packaging and release payload scanning.
+A2 supplies SAF staging, app-private Data/State and real engine bootstrap. A3 adds cadence, framebuffer upload and touch/keyboard translation, including the temporary portrait scrolling override. A4 adds Oboe and the bounded host PCM ring. A5 adds engine lifecycle/audio-focus handling. A6 runs original-backed parity and physical-device acceptance. A7 adds signed APK/AAB packaging and release payload scanning.

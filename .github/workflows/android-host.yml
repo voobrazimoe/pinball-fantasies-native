@@ -8,6 +8,12 @@ on:
       - 'tools/check_android_elf.py'
       - 'tools/test_check_android_elf.py'
       - 'tools/run_android_host_smoke.sh'
+      - 'tools/test_android_import.sh'
+      - 'tools/build_android_engine.sh'
+      - 'tools/build_engine.sh'
+      - 'cmd/pfengine/**'
+      - 'internal/**'
+      - 'docs/android.md'
   pull_request:
     paths:
       - '.github/workflows/android-host.yml'
@@ -15,6 +21,12 @@ on:
       - 'tools/check_android_elf.py'
       - 'tools/test_check_android_elf.py'
       - 'tools/run_android_host_smoke.sh'
+      - 'tools/test_android_import.sh'
+      - 'tools/build_android_engine.sh'
+      - 'tools/build_engine.sh'
+      - 'cmd/pfengine/**'
+      - 'internal/**'
+      - 'docs/android.md'
   workflow_dispatch:
 
 permissions:
@@ -26,7 +38,7 @@ env:
   ANDROID_AVD_HOME: ${{ github.workspace }}/.android-avd
 
 jobs:
-  a1-shell:
+  a2-import-shell:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4

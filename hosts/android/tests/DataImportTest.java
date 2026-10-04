@@ -94,6 +94,15 @@ public final class DataImportTest {
             Files.createDirectories(new File(storage, "Data.staging-stale").toPath());
             Files.createDirectories(new File(storage, "State.validation-stale").toPath());
             importer.recover(); preserved(importer.data(), state); check(storage.list().length == 1);
+            // Even if rollback cannot rename, recovery retains the previous installation.
+            DataImport failedRollback = new DataImport(storage, state, engine, (from, to) -> {
+                if (from.getName().equals("Data")) Files.move(from.toPath(), to.toPath());
+                else throw new IOException("injected adoption and rollback failures");
+            });
+            rejects(() -> failedRollback.install(new Source()));
+            check(!importer.data().exists());
+            check(new File(storage, "Data.previous/sentinel").exists());
+            importer.recover(); preserved(importer.data(), state);
             // Cleanup must never follow a symlink out of private scratch.
             File outside = new File(root, "outside"); original(outside);
             Files.createSymbolicLink(new File(storage, "Data.staging-link").toPath(), outside.toPath());

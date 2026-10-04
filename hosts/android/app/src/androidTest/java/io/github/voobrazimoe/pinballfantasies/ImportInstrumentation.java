@@ -16,6 +16,7 @@ public final class ImportInstrumentation extends Instrumentation {
         Bundle result = new Bundle();
         File root = null;
         long session = 0;
+        int outcome = Activity.RESULT_CANCELED;
         try {
             root = Files.createTempDirectory(getTargetContext().getNoBackupFilesDir().toPath(), "a2-test-").toFile();
             File data = new File(root, "Data"), state = new File(root, "State.validation-test");
@@ -33,14 +34,23 @@ public final class ImportInstrumentation extends Instrumentation {
             String uri = PinballActivity.nativeEngine(session, 0, "content://test".getBytes(StandardCharsets.UTF_8),
                     state.getAbsolutePath().getBytes(StandardCharsets.UTF_8));
             check(uri != null && uri.contains("filesystem"));
-            result.putString("stream", "PASS: packaged ABI 1 JNI missing/malformed rejection, bounded error, URI guard\n");
-            finish(Activity.RESULT_OK, result);
+            String boot = PinballActivity.nativeEngine(session, 1,
+                    data.getAbsolutePath().getBytes(StandardCharsets.UTF_8),
+                    state.getAbsolutePath().getBytes(StandardCharsets.UTF_8));
+            check(boot != null && !boot.isEmpty());
+            PinballActivity.nativeClose(session);
+            String closed = PinballActivity.nativeEngine(session, 0,
+                    data.getAbsolutePath().getBytes(StandardCharsets.UTF_8),
+                    state.getAbsolutePath().getBytes(StandardCharsets.UTF_8));
+            check("Activity closed".equals(closed));
+            result.putString("stream", "PASS: packaged ABI 1 JNI missing/malformed rejection, bounded error, URI/session guards\n");
+            outcome = Activity.RESULT_OK;
         } catch (Throwable failure) {
             result.putString("stream", "FAIL: " + failure + "\n");
-            finish(Activity.RESULT_CANCELED, result);
         } finally {
             PinballActivity.nativeClose(session);
             if (root != null) try { DataImport.remove(root); } catch (IOException ignored) { }
         }
+        finish(outcome, result);
     }
 }
