@@ -103,7 +103,12 @@ static void inputEvent(void *context,PFHostEvent event,int32_t a,int32_t b) {
     if (!_engine || _failed) return;
     [self syncFocus];
     if (!_focused) return;
+    uint64_t dropped=atomic_load(&_audio.ring.dropped);
     [self check:pf_engine_advance(_engine,[self now],pf_audio_enqueue,&_audio)];
+    if (atomic_load(&_audio.ring.dropped)!=dropped) {
+        pf_audio_pause(&_audio);
+        NSLog(@"Audio queue overrun: discarded stale PCM, source advancement preserved");
+    }
     uint64_t ticks; uint32_t mode,table,flags;
     [self check:pf_engine_state(_engine,&ticks,&mode,&table,&flags)];
     (void)ticks; (void)table;

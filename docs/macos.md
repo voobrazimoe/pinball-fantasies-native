@@ -132,10 +132,11 @@ or tracker time. Left/right channel order is retained.
 Pause/focus loss stop the AudioUnit before resetting queued PCM; resume starts
 with fresh source output. Default-output-device changes are delivered to the
 main queue, where the unit is closed/reopened without modifying game state.
-Queue backpressure waits in one-millisecond increments while audio drains. A
-missing or stalled device cannot hang the UI: a full ring drops remaining PCM
-after 100 waits and counts it; source updates still run. Underruns/dropped frames
-are logged at shutdown. This bounded failure policy is not a claim of underrun-
+Queue copying never waits on the audio device. A full ring drops remaining PCM
+and counts it; source updates still run. After that Advance, the main thread
+stops/flushes stale PCM and restarts from subsequent source output. This prevents
+slow-device catch-up from blocking AppKit input. Underruns/dropped frames are
+logged at shutdown. This bounded failure policy is not a claim of underrun-
 free output. Real device output, sustained cadence and route recovery remain
 physical-Mac acceptance items.
 

@@ -19,7 +19,13 @@ static void audioTests(void) {
     assert(atomic_load(&audio.ring.underruns)==1);
     pf_audio_enqueue(&audio,(const uint8_t *)input,sizeof(input));
     pf_audio_pause(&audio); assert(pf_ring_available(&audio.ring)==0);
-    puts("PASS actual AudioUnit render callback: queued S16 stereo, silence and stopped flush (no device required)");
+    int16_t *full=calloc(PF_RING_FRAMES*2,sizeof(int16_t)); assert(full);
+    pf_audio_enqueue(&audio,(const uint8_t *)full,PF_RING_FRAMES*4);
+    audio.running=true; /* Simulated active-but-stalled device: enqueue must not wait. */
+    pf_audio_enqueue(&audio,(const uint8_t *)input,sizeof(input));
+    assert(atomic_load(&audio.ring.dropped)==2 && pf_ring_available(&audio.ring)==PF_RING_FRAMES);
+    pf_audio_pause(&audio); assert(!audio.running && pf_ring_available(&audio.ring)==0); free(full);
+    puts("PASS actual AudioUnit render callback: S16 stereo, silence, bounded overrun and stopped flush (no device required)");
 }
 static void modifierTests(void) {
     PFInput input; pf_input_init(&input,NULL,NULL); pf_input_focus(&input,true);

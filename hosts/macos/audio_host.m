@@ -1,6 +1,5 @@
 #import "audio_host.h"
 #include <string.h>
-#include <time.h>
 static const AudioObjectPropertyAddress route={kAudioHardwarePropertyDefaultOutputDevice,
     kAudioObjectPropertyScopeGlobal,kAudioObjectPropertyElementMain};
 OSStatus pf_audio_render(void *ctx,AudioUnitRenderActionFlags *flags,const AudioTimeStamp *time,
@@ -60,21 +59,11 @@ void pf_audio_close(PFAudio *a) {
     if (a->unit) { AudioUnitUninitialize(a->unit); AudioComponentInstanceDispose(a->unit); a->unit=NULL; }
 }
 void pf_audio_enqueue(void *ctx,const uint8_t *pcm,uint32_t bytes) {
-    PFAudio *a=ctx; size_t remaining=bytes/4;
-    /* Preserve source chunks while the device drains. Never hold a Go pointer
-       after this synchronous callback. A stalled/missing device cannot hang UI. */
-    unsigned stalled=0;
-    while (remaining) {
-        size_t free=PF_RING_FRAMES-pf_ring_available(&a->ring);
-        if (free) {
-            size_t n=remaining<free?remaining:free;
-            pf_ring_write(&a->ring,pcm,n); pcm+=n*4; remaining-=n; stalled=0;
-        } else if (a->running && stalled++<100) {
-            struct timespec wait={0,1000000}; nanosleep(&wait,NULL);
-        } else {
-            atomic_fetch_add(&a->ring.dropped,remaining); break;
-        }
-    }
+    PFAudio *a=ctx;
+    /* Synchronous ownership copy only. A slow/stalled device never delays source
+       ticks or AppKit input. Overruns are counted; main flushes stale queued PCM
+       after Advance completes, without entering the engine from audio. */
+    pf_ring_write(&a->ring,pcm,bytes/4);
 }
 void pf_audio_watch_device(PFAudio *a,dispatch_block_t changed) {
     a->listener=^(UInt32 count,const AudioObjectPropertyAddress *addresses) {
