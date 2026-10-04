@@ -1,13 +1,19 @@
 # Native host phase validation status
 
-**Historical foundation report below.** The foundation was independently
-revalidated, fast-forwarded and pushed to public `main` at
-`4a02f91f78d40753565db9f0cbd0c83f556d35ec` on 2026-10-03 under the new task
-authorization. Its former main-integration restriction below is superseded for
-that foundation milestone. Native macOS work now lives exclusively on
-`codex/macos-arm64-host`; see [current macOS implementation and pending acceptance](macos.md).
-The macOS branch is not authorized for merge before original-backed/physical
-acceptance. Android remains unimplemented.
+## Current status (2026-10-04)
+
+The native macOS ARM64/x86_64 host is implemented and accepted by the owner.
+Original-backed replay/native journeys, clean packages and physical Mac gameplay
+checks are recorded in [macOS validation](macos-validation.md); see
+[macOS build and usage](macos.md). It lives on `macos-arm64-host`; PR #1 is ready
+for review and remains unmerged pending owner integration. Android remains
+unimplemented and is outside this PR.
+
+## Historical foundation report (2026-10-03)
+
+The platform/acceptance restrictions below describe that earlier milestone and
+are superseded for macOS by the current status above. The historical test results
+and implementation record are retained.
 
 Validated on 2026-10-03. Engine work is ready for native host development;
 macOS and Android applications are **not implemented or accepted**. The feature

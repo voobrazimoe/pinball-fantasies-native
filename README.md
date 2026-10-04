@@ -2,15 +2,17 @@
 
 **English** | [Русский](README.ru.md)
 
-First public beta of a native, source-guided reimplementation of the DOS version of **Pinball Fantasies** for modern Windows and Linux.
+First public beta of a native, source-guided reimplementation of the DOS version of **Pinball Fantasies** for modern Windows, Linux and macOS.
 
 > **Important:** public builds contain no commercial Pinball Fantasies game data. You need your own legally obtained DOS copy of the game.
 
 ## Quick start
 
-Download `pinballfantasies.exe` for Windows or `PinballFantasies-x86_64.AppImage` for Linux from [Releases](https://github.com/voobrazimoe/pinball-fantasies-native/releases).
+The published `v0.1.1` [release](https://github.com/voobrazimoe/pinball-fantasies-native/releases/tag/v0.1.1) contains `pinballfantasies.exe` for Windows, `PinballFantasies-x86_64.AppImage` for Linux and checksums. It does not contain macOS assets.
 
-Keep the original DOS data beside the executable, or point the port to it explicitly:
+For macOS 13 or later, use the separate native Apple Silicon ARM64 or Intel x86_64 app described in [macOS build and usage](docs/macos.md). Launch the app and select your original DOS game folder in the native import flow. Files are validated and copied into Application Support. Public Mac bundles are ad-hoc signed and not notarized; Mac release downloads will be available only after a later release publishes them.
+
+On Windows/Linux, keep the original DOS data beside the executable, or point the port to it explicitly:
 
 ```text
 pinballfantasies.exe -data-dir "D:\Games\Pinball Fantasies"
@@ -33,7 +35,9 @@ TABLE4.PRG TABLE4.MOD
 
 `PINBALL.CFG` is an optional legacy settings seed. Missing or malformed settings use native defaults; writable PFNC settings live in native state. Runtime accepts the supported consumed-data layout; exact whole-file hashes are reserved for research and parity fixtures.
 
-The originals are treated as read-only data. Native settings, high scores and logs are written to `userdata/` beside the executable/AppImage, with a per-user configuration directory as fallback. Optional legacy `TABLE*.HI` files are read-only score seeds; without them the native factory scores are used.
+The originals are treated as read-only data. Windows/Linux write native settings, high scores and logs to `userdata/` beside the executable/AppImage, with a per-user configuration directory as fallback. macOS imports originals into `~/Library/Application Support/PinballFantasies/Data/` and writes settings and high scores to `~/Library/Application Support/PinballFantasies/State/`, outside the app bundle.
+
+On Windows/Linux, optional legacy `TABLE*.HI` files are read-only score seeds; without them the native factory scores are used. The macOS importer copies only the required PRG/MOD files and optional CFG, using factory scores when there is no saved native state.
 
 ## What is implemented
 
@@ -44,7 +48,7 @@ All four tables are playable:
 - Billion Dollar Gameshow
 - Stones ’N Bones
 
-The port includes native table rules and state machines, integer ball physics, flippers, plunger, nudging and tilt, matrix display, lamps and animated playfield patches, high scores, options, tracker/module music and effects, persistent resizable windows, borderless fullscreen and native Windows/Linux platform backends.
+The port includes native table rules and state machines, integer ball physics, flippers, plunger, nudging and tilt, matrix display, lamps and animated playfield patches, high scores, options, tracker/module music and effects, resizable windows, platform fullscreen and native Windows/Linux/macOS platform backends. Windows uses Win32/GDI/waveOut, Linux uses SDL2, and macOS uses AppKit/Core Animation/AudioUnit around the shared Go engine and C ABI.
 
 This is not DOSBox, an x86 interpreter or a wrapper around the original executable. The original files are decoded as data; their x86 code is never executed.
 
@@ -64,12 +68,15 @@ Inside a loaded table:
 | `F1`–`F8` | Start a game with 1–8 players |
 | `Enter` | Add a player before the first ball is launched |
 | `Down Arrow` | Hold to charge the plunger, release to launch |
-| `Shift`, `Ctrl`, `Alt` | Flippers |
+| Left/right `Shift`, `Ctrl`, `Alt` (`Option` on macOS) | Corresponding left/right flippers |
 | `Space` | Nudge; repeated nudges can tilt |
 | `P` | Pause |
 | `M` | Toggle music |
-| `Alt+Enter` | Toggle borderless fullscreen |
+| `Alt+Enter` (Windows/Linux) | Toggle borderless fullscreen |
+| `Option+Return`, `Command+F` or View → Toggle Full Screen (macOS) | Toggle native fullscreen |
 | `Esc` | Back / quit according to the current screen |
+
+On macOS, `Z` / `/` and Left / Right Arrow are alternate left/right flipper controls. If your Mac reports Shift sides reversed, enable **View → Swap Left/Right Shift**; the correction persists across launches and affects only Shift.
 
 Before the first launch, `F1`–`F8` can replace the player count and `Enter` can add a player up to eight. After the first launch the count is fixed for that game. Players rotate each ball round; extra balls stay with the player who earned them. Each player retains their own score and table state. The matrix presents the incoming player and ball immediately at handoff, before launch.
 
@@ -87,10 +94,12 @@ The native mixer reproduces the original four-channel tracker/module playback an
 
 ## Build and verification
 
-See [build instructions](docs/build.md). The public CI runs the asset-free test/build path on Linux and Windows and downloads no commercial game data or historical source.
+See [build instructions](docs/build.md). Public CI runs asset-free shared tests and native Windows/Linux checks, plus Apple SDK ARM64 host tests/build and an Intel x86_64 cross-build. It downloads no commercial game data or historical source. Hosted asset-free checks are separate from local original-backed validation. macOS original-backed replays and native journeys passed, and physical Mac gameplay/input acceptance is recorded in the [validation report](docs/macos-validation.md).
 
 Useful project documentation:
 
+- [macOS build and usage](docs/macos.md)
+- [macOS validation](docs/macos-validation.md)
 - [Architecture](docs/architecture.md)
 - [Runtime data boundary](docs/runtime-data.md)
 - [Provenance and licensing boundary](docs/provenance.md)
@@ -105,7 +114,9 @@ A native Windows Win32/GDI/waveOut build is provided. Hosted native Windows buil
 
 ## Local-only personal builder
 
-For local use, `./tools/build_personal_release.sh "/path/to/original/game"` creates self-contained builds under `release/personal/` from the same 11 game-data inputs and optional settings seed. These local builds contain your commercial game data and are **not distributable project releases**. Do not commit, push or upload them.
+For local Windows/Linux use, `./tools/build_personal_release.sh "/path/to/original/game"` creates self-contained builds under `release/personal/` from the same 11 game-data inputs and optional settings seed. These local builds contain your commercial game data and are **not distributable project releases**. Do not commit, push or upload them.
+
+For macOS, `python3 tools/build_personal_macos.py "/path/to/original/game"` creates separate ARM64 and x86_64 apps with automatic first-run import. The same local-only commercial-data boundary applies.
 
 ## License and game data
 

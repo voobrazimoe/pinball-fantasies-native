@@ -1,17 +1,17 @@
 # Native macOS host
 
-The experimental macOS MVP is an Objective-C AppKit shell around the existing
-ABI 1 (`cmd/pfengine/abi.h`). It lives on `codex/macos-arm64-host`. The foundation
-was separately fast-forwarded and pushed to main at
-`4a02f91f78d40753565db9f0cbd0c83f556d35ec` after its Linux/Windows gates passed.
-No macOS merge is authorized before original-backed and physical-Mac acceptance.
-Android work has not started.
+The native macOS app is an Objective-C AppKit/Core Animation/AudioUnit host
+around the existing Go engine and ABI 1 (`cmd/pfengine/abi.h`). It lives on
+`macos-arm64-host`. Original-backed validation and owner physical-Mac acceptance
+are complete as recorded in [macOS validation](macos-validation.md). PR #1
+remains unmerged for the owner to integrate. Android work has not started.
 
-Supported build target: **Apple Silicon arm64, macOS 13 or later**. Hosted
-validation uses macOS 15. Deployment to macOS 13/14 has not been exercised.
-An experimental Intel x86_64 test build is also available for local keyboard
-acceptance on an Intel Mac; Intel hardware validation remains pending. Universal
-binaries are outside this milestone. This is not a notarized production distribution.
+Supported targets: **macOS 13 or later**, with separate **Apple Silicon ARM64**
+and **Intel x86_64** apps. Hosted ARM64 validation uses macOS 15; Intel gameplay
+was accepted on the owner's MacBook. Universal binaries are not provided.
+Public bundles are ad-hoc signed and not notarized. The published `v0.1.1`
+release has Windows/Linux assets and checksums only; use these build instructions
+until a later release actually publishes Mac assets.
 
 ## Build and CI
 
@@ -28,7 +28,7 @@ go version
 ./tools/build_macos.sh
 ```
 
-For an Intel test bundle, run `./tools/build_macos.sh x86_64` on a Mac with the
+For an Intel bundle, run `./tools/build_macos.sh x86_64` on a Mac with the
 Apple SDK. Go uses `darwin/amd64` and clang uses `x86_64`. The separate outputs are
 `bin/macos-x86_64/`, `release/macos-x86_64/Pinball Fantasies.app` and
 `release/macos-x86_64/PinballFantasies-x86_64.zip`; the Apple Silicon app is preserved.
@@ -37,7 +37,8 @@ Run it on the Intel Mac and import the owner's original game files normally.
 The script runs native executable/ABI tests only when host and target architecture
 match. Cross-building on Apple Silicon verifies compile/link, architecture,
 ad-hoc signature and bundle structure, but does not establish Intel runtime or
-physical keyboard acceptance. Hosted CI continues to test the default arm64 target.
+physical keyboard acceptance. Owner Intel acceptance is recorded separately;
+hosted CI tests ARM64 and cross-builds/uploads the Intel package.
 
 For input-lag investigation, launch the executable from Terminal with
 `--pacing-log /path/to/report.csv`, then play with the built-in or attached
@@ -75,9 +76,9 @@ The native host build treats compiler warnings as errors.
 
 Hosted CI requires shared Go tests, real Apple-built C archive/shared library,
 asset-free ABI contract tests, native host tests, exact nearest-neighbour bitmap
-pixels, arm64 executable/bundle/signature checks, public payload scanning,
+pixels, ARM64 executable/bundle/signature checks, Intel cross-build checks, public payload scanning,
 a bounded two-second AppKit synthetic-frame launch and clean termination, and
-an uploaded public `.app` zip. Hosted WindowServer launch worked; the smoke is
+uploaded public ARM64 and Intel `.app` zips. Hosted WindowServer launch worked; the smoke is
 bounded to 15 seconds and fails on crash/timeout. It does not import originals,
 exercise a game, certify human-visible output or listen to audio.
 
@@ -216,7 +217,8 @@ drivers, existing mutable TABLE*.HI and unrelated files are not copied.
 
 Files must be regular, non-symlink inputs. A sibling staging directory receives
 the allowlisted copies. Validation creates/destroys a temporary ABI engine,
-using the existing Go hashes/decoders/settings semantics. Only a fully validated
+using the shared consumed-data layout, decoder and settings semantics. Runtime
+import does not require pinned whole-file hashes or an unchanged CFG. Only a fully validated
 set is moved/replaced as app-owned Data; a failed import preserves the previous
 set. Arbitrary external paths are no longer needed after import. No files are
 downloaded. Native tests check staged replacement, missing files, symlinks,
@@ -232,20 +234,19 @@ Foundation chooses the user-domain application support directory:
 
 Explicit Data/State paths go to the existing ABI. Settings/high-score encodings,
 factory defaults, save/restart behaviour and hotseat semantics remain shared Go
-code. State never targets CWD, originals or `.app`. Interactive first-launch
-import and persistence across real app launches remain unverified.
+code. State never targets CWD, originals or `.app`. Automated staged-import and
+save/restart checks passed; the owner accepted real Mac gameplay. See the
+[validation record](macos-validation.md) for the tested scope.
 
 ## Original-backed Mac validation and manual acceptance
 
-The owner has an authorized Apple Silicon Mac with Codex for the next session.
-Original-backed macOS tests are **PENDING**, distinct from green hosted checks.
-With an owner-supplied directory containing pristine PRG/MOD originals and installed Go 1.27.1:
+Original-backed replay/native journeys and physical Mac gameplay/input acceptance
+are recorded as complete in [macOS validation](macos-validation.md). To rerun the
+local original-backed gates on Apple Silicon with Go 1.27.1 and an owner-supplied
+directory of pristine PRG/MOD reference inputs:
 
 ```sh
 python3 tools/validate_macos_originals.py --data /absolute/path/to/originals
-# Optional historical sources can run additional Go reference checks:
-python3 tools/validate_macos_originals.py --data /absolute/path/to/originals \
-  --reference /absolute/path/to/original-dos-source
 ```
 
 PINBALL.CFG is optional mutable user state and need not match a pristine hash.
@@ -259,14 +260,17 @@ This command refuses non-Mac/non-arm64 hosts, checks the pinned PRG/MOD hashes,
 builds with Apple tools, runs the actual C-library direct-Runner comparison for
 all four tables in SOFT/OFF (including cheats/lifecycle/PCM/frame checkpoints),
 runs native four-table journeys in HARD/MEDIUM/SOFT/OFF, with NORMAL and HIGH resolution, runs shared Go tests in
-a clean temporary checkout with external originals, exercises shared settings
+a clean asset-free temporary checkout, exercises shared settings
 and high-score restart validation, scans the app for original blocks, and checks
-that original inputs are unchanged. Missing optional historical captures still
-skip with reasons. It never uploads commercial inputs. Preserve its output as
+that original inputs are unchanged. Original-backed tests use isolated staged
+inputs; the shared asset-free suite skips absent originals/reference captures
+with reasons. Historical independent fixtures absent from the public checkout
+are outside this gate. It never uploads commercial inputs. Preserve its output as
 local acceptance evidence; do not put originals in Git or Actions artifacts.
 
-Then launch the real app, import from NSOpenPanel and complete these currently
-**UNVERIFIED** physical-Mac checks:
+For future releases or broader hardware coverage, use this physical-Mac
+regression checklist. The accepted release does not claim exhaustive testing of
+every device, display topology or sleep duration:
 
 - Actual visible framebuffer/window rendering, resize/aspect/crisp pixels and
   every table in HARD, MEDIUM, SOFT and OFF/full-table at NORMAL and HIGH resolution.
@@ -284,9 +288,9 @@ Then launch the real app, import from NSOpenPanel and complete these currently
 - Settings/high-score persistence across real app launches from different CWDs,
   with writes confined to Application Support and no changes inside `.app`.
 
-The feature branch must remain unmerged until these original-backed/hardware
-gates are completed and the user authorizes integration. No Android implementation
-or fake release/tag is part of this milestone.
+The owner has accepted the macOS host. PR #1 remains ready for review and
+unmerged until owner integration; this documentation pass publishes no new
+release/tag and starts no Android work.
 
 ## Signing
 
@@ -295,5 +299,5 @@ ID credentials and performs no notarization. Wider distribution would require
 an actual Developer ID certificate/private key, appropriate hardened-runtime
 signing configuration and Apple notarization credentials/submission/stapling,
 followed by Gatekeeper testing. Ad-hoc build artifacts may require owner approval
-in macOS security UI; signing/notarization and physical acceptance are not
-represented as completed production-distribution work.
+in macOS security UI. Physical gameplay acceptance is complete, but Developer
+ID signing/notarization and unrestricted distribution have not been performed.

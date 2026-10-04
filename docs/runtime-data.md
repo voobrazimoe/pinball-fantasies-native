@@ -30,19 +30,21 @@ The program never executes original x86 code. Source addresses and record maps i
 
 ## Writable state
 
-Native writable data is kept separately from the original installation:
+Native writable data is kept separately from the original installation. Windows/Linux use:
 
 ```text
 userdata/
 ```
 
-This includes settings, high scores and logs. If the directory beside the executable/AppImage is not writable, the normal per-user configuration directory is used as fallback. `-config-dir` and `-high-score-dir` provide explicit overrides.
+This includes settings, high scores and logs. If the directory beside the executable/AppImage is not writable, the normal per-user configuration directory is used as fallback. The Windows/Linux CLI provides `-config-dir` and `-high-score-dir` overrides.
 
-Optional legacy `TABLE*.HI` files may be read as score seeds in a normal asset-free installation. They are never required runtime inputs and are not modified. Without them, the native factory high-score tables are used.
+macOS imports originals into `~/Library/Application Support/PinballFantasies/Data/` and writes native settings/high scores in the sibling `State/` directory. It does not write `userdata/` beside the app or modify the bundle. The native importer copies only PRG/MOD files and optional CFG, not legacy high-score files. See [macOS storage and import](macos.md).
+
+On Windows/Linux, optional legacy `TABLE*.HI` files may be read as score seeds in a normal asset-free installation. They are never required runtime inputs and are not modified. Without them, the native factory high-score tables are used.
 
 ## Personal builds
 
-The local-only personal builder embeds the eleven compatible game-data files above and an optional CFG settings seed into the resulting EXE/AppImage. Those artifacts therefore contain the user's commercial game data and must not be distributed as project releases. Public GitHub release binaries are always asset-free.
+The local-only personal builder embeds the eleven compatible game-data files above and an optional CFG settings seed into the resulting EXE/AppImage or macOS app. Personal macOS bundles automatically import their Resources/Data contents into Application Support on first launch, preserving an existing valid import and native state. Those artifacts therefore contain the user's commercial game data and must not be distributed as project releases. Public GitHub release binaries are always asset-free.
 
 ## Fonts and presentation
 
