@@ -4,11 +4,11 @@ Validated on 2026-10-03. Engine work is ready for native host development;
 macOS and Android applications are **not implemented or accepted**. The feature
 branch must not be merged into main as a completed platform phase.
 
-- Public starting main: `b5363935e5c4085ef197cb33f4fd9f778ddbe9fe`.
-- Pre-platform parity checkpoint: `ae57d8d112f3543da6aa400ae4643975c14c3c2d`.
-- Engine implementation: `9afb838`.
-- Conformance harness: `87693aa`; strengthened coverage: `851ac3067d4f449db76639be0d9e1188eff3ea68`.
-- Canonical spring validity gate: `af7a476`.
+- Public starting main: `16d377ba39c9880cd3f5b76be8da27fac345e4d2`.
+- Pre-platform parity checkpoint: `81ffea229c4a7b162fda6efa3fc8cde8ef330c23`.
+- Engine implementation: `98f5344`.
+- Conformance harness: `5477f83`; strengthened coverage: `4cb5b0444452e0363b486a90c5eebccd185a4782`.
+- Canonical spring validity gate: `cc92236`.
 - Branch: `codex/native-host-boundary-macos-android`.
 - No tag or release was created. The checkpoint commit identifies the final
   validated Windows/Linux baseline; existing release/version conventions remain
@@ -17,7 +17,7 @@ branch must not be merged into main as a completed platform phase.
 The incoming workspace was the separate private development repository, whose
 main and preparatory checkout were preserved. An isolated clone of the requested
 public repository was used. Its main included the Runner, DOS mouse plunger,
-matrix audit (`26d1e7c`, closed by `b536393`) and original attract cheats.
+matrix audit (`c5e5472`, closed by `16d377b`) and original attract cheats.
 
 The later repeated/right-Alt fix was committed and pushed in private commit
 `5b3763446ef23e2a4c40f776efb13691d25b2779`, but absent from public main. Only the
