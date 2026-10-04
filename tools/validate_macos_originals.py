@@ -78,7 +78,11 @@ def main():
                     source.extractall(checkout)
             # Exercise the current inventory regression fix even before it is committed.
             shutil.copyfile(root/'internal/assets/inventory_test.go', checkout/'internal/assets/inventory_test.go')
-            stage_inputs(data, checkout)
+            # Keep the archived checkout asset-free, matching public CI. The
+            # independent historical fixture tests require private reference
+            # files not present in a public source archive. Original-backed
+            # coverage runs above through real ABI replay/native journeys and
+            # below through personalvalidate with the explicit staged data path.
             if a.reference:
                 (checkout/'reference').mkdir(exist_ok=True)
                 (checkout/'reference/original-dos-source').symlink_to(a.reference.resolve(strict=True), target_is_directory=True)
@@ -92,7 +96,7 @@ def main():
         if before != input_hashes(data):
             raise RuntimeError('owner-supplied inputs were modified')
         print('PASS owner-supplied PRG/MOD and optional CFG unchanged')
-    print('PASS local macOS original-backed ABI, four-table/all-scroll host journeys, shared Go gates, storage restart, public payload scan')
+    print('PASS local macOS original-backed ABI, four-table/all-scroll host journeys, shared asset-free Go gates, storage restart, public payload scan')
     print('Physical window/input/cursor/audio/fullscreen/import and real restart acceptance still require the docs/macos.md checklist.')
 
 

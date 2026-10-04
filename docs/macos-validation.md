@@ -48,7 +48,11 @@ commit adds this record and Intel CI packaging without changing gameplay.
 
 The clean release build reruns the local original-backed validation via
 `tools/validate_macos_originals.py`; external inputs are staged into temporary
-storage and their hashes are checked unchanged. CI uses no commercial originals
+storage and their hashes are checked unchanged. Its clean archived checkout runs
+the same asset-free Go suite as public CI; original-backed coverage is provided
+by the separate real ABI replays, native journeys and personalvalidate run.
+Historical independent fixture tests requiring absent private reference files
+are not included in this release gate. CI uses no commercial originals
 and runs asset-free tests, bounded AppKit launch, ARM64 build and Intel cross-build.
 
 ## Diagnosis and resolution
