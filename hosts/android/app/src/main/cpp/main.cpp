@@ -300,10 +300,8 @@ public:
         LOGI("A1_ACTIVITY_%s", resumed ? "RESUMED" : "PAUSED");
     }
 
-    void setFocused(bool focused) { focused_ = focused; }
-
     [[nodiscard]] bool active() const {
-        return resumed_ && focused_ && ready();
+        return resumed_ && ready();
     }
 
     bool draw() {
@@ -402,7 +400,6 @@ private:
     int lastSurfaceHeight_ = -1;
     bool firstFrame_ = true;
     bool resumed_ = false;
-    bool focused_ = false;
     bool resumeFrame_ = false;
 };
 
@@ -414,10 +411,10 @@ void handleAppCommand(android_app* app, int32_t command) {
 
     switch (command) {
         case APP_CMD_GAINED_FOCUS:
-            renderer->setFocused(true);
+            LOGI("A3_NATIVE_FOCUS gained");
             break;
         case APP_CMD_LOST_FOCUS:
-            renderer->setFocused(false);
+            LOGI("A3_NATIVE_FOCUS lost");
             break;
         case APP_CMD_RESUME:
             renderer->setResumed(true);

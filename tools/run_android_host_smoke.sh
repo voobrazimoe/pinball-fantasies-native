@@ -1,5 +1,5 @@
 #!/bin/sh
-# Asset-free A1 runtime checks. A fresh log snapshot per phase prevents stale
+# Asset-free A1/A3 runtime checks. A fresh log snapshot per phase prevents stale
 # portrait/frame messages from making later transitions pass accidentally.
 set -eu
 
@@ -51,6 +51,11 @@ wait_for() {
     done
     echo "Android host smoke timed out waiting for: $pattern" >&2
     cat "$scratch/log" >&2
+    timeout 10 adb shell wm user-rotation >&2 || true
+    timeout 10 adb shell settings get system accelerometer_rotation >&2 || true
+    timeout 10 adb shell settings get system user_rotation >&2 || true
+    timeout 10 adb shell dumpsys window displays >&2 || true
+    timeout 10 adb shell dumpsys activity activities >&2 || true
     exit 1
 }
 
@@ -68,7 +73,7 @@ require_same_host() {
 test -f "$APK"
 timeout 60 adb install -r "$APK"
 timeout 10 adb shell settings put system accelerometer_rotation 0
-timeout 10 adb shell settings put system user_rotation 0
+timeout 10 adb shell wm user-rotation lock 0
 timeout 10 adb shell input keyevent KEYCODE_WAKEUP
 timeout 10 adb shell wm dismiss-keyguard
 begin_phase
@@ -81,12 +86,12 @@ initial_pid=$(timeout 10 adb shell pidof "$PACKAGE" | tr -d '\r')
 test -n "$initial_pid"
 
 begin_phase
-timeout 10 adb shell settings put system user_rotation 1
+timeout 10 adb shell wm user-rotation lock 1
 wait_for 'A1_VIEWPORT.*orientation=landscape'
 require_same_host
 
 begin_phase
-timeout 10 adb shell settings put system user_rotation 0
+timeout 10 adb shell wm user-rotation lock 0
 wait_for 'A1_VIEWPORT.*orientation=portrait'
 require_same_host
 

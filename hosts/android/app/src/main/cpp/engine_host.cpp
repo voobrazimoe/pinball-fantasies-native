@@ -86,6 +86,7 @@ extern "C" JNIEXPORT void JNICALL JNI_METHOD(nativeActive)(JNIEnv*, jclass, jlon
  std::lock_guard<std::mutex> guard(lock);
  if (!opened || token != generation) return;
  bool before = active(); resumed = resume; focused = focus;
+ __android_log_print(ANDROID_LOG_INFO, "PinballFantasies", "A3_INPUT_STATE resumed=%d focused=%d", resumed, focused);
  if (persistent && before != active()) {
   if (active()) pf_engine_resume(persistent, now());
   else pf_engine_suspend(persistent);

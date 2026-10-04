@@ -184,7 +184,10 @@ Runner input, applies the shared focus-pause request, and stops source/tracker
 progression. Resuming calls `pf_engine_resume` with fresh monotonic time. The
 Runner re-anchors its deadline and preserves the gameplay instance; shared game
 pause semantics still apply (a logical key resumes a paused game). The render
-loop also sleeps while paused/unfocused. Rotation and EGL surface replacement
+loop sleeps while paused or without a surface. Java window focus is the sole
+engine focus authority; native glue focus commands are diagnostic rather than
+a second presentation gate. While unfocused, a remaining surface may present
+its cached frame, but no engine input/advance/frame calls occur. Rotation and EGL surface replacement
 only replace graphics resources; they neither destroy the engine nor reset
 source/table/player state. A brief surface gap while otherwise active is caught
 up by the Runner at the next presentation. Process restart uses A2 bootstrap.
@@ -305,8 +308,10 @@ Android instrumentation additionally dispatches real multi-pointer `MotionEvent`
 objects through `ControlOverlay`, verifies cancellation/plunger dispatch, and
 exercises no-data JNI callbacks. Hosted Android CI retains A2 import/recovery
 checks, packaged ABI exports, payload scan, all ELF/ZIP 16 KB checks and A1
-rotation/background/resume smoke. Smoke now issues hardware/menu/Back and touch
-input in the no-data shell and requires the same host to survive.
+rotation/background/resume smoke. Smoke locks rotation through WindowManager rather than relying on a settings
+write that emulator startup can race, issues hardware/menu/Back and touch input
+in the no-data shell, and requires the same host to survive. Timeout diagnostics
+include rotation policy and focused Activity/window state.
 
 Asset-free Go regressions exercise the actual Engine → Runtime → four-table
 render/composition path using invented zero indexed pixels, verify 320×609 and
