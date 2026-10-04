@@ -3,13 +3,16 @@
 There is one Go gameplay implementation. Foreign hosts use `cmd/pfengine/abi.h`;
 Go desktop adapters may continue using `internal/source.Runner`. Both paths use
 that Runner, `frontend.Runtime`, and the existing table/presentation/audio code.
-No native macOS or Android host is implemented yet.
+The native macOS ARM64/x86_64 host is in `hosts/macos`; original-backed checks
+and owner physical-Mac acceptance are complete as recorded in
+[macOS validation](macos-validation.md). See [macOS build and usage](macos.md).
+Android is not implemented.
 
 ```text
 Go source engine / frontend.Runtime / source.Runner
     +-- direct Go desktop adapter -> Win32
     +-- direct Go desktop adapter -> SDL/Linux
-    +-- internal/engine -> stable C ABI -> AppKit/macOS (pending)
+    +-- internal/engine -> stable C ABI -> AppKit/macOS (ARM64/x86_64 native host; accepted)
     +-- internal/engine -> stable C ABI -> Android native host (pending)
 ```
 
@@ -103,7 +106,9 @@ for developer/portable workflows. Hosts own native file selection and staged
 copying: NSOpenPanel or Android SAF, required original filenames only, validate
 through the shared Go loader before adopting app-owned copies. SAF content URIs
 are never passed as filesystem paths. No commercial files ship with the library.
-Native import transactions still require platform implementation and tests.
+The macOS host stages/imports files through NSOpenPanel and validates through
+this ABI, with native transaction tests. Mac host acceptance is recorded in
+[macOS validation](macos-validation.md); Android import remains unimplemented.
 
 Hosts own windows/surfaces, focus, native fullscreen, keyboard/touch translation,
 pointer IDs and cancellation, nearest-neighbour framebuffer upload, aspect and

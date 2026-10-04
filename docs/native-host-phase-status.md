@@ -1,5 +1,20 @@
 # Native host phase validation status
 
+## Current status (2026-10-04)
+
+The native macOS ARM64/x86_64 host is implemented and accepted by the owner.
+Original-backed replay/native journeys, clean packages and physical Mac gameplay
+checks are recorded in [macOS validation](macos-validation.md); see
+[macOS build and usage](macos.md). It lives on `macos-arm64-host`; PR #1 is ready
+for review and remains unmerged pending owner integration. Android remains
+unimplemented and is outside this PR.
+
+## Historical foundation report (2026-10-03)
+
+The platform/acceptance restrictions below describe that earlier milestone and
+are superseded for macOS by the current status above. The historical test results
+and implementation record are retained.
+
 Validated on 2026-10-03. Engine work is ready for native host development;
 macOS and Android applications are **not implemented or accepted**. The feature
 branch must not be merged into main as a completed platform phase.
