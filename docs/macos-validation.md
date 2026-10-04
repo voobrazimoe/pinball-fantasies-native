@@ -10,10 +10,10 @@ release/tag, Developer ID credential or notarization was introduced.
 
 | Item | Result |
 | --- | --- |
-| Original public main | `b5363935e5c4085ef197cb33f4fd9f778ddbe9fe` |
+| Original public main | `16d377ba39c9880cd3f5b76be8da27fac345e4d2` |
 | Validated foundation branch | `codex/native-host-boundary-macos-android` |
-| Validated foundation HEAD | `8bc62e361832ac2ae76b2da251d335eef533c9cc` |
-| Resulting foundation main | `8bc62e361832ac2ae76b2da251d335eef533c9cc` |
+| Validated foundation HEAD | `4a02f91f78d40753565db9f0cbd0c83f556d35ec` |
+| Resulting foundation main | `4a02f91f78d40753565db9f0cbd0c83f556d35ec` |
 | Integration | Clean fast-forward, pushed to `origin/main`, fetched and SHA verified on 2026-10-03; no force push |
 | Final repeated-Alt fix | `internal/platform/win32_windows.go` calls `windowsAltGrControl` from `keys_windows_contract.go` to ignore only the synthetic same-timestamp Left Ctrl/Right Alt pair |
 | Alt regressions | `keys_altgr_test.go`: 60,000-cycle repeated/synthetic regression and independent-left preservation; `keys_altgr_windows_test.go`: actual Win32 queue test; PASS under Wine, including the final macOS-branch rerun |
@@ -57,7 +57,7 @@ settings into temporary storage, and checks external inputs remain unchanged. Lo
 | Linux regression | Final full Go suite, four-table Go/C replay including cheats, source/desktop plunger, matrix/presentation, and executable build PASS |
 | Windows regression | CGO_ENABLED=0 build and repeated/synthetic/actual-queue Alt tests under Wine PASS; existing Linux/Windows hosted CI retained |
 | Commercial-data hygiene | Exact app file allowlist and original whole-file hashes checked in hosted CI; original 4 KiB-block scan performed locally with supplied originals against the public artifact |
-| Merge status | macOS remains unmerged; foundation remains on `origin/main` at `8bc62e361832ac2ae76b2da251d335eef533c9cc` |
+| Merge status | macOS remains unmerged; foundation remains on `origin/main` at `4a02f91f78d40753565db9f0cbd0c83f556d35ec` |
 
 The eight Linux C replays each compare 2,714 checkpoints and 2,801 scheduled source
 tasks, with PCM/frame/state parity. Party Land, Speed Devils, Billion Dollar

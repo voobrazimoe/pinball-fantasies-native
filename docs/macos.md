@@ -3,7 +3,7 @@
 The experimental macOS MVP is an Objective-C AppKit shell around the existing
 ABI 1 (`cmd/pfengine/abi.h`). It lives on `codex/macos-arm64-host`. The foundation
 was separately fast-forwarded and pushed to main at
-`8bc62e361832ac2ae76b2da251d335eef533c9cc` after its Linux/Windows gates passed.
+`4a02f91f78d40753565db9f0cbd0c83f556d35ec` after its Linux/Windows gates passed.
 No macOS merge is authorized before original-backed and physical-Mac acceptance.
 Android work has not started.
 

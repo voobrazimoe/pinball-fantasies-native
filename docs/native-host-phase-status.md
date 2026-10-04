@@ -2,7 +2,7 @@
 
 **Historical foundation report below.** The foundation was independently
 revalidated, fast-forwarded and pushed to public `main` at
-`8bc62e361832ac2ae76b2da251d335eef533c9cc` on 2026-10-03 under the new task
+`4a02f91f78d40753565db9f0cbd0c83f556d35ec` on 2026-10-03 under the new task
 authorization. Its former main-integration restriction below is superseded for
 that foundation milestone. Native macOS work now lives exclusively on
 `codex/macos-arm64-host`; see [current macOS implementation and pending acceptance](macos.md).
