@@ -1,4 +1,4 @@
-name: macOS arm64 host
+name: macOS native hosts
 on:
   push:
   pull_request:
@@ -42,6 +42,8 @@ jobs:
           import subprocess
           subprocess.run(['release/macos/Pinball Fantasies.app/Contents/MacOS/pinballfantasies','--ui-smoke'],check=True,timeout=15)
           PY
+      - name: Intel cross-build, signature and public package
+        run: ./tools/build_macos.sh x86_64
       - name: Record acceptance limits
         run: |
           echo 'Hosted CI uses no commercial originals; original-backed four-table macOS ABI journeys remain UNVERIFIED.' >> "$GITHUB_STEP_SUMMARY"
@@ -50,4 +52,9 @@ jobs:
         with:
           name: PinballFantasies-macos-arm64-adhoc
           path: release/macos/PinballFantasies-arm64.zip
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PinballFantasies-macos-x86_64-adhoc
+          path: release/macos-x86_64/PinballFantasies-x86_64.zip
           if-no-files-found: error
