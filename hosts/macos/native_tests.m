@@ -3,7 +3,6 @@
 #import "audio_host.h"
 #import "native_input.h"
 #import <mach/mach_time.h>
-#import <IOKit/hidsystem/IOLLEvent.h>
 #include <assert.h>
 #include <stdio.h>
 static void audioTests(void) {
@@ -27,30 +26,101 @@ static void audioTests(void) {
     pf_audio_pause(&audio); assert(!audio.running && pf_ring_available(&audio.ring)==0); free(full);
     puts("PASS actual AudioUnit render callback: S16 stereo, silence, bounded overrun and stopped flush (no device required)");
 }
+static unsigned modifierMakes, modifierActions, modifierFullscreen;
+static void modifierEmit(void *ctx,PFHostEvent event,int32_t a,int32_t b) {
+    (void)ctx; (void)b;
+    if (event==PF_EVENT_KEY) { assert(a==127); modifierMakes++; }
+    if (event==PF_EVENT_ACTION) modifierActions++;
+    if (event==PF_EVENT_FULLSCREEN) modifierFullscreen++;
+}
+static void modifierEvent(PFInput *input,uint16_t key,NSEventModifierFlags flags) {
+    NSEvent *event=[NSEvent keyEventWithType:NSEventTypeFlagsChanged
+        location:NSZeroPoint modifierFlags:flags timestamp:0 windowNumber:0
+        context:nil characters:@"" charactersIgnoringModifiers:@"" isARepeat:NO keyCode:key];
+    assert(event && event.keyCode==key && event.modifierFlags==flags);
+    pf_macos_modifiers(input,event.keyCode,event.modifierFlags);
+}
 static void modifierTests(void) {
-    PFInput input; pf_input_init(&input,NULL,NULL); pf_input_focus(&input,true);
-    pf_macos_modifiers(&input,58,NX_DEVICELALTKEYMASK);
+    const uint16_t keys[3][2]={{56,60},{59,62},{58,61}};
+    const NSEventModifierFlags flags[3]={NSEventModifierFlagShift,
+        NSEventModifierFlagControl,NSEventModifierFlagOption};
+    PFInput input;
+    for (unsigned c=0;c<3;c++) for (unsigned first=0;first<2;first++) {
+        pf_input_init(&input,modifierEmit,NULL); pf_macos_focus(&input,true,0);
+        modifierMakes=modifierActions=0;
+        modifierEvent(&input,keys[c][first],flags[c]);
+        assert(input.held[first] && !input.held[1-first]);
+        modifierEvent(&input,keys[c][1-first],flags[c]);
+        assert(input.held[PF_LEFT] && input.held[PF_RIGHT]);
+        modifierEvent(&input,keys[c][first],flags[c]);
+        assert(!input.held[first] && input.held[1-first]);
+        modifierEvent(&input,keys[c][1-first],0);
+        assert(!input.held[PF_LEFT] && !input.held[PF_RIGHT]);
+        assert(modifierMakes==2 && modifierActions==4);
+
+        /* The old side remains physically held across loss. A fresh opposite
+           side works, its release keeps the old side suppressed, and the old
+           side's break with the sibling still held cannot become a make. */
+        modifierEvent(&input,keys[c][first],flags[c]);
+        pf_macos_focus(&input,false,flags[c]);
+        pf_macos_focus(&input,true,flags[c]);
+        assert(!input.held[PF_LEFT] && !input.held[PF_RIGHT]);
+        modifierMakes=0;
+        modifierEvent(&input,keys[c][1-first],flags[c]);
+        assert(!input.held[first] && input.held[1-first] && modifierMakes==1);
+        modifierEvent(&input,keys[c][1-first],flags[c]);
+        assert(!input.held[PF_LEFT] && !input.held[PF_RIGHT] && modifierMakes==1);
+        modifierEvent(&input,keys[c][1-first],flags[c]);
+        assert(!input.held[first] && input.held[1-first] && modifierMakes==2);
+        modifierEvent(&input,keys[c][first],flags[c]);
+        assert(!input.held[first] && input.held[1-first] && modifierMakes==2);
+        modifierEvent(&input,keys[c][first],flags[c]);
+        assert(input.held[first] && input.held[1-first] && modifierMakes==3);
+        modifierEvent(&input,keys[c][first],flags[c]);
+        modifierEvent(&input,keys[c][1-first],0);
+
+        /* A break missed while inactive is reconciled by public aggregate
+           flags on regain, so the next same-side press works immediately. */
+        modifierEvent(&input,keys[c][first],flags[c]);
+        pf_macos_focus(&input,false,flags[c]); pf_macos_focus(&input,true,0);
+        modifierEvent(&input,keys[c][first],flags[c]); assert(input.held[first]);
+        pf_macos_focus(&input,false,flags[c]);
+        modifierEvent(&input,keys[c][first],0); /* break delivered inactive */
+        modifierEvent(&input,keys[c][1-first],flags[c]); /* inactive make */
+        pf_macos_focus(&input,true,flags[c]);
+        assert(!input.held[PF_LEFT] && !input.held[PF_RIGHT]);
+        modifierEvent(&input,keys[c][1-first],0);
+        assert(!input.held[PF_LEFT] && !input.held[PF_RIGHT]);
+    }
+    pf_input_init(&input,modifierEmit,NULL); pf_macos_focus(&input,true,0);
+    modifierMakes=modifierActions=0;
+    modifierEvent(&input,56,NSEventModifierFlagShift);
+    modifierEvent(&input,59,NSEventModifierFlagShift|NSEventModifierFlagControl);
+    modifierEvent(&input,58,NSEventModifierFlagShift|NSEventModifierFlagControl|NSEventModifierFlagOption);
+    assert(modifierActions==1 && modifierMakes==3);
+    modifierEvent(&input,56,NSEventModifierFlagControl|NSEventModifierFlagOption);
+    modifierEvent(&input,59,NSEventModifierFlagOption);
+    assert(input.held[PF_LEFT] && modifierActions==1);
+    modifierEvent(&input,55,NSEventModifierFlagCommand);
+    modifierEvent(&input,54,0); modifierEvent(&input,57,NSEventModifierFlagCapsLock);
+    modifierEvent(&input,63,0);
+    assert(input.held[PF_LEFT] && modifierActions==1 && modifierMakes==3);
+    modifierEvent(&input,58,0); assert(!input.held[PF_LEFT] && modifierActions==2);
+
+    /* A different class held over focus loss cannot suppress a fresh press. */
+    modifierEvent(&input,60,NSEventModifierFlagShift);
+    pf_macos_focus(&input,false,NSEventModifierFlagShift);
+    pf_macos_focus(&input,true,NSEventModifierFlagShift);
+    modifierEvent(&input,58,NSEventModifierFlagShift|NSEventModifierFlagOption);
     assert(input.held[PF_LEFT] && !input.held[PF_RIGHT]);
-    pf_macos_modifiers(&input,61,NX_DEVICELALTKEYMASK|NX_DEVICERALTKEYMASK);
-    assert(input.held[PF_LEFT] && input.held[PF_RIGHT]);
-    pf_macos_modifiers(&input,58,NX_DEVICERALTKEYMASK);
-    assert(!input.held[PF_LEFT] && input.held[PF_RIGHT]);
-    pf_macos_modifiers(&input,62,NX_DEVICERALTKEYMASK|NX_DEVICERCTLKEYMASK);
-    pf_macos_modifiers(&input,61,NX_DEVICERCTLKEYMASK);
-    pf_macos_modifiers(&input,56,NX_DEVICERCTLKEYMASK|NX_DEVICELSHIFTKEYMASK);
-    assert(input.held[PF_LEFT] && input.held[PF_RIGHT]);
-    pf_macos_modifiers(&input,56,0); assert(!input.held[PF_LEFT] && !input.held[PF_RIGHT]);
-    pf_macos_modifiers(&input,59,NX_DEVICELCTLKEYMASK);
-    pf_macos_modifiers(&input,60,NX_DEVICELCTLKEYMASK|NX_DEVICERSHIFTKEYMASK);
-    pf_input_focus(&input,false); assert(!input.held[PF_LEFT] && !input.held[PF_RIGHT]);
-    pf_input_focus(&input,true); assert(!input.held[PF_LEFT] && !input.held[PF_RIGHT]);
-    pf_macos_modifiers(&input,56,NX_DEVICELSHIFTKEYMASK|NX_DEVICERSHIFTKEYMASK);
-    assert(input.held[PF_LEFT] && !input.held[PF_RIGHT]); /* old right Shift held across regain */
-    pf_macos_modifiers(&input,56,NX_DEVICERSHIFTKEYMASK);
+    modifierFullscreen=0;
+    pf_input_key(&input,36,true,false,false,true);
+    assert(modifierFullscreen==1);
+    pf_input_key(&input,36,false,false,false,false); pf_input_fullscreen_done(&input);
+    pf_input_key(&input,3,true,false,true,false); assert(modifierFullscreen==2);
+    pf_input_key(&input,12,true,false,true,false); assert(!input.down[12]); /* Command-Q */
+    pf_macos_focus(&input,false,NSEventModifierFlagShift|NSEventModifierFlagOption);
     assert(!input.held[PF_LEFT] && !input.held[PF_RIGHT]);
-    pf_macos_modifiers(&input,60,0);
-    pf_macos_modifiers(&input,60,NX_DEVICERSHIFTKEYMASK);
-    assert(input.held[PF_RIGHT]); /* fresh make accepted */
     mach_timebase_info_data_t scale; assert(mach_timebase_info(&scale)==KERN_SUCCESS);
     uint64_t epoch=mach_absolute_time(); assert(pf_clock_ns(epoch,epoch,scale.numer,scale.denom)==0);
     int64_t previous=0;
@@ -58,7 +128,7 @@ static void modifierTests(void) {
         int64_t now=pf_clock_ns(mach_absolute_time(),epoch,scale.numer,scale.denom);
         assert(now>=previous); previous=now;
     }
-    puts("PASS Apple device-side modifier masks, focus reset and actual monotonic clock");
+    puts("PASS public AppKit modifier events, sided holds, focus reconciliation, shortcuts and monotonic clock");
 }
 static BOOL acceptTestFiles(NSString *data,NSError **error) {
     (void)error;

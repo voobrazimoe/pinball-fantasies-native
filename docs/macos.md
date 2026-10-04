@@ -94,10 +94,13 @@ filtered. Cheat letters follow physical QWERTY make mapping, exactly as the
 shared DOS key boundary; no cheat menu is added. Unknown ordinary keys map to
 the shared generic resume/quit make.
 
-Modifier-only input uses `flagsChanged` and Apple's IOKit device-side masks,
-not aggregate flag toggles or Win32 pairing logic. Independent contributors
-are combined before issuing held actions. Only the event's changed side can
-start a new hold; unchanged siblings held across focus regain stay cleared.
+Modifier-only input uses `flagsChanged`, public AppKit modifier-class flags and
+the physical modifier keycode. Physical side bookkeeping survives focus loss
+while gameplay holds are cleared; an aggregate snapshot on focus transitions
+clears classes released while inactive. Independent contributors are combined
+before issuing held actions. Only a fresh press on the event's changed side can
+start a new hold; unchanged siblings and stale releases after focus regain stay
+cleared.
 Fresh modifier makes also reach the shared generic pause/quit key semantics. Automated tests exercise both-side
 press/release, mixed modifiers, repeat/shortcut suppression and ordered SNAIL
 makes. Physical keyboard layouts/devices still need acceptance.

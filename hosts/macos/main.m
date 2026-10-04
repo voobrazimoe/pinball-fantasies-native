@@ -92,9 +92,9 @@ static void inputEvent(void *context,PFHostEvent event,int32_t a,int32_t b) {
     if (!_engine || next==_focused) return;
     _focused=next;
     if (next) {
-        [self check:pf_engine_resume(_engine,[self now])]; pf_input_focus(&_input,true);
+        [self check:pf_engine_resume(_engine,[self now])]; pf_macos_focus(&_input,true,NSEvent.modifierFlags);
     } else {
-        [self check:pf_engine_suspend(_engine)]; pf_input_focus(&_input,false);
+        [self check:pf_engine_suspend(_engine)]; pf_macos_focus(&_input,false,NSEvent.modifierFlags);
         pf_audio_pause(&_audio); _mouseActive=NO;
     }
     [self updateCursor];

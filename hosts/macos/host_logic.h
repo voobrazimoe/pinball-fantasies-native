@@ -11,6 +11,8 @@ typedef enum { PF_EVENT_ACTION, PF_EVENT_KEY, PF_EVENT_RELEASE, PF_EVENT_FIRE,
 typedef void (*PFEmit)(void *, PFHostEvent, int32_t, int32_t);
 typedef struct {
     bool down[128], held[4], fire, focused, fullscreenPending;
+    /* Physical modifiers survive focus clearing; gameplay contributors do not. */
+    bool physicalModifiers[6];
     PFEmit emit;
     void *context;
 } PFInput;
