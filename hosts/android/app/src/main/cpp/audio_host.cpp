@@ -27,7 +27,7 @@ public:
         if (currentStream.load(std::memory_order_acquire)!=source) return true;
         errors.fetch_add(1, std::memory_order_relaxed);
         buffer.ready.store(false, std::memory_order_release);
-        buffer.refresh();
+        buffer.invalidate();
         restart.store(true, std::memory_order_release);
         return true;
     }
@@ -79,22 +79,23 @@ class AudioOutput final {
     }
     void run() {
         using namespace std::chrono;
-        uint64_t epoch=0;
+        uint64_t epoch=0, revision=0;
         unsigned attempts=0;
         auto retry=steady_clock::now(), report=retry+seconds(5), started=retry;
         while (!exiting.load()) {
+            const auto requested=buffer.requestRevision();
+            if (requested!=revision) { revision=requested; attempts=0; }
             const auto desired=buffer.current();
             const bool failed=state->restart.exchange(false);
             if (desired!=epoch || failed) {
                 close(); epoch=desired;
-                if (!failed) attempts=0;
                 if (failed) { restarts.fetch_add(1); retry=steady_clock::now()+milliseconds(250); }
                 else retry=steady_clock::now()+milliseconds(50);
                 PF_LOGI("A5_STREAM_TRANSITION epoch=%llu disconnect=%d attempts=%u",
                     static_cast<unsigned long long>(epoch), failed, attempts);
             }
             if ((epoch&1) && !stream && attempts<3 && steady_clock::now()>=retry) {
-                buffer.refresh(); epoch=buffer.current();
+                buffer.invalidate(); epoch=buffer.current();
                 buffer.ring.discardBefore(epoch);
                 if (epoch&1) {
                     ++attempts;

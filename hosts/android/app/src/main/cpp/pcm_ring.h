@@ -80,6 +80,7 @@ class PcmBuffer {
     // with PCM through A3; control/error invalidation uses the same atomic epoch.
     // No stream operation or wait occurs on the producer/publication path.
     std::atomic<uint64_t> state{0};
+    std::atomic<uint64_t> revision{0};
 public:
     PcmRing<> ring;
     std::atomic<bool> ready{true};
@@ -88,8 +89,13 @@ public:
         do {
             if (bool(old&1)==active) return;
         } while (!state.compare_exchange_weak(old, ((old&~uint64_t{1})+2) | uint64_t(active), std::memory_order_release));
+        revision.fetch_add(1, std::memory_order_release);
     }
-    void refresh() noexcept { state.fetch_add(2, std::memory_order_acq_rel); }
+    // External eligibility/route requests renew the recovery budget. Internal
+    // errors/startup only invalidate PCM: their ordering cannot renew retries.
+    void invalidate() noexcept { state.fetch_add(2, std::memory_order_acq_rel); }
+    void refresh() noexcept { invalidate(); revision.fetch_add(1, std::memory_order_release); }
+    uint64_t requestRevision() const noexcept { return revision.load(std::memory_order_acquire); }
     void reset() noexcept { setActive(false); refresh(); }
     uint64_t current() const noexcept { return state.load(std::memory_order_acquire); }
     static void sink(void* context, const uint8_t* pcm, uint32_t bytes) noexcept {

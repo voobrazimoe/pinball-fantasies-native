@@ -534,6 +534,8 @@ attempts (each retains Exclusive → Shared → conversion fallback). Failed ope
 back off one second; disconnect recovery backs off 250 ms. Repeated immediate
 stream disconnects share that budget; five seconds of stable playback renews it.
 After exhaustion, only a meaningful lifecycle/focus/route transition renews recovery.
+A separate bounded atomic request revision distinguishes those external transitions
+from internal PCM invalidations, so reordered error/epoch signals cannot renew retries.
 The accepted 4096-frame capacity, tail-drop overflow, 48 kHz stereo I16 callback,
 LowLatency, Exclusive preference and two-burst target remain unchanged.
 

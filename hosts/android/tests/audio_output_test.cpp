@@ -52,6 +52,11 @@ int main() {
     assert(output.buffer.ring.depth()==0);
     std::this_thread::sleep_for(std::chrono::milliseconds(1100));
     assert(output.errors==failures); // finite three-attempt budget
+    // Internal invalidation may be observed before a disconnect flag. It must
+    // never be mistaken for an external request renewing the failed-device budget.
+    output.buffer.invalidate();
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    assert(output.errors==failures);
     output.buffer.reset(); oboe::openFailures=0;
     assert(pfTestInfoLogs==0);
     assert(Java_io_github_voobrazimoe_pinballfantasies_ImportInstrumentation_nativeAudioSmoke(nullptr,nullptr));
