@@ -143,13 +143,17 @@ jobs:
           AVDMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/avdmanager"
           set -x
           wait_android_services() {
-            local deadline=$((SECONDS + 240)) settings_value activity_user
+            local deadline=$((SECONDS + 240)) settings_value activity_user package_path window_size
             until settings_value=$(timeout 10 adb shell settings get system screen_off_timeout 2>/dev/null | tr -d '\r') &&
                   [[ "$settings_value" =~ ^[0-9]+$ ]] &&
                   activity_user=$(timeout 10 adb shell cmd activity get-current-user 2>/dev/null | tr -d '\r') &&
-                  [[ "$activity_user" =~ ^[0-9]+$ ]]; do
+                  [[ "$activity_user" =~ ^[0-9]+$ ]] &&
+                  package_path=$(timeout 10 adb shell pm path android 2>/dev/null | tr -d '\r') &&
+                  [[ "$package_path" == package:* ]] &&
+                  window_size=$(timeout 10 adb shell wm size 2>/dev/null | tr -d '\r') &&
+                  [[ "$window_size" == *'Physical size:'* ]]; do
               if (( SECONDS >= deadline )); then
-                echo 'Android settings/activity services did not become responsive' >&2
+                echo 'Android settings/activity/package/window services did not become responsive' >&2
                 return 1
               fi
               sleep 2
@@ -172,10 +176,6 @@ jobs:
           # wait-for-device can return before the restarted root shell works.
           timeout 60 bash -c 'until [ "$(timeout 10 adb shell id -u 2>/dev/null | tr -d "\r")" = 0 ]; do sleep 2; done'
           wait_android_services
-          # First-run immersive education is a focus-owning system window.
-          # Acknowledge it in this disposable guest before restarting policy,
-          # so smoke can require real game-window focus after every resume.
-          timeout 10 adb shell settings put secure immersive_mode_confirmations confirmed
           timeout 20 adb shell stop
           timeout 10 adb shell setprop dalvik.vm.usejit false
           timeout 10 adb shell setprop dalvik.vm.extra-opts -Xint
@@ -184,6 +184,11 @@ jobs:
           timeout 240 bash -c 'until [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d "\r")" = 1 ]; do sleep 2; done'
           # boot_completed does not guarantee Binder services can handle commands.
           wait_android_services
+          # First-run immersive education owns focus. Write after the ART
+          # restart: stopping system_server immediately after settings put can
+          # race persistence. Require readback before assertions/install/smoke.
+          timeout 10 adb shell settings put secure immersive_mode_confirmations confirmed
+          timeout 60 bash -c 'until [ "$(timeout 10 adb shell settings get secure immersive_mode_confirmations 2>/dev/null | tr -d "\r")" = confirmed ]; do sleep 2; done'
           test "$(adb shell getconf PAGE_SIZE | tr -d '\r')" = 16384
           test "$(adb shell getprop dalvik.vm.extra-opts | tr -d '\r')" = '-Xint'
           test "$(adb shell getprop dalvik.vm.usejit | tr -d '\r')" = 'false'
