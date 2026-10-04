@@ -5,9 +5,15 @@
 The native macOS ARM64/x86_64 host is implemented and accepted by the owner.
 Original-backed replay/native journeys, clean packages and physical Mac gameplay
 checks are recorded in [macOS validation](macos-validation.md); see
-[macOS build and usage](macos.md). It lives on `macos-arm64-host`; PR #1 is ready
-for review and remains unmerged pending owner integration. Android remains
-unimplemented and is outside this PR.
+[macOS build and usage](macos.md). PR #1 was merged into `main` at `97c9777`;
+public desktop packages were published as `v0.1.2`.
+
+Android development is separate on `android-host`. A0 native engine builds and
+the 16 KB ABI runtime smoke passed hosted CI. A1 has an asset-free GameActivity
+and EGL/GLES synthetic renderer; JNI startup and orientation/lifecycle smoke
+passed hosted CI at `c72f018` on a 16 KB emulator with interpreted ART.
+A playable Android host and physical-device acceptance
+remain outstanding. See [Android development status and remaining milestones](android.md).
 
 ## Historical foundation report (2026-10-03)
 

@@ -18,10 +18,24 @@ This is an asset-free platform prototype, not a playable Android release.
   `AppIdSettingMap.getSetting`. The CI guest now restarts ART in `-Xint` mode
   before installation. Native rendering still executes normally; this smoke
   cannot certify Java performance or a normal compiled Android runtime.
+- Inspecting the built APK also exposed a missing GameActivity JNI initializer:
+  linking only `GameActivity_onCreate` did not pull the JNI implementation out
+  of the static archive. CMake now retains
+  `Java_com_google_androidgamesdk_GameActivity_initializeNativeCode` explicitly,
+  following the [GameActivity integration guidance](https://developer.android.com/games/agdk/game-activity/migrate-native-activity).
+  CI checks this symbol, `GameActivity_onCreate` and `android_main` in both
+  packaged host libraries before attempting to launch the app.
 - The host stops rendering while the Activity is paused. The runtime smoke
   requires new log evidence for portrait → landscape → portrait, the same
   process/native host across rotation and background/resume, a presented frame
   after resume, and a fresh EGL frame after process restart.
+- A1 passed [hosted CI at `c72f018`](https://github.com/voobrazimoe/pinball-fantasies-native/actions/runs/37199738092):
+  both-ABI APK/symbol/alignment checks, actual synthetic frame presentation,
+  both orientation transitions, same-host background/resume, and fresh-process
+  presentation on the 16 KB emulator with interpreted ART. A0, asset-free source
+  and macOS native-host workflows also passed at that commit. A1 is an empty
+  native-shell gate only; normal compiled-runtime and physical-device testing
+  remain outstanding.
 - A2–A7 are outstanding. There is no SAF import, packaged engine integration,
   real game framebuffer, touch/keyboard controls, Oboe audio, engine lifecycle
   or audio focus handling, original-backed Android parity, physical-device
@@ -85,6 +99,6 @@ sh ./tools/run_android_abi_smoke.sh x86_64 16384
 
 The second argument is the required device page size. Omit it for a normal 4 KB development device.
 
-## Next phases after A0
+## Remaining phases
 
-A1 creates the empty GameActivity + EGL/GLES host with synthetic pixels only. A2 adds SAF staging, app-private Data/State and real engine bootstrap. A3 adds cadence, framebuffer upload and touch/keyboard translation. A4 adds Oboe and the bounded host PCM ring. A5 adds lifecycle/audio-focus handling. A6 runs original-backed parity and physical-device acceptance. A7 adds signed APK/AAB packaging and release payload scanning.
+A2 adds SAF staging, app-private Data/State and real engine bootstrap. A3 adds cadence, framebuffer upload and touch/keyboard translation, including the temporary portrait scrolling override. A4 adds Oboe and the bounded host PCM ring. A5 adds engine lifecycle/audio-focus handling. A6 runs original-backed parity and physical-device acceptance. A7 adds signed APK/AAB packaging and release payload scanning.
