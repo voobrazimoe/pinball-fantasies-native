@@ -2,7 +2,29 @@ name: Android A0
 on:
   push:
     branches: [android-host]
+    paths:
+      - '.github/workflows/android-a0.yml'
+      - 'go.mod'
+      - 'go.sum'
+      - 'cmd/pfengine/**'
+      - 'internal/**'
+      - 'tools/build_android_engine.sh'
+      - 'tools/build_engine.sh'
+      - 'tools/check_android_elf.py'
+      - 'tools/test_check_android_elf.py'
+      - 'tools/run_android_abi_smoke.sh'
   pull_request:
+    paths:
+      - '.github/workflows/android-a0.yml'
+      - 'go.mod'
+      - 'go.sum'
+      - 'cmd/pfengine/**'
+      - 'internal/**'
+      - 'tools/build_android_engine.sh'
+      - 'tools/build_engine.sh'
+      - 'tools/check_android_elf.py'
+      - 'tools/test_check_android_elf.py'
+      - 'tools/run_android_abi_smoke.sh'
   workflow_dispatch:
 
 permissions:
