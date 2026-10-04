@@ -28,6 +28,10 @@ int main() {
     assert(ring.push(bytes,1,3)==1); ring.discardBefore(3); assert(ring.depth()==1);
     assert(ring.pull(out,1,3,true)==1 && out[0]==1 && ring.depth()==0);
     assert(ring.pull(out,1,3,true)==0 && out[0]==0 && out[1]==0);
+    assert(ring.push(bytes,1,5)==1);
+    assert(ring.pull(out,1,3,true)==0 && out[0]==0 && ring.depth()==1);
+    ring.discardBefore(4); assert(ring.depth()==1);
+    assert(ring.pull(out,1,5,true)==1 && out[0]==1);
 
     a4::PcmBuffer buffer;
     buffer.setActive(true);

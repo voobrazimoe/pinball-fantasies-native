@@ -46,6 +46,9 @@ public:
         size_t n=0, stale=0;
         while (r<w && n<frames) {
             const auto& f=data[r%Capacity];
+            // A rapid resume may publish a newer generation after this callback
+            // sampled state. Leave those fresh frames for the next callback.
+            if (f.epoch>epoch) break;
             if (active && f.epoch==epoch) { std::memcpy(dst+n*4, f.samples, 4); ++n; }
             else ++stale;
             ++r;
@@ -62,7 +65,7 @@ public:
     void discardBefore(uint64_t epoch) noexcept {
         auto r=read.load(std::memory_order_relaxed);
         const auto start=r, w=write.load(std::memory_order_acquire);
-        while (r<w && data[r%Capacity].epoch!=epoch) ++r;
+        while (r<w && data[r%Capacity].epoch<epoch) ++r;
         read.store(r, std::memory_order_release);
         invalidated.fetch_add(r-start, std::memory_order_relaxed);
     }
