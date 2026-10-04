@@ -27,13 +27,13 @@ Local build:
 
 ```sh
 export ANDROID_NDK_HOME=/path/to/android-ndk
-./tools/build_android_engine.sh all
+sh ./tools/build_android_engine.sh all
 ```
 
 Device/emulator smoke after `adb` sees the target:
 
 ```sh
-./tools/run_android_abi_smoke.sh x86_64 16384
+sh ./tools/run_android_abi_smoke.sh x86_64 16384
 ```
 
 The second argument is the required device page size. Omit it for a normal 4 KB development device.
