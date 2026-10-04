@@ -9,6 +9,9 @@ on:
       - 'tools/test_check_android_elf.py'
       - 'tools/run_android_host_smoke.sh'
       - 'tools/test_android_import.sh'
+      - 'tools/build_personal_android.py'
+      - 'tools/test_build_personal_android.py'
+      - 'tools/personal_assets.py'
       - 'tools/test_android_a3.sh'
       - 'tools/test_android_a4.sh'
       - 'tools/test_android_a5.sh'
@@ -25,6 +28,9 @@ on:
       - 'tools/test_check_android_elf.py'
       - 'tools/run_android_host_smoke.sh'
       - 'tools/test_android_import.sh'
+      - 'tools/build_personal_android.py'
+      - 'tools/test_build_personal_android.py'
+      - 'tools/personal_assets.py'
       - 'tools/test_android_a3.sh'
       - 'tools/test_android_a4.sh'
       - 'tools/test_android_a5.sh'
@@ -87,6 +93,8 @@ jobs:
           echo "${ANDROID_HOME}/emulator" >> "$GITHUB_PATH"
           mkdir -p "$ANDROID_AVD_HOME"
 
+      - name: Asset-free personal builder safety tests
+        run: python3 tools/test_build_personal_android.py
       - name: Asset-free import transaction tests
         run: sh tools/test_android_import.sh
       - name: Asset-free A5 focus policy and native route coordination
@@ -116,7 +124,7 @@ jobs:
         run: |
           APK='hosts/android/app/build/outputs/apk/debug/app-debug.apk'
           test -f "$APK"
-          if unzip -Z1 "$APK" | grep -Eqi '(^|/)(INTRO\.PRG|INTRO\.MOD|MOD2\.MOD|TABLE[1-4]\.(PRG|MOD|HI)|PINBALL\.CFG)$'; then
+          if unzip -Z1 "$APK" | grep -Eqi '(^|/)(INTRO\.PRG|INTRO\.MOD|MOD2\.MOD|TABLE[1-4]\.(PRG|MOD|HI)|PINBALL\.CFG)$|^assets/personal-data/'; then
             echo 'commercial DOS payload found in public Android APK' >&2
             exit 1
           fi

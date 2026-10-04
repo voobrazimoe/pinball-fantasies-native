@@ -63,6 +63,25 @@ final class DataImport {
             engine.bootstrap(data(), state);
         }
     }
+    // Validate existing Data with disposable State before touching live player state.
+    // Embedded and SAF sources share install(), including validation and rollback.
+    void bootstrap(Source embedded) throws IOException {
+        IOException invalid = null;
+        if (data().exists()) {
+            File validation = Files.createTempDirectory(root.toPath(), "State.validation-").toFile();
+            try { engine.validate(data(), validation); }
+            catch (IOException failure) { invalid = failure; }
+            finally { remove(validation); }
+            if (invalid == null) { bootstrap(); return; }
+        }
+        if (embedded != null) {
+            try { install(embedded); }
+            catch (IOException failure) {
+                if (invalid != null) failure.addSuppressed(invalid);
+                throw failure;
+            }
+        } else if (invalid != null) throw invalid;
+    }
     void install(Source source) throws IOException {
         // null represents picker cancellation and makes no filesystem changes.
         if (source == null) return;

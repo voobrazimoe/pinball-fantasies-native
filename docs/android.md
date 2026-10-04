@@ -75,6 +75,41 @@ python3 tools/test_check_android_elf.py
 The alignment checker needs no SDK. The transaction tests need only JDK 17.
 The smoke rotates and restarts the app; use a dedicated emulator/device.
 
+## Private personal APK (local only)
+
+With the Go/NDK/JDK/Gradle prerequisites above installed and `gradle` on PATH:
+
+```sh
+python3 tools/build_personal_android.py /path/to/originals
+```
+
+Output: `release/personal/android/pinball-fantasies-personal.apk`.
+This debug-signed **Pinball Fantasies (Personal)** APK contains commercial data
+supplied by the owner. Private/local use only: never upload or redistribute it,
+including CI artifacts, issues or GitHub Releases. There are no A7 release
+signing keys. Tap the APK to use ordinary Android package installation (allow
+installation from that source when Android prompts); adb and SAF are not needed
+for ordinary personal use. The application ID and debug signing identity remain
+the same; preserve existing app State when installing updates.
+
+The builder reuses `personal_assets.inventory()` before copying inputs, packages
+only its 11 required files and optional CFG under `assets/personal-data/`, and
+never includes TABLE*.HI. It checks Git ignores for all private destinations,
+checks copied bytes against the validated inventory, rebuilds both engine ABIs,
+and opts into a temporary asset directory and isolated Gradle output. Temporary
+inputs and merged asset/build outputs are removed on success or failure. Original
+hashes stay only in ignored `.build-personal/android-manifest.json`. The console
+reports the APK path/hash, filenames/sizes and source commit. A separate ordinary
+public debug build must pass the asset-free ZIP check before success is reported.
+Normal Gradle builds remain asset-free, even while the private payload exists.
+
+On first launch, embedded data uses the existing A2 staging, real-engine
+validation and transactional adoption into `noBackupFilesDir/Data`. Valid existing
+Data takes precedence; `filesDir/State` is retained. **Data / Import DOS folder**
+remains available for manual SAF replacement. Bundled gameplay/device checks can
+inform A6, but do not certify real SAF import; see the separate
+[acceptance record](android-a6-acceptance.md). Overall A6 remains NOT TESTED.
+
 ## A2 import and engine bootstrap
 
 Tap **Import DOS folder** to open Android's `ACTION_OPEN_DOCUMENT_TREE` picker.
@@ -90,7 +125,8 @@ copied, with canonical uppercase private filenames:
 Executables, `TABLE*.HI`, other files and directories are ignored. Cursors,
 provider input streams and private output streams use try-with-resources.
 No persistable URI permission is needed after copying. There is no external
-storage output and no commercial fallback in the APK or tests.
+storage output and no commercial fallback in public APKs or tests. A local personal APK can supply
+the embedded source described above.
 
 Exact paths (Android resolves the device/user-specific prefixes):
 
@@ -130,7 +166,9 @@ live State. Successful adoption creates one persistent native engine using
 serialize creation/destruction and prevent an old Activity's worker from creating
 another persistent instance after close. Activity destruction closes the native
 handle. A3 advances that same handle. Relaunch bootstraps adopted Data automatically;
-missing Data stays in the shell, and malformed/incomplete Data reports failure.
+public APKs without Data stay in the shell, and malformed/incomplete Data reports
+failure. Personal APKs validate existing Data using disposable State first and
+only fall back to their embedded source if existing Data is absent or invalid.
 An engine/bootstrap failure after commit leaves validated Data installed and
 reports the error; importing again does not require deleting it.
 

@@ -12,15 +12,15 @@ public final class DataImportTest {
         throw new AssertionError("Expected rejection");
     }
     static final class Engine implements DataImport.Engine {
-        boolean reject; int validations, boots, stops;
+        boolean reject, rejectExisting; int validations, boots, stops;
         File liveState;
         public void validate(File data, File state) throws IOException {
             validations++;
             check(!state.equals(liveState));
             check(state.getName().startsWith("State.validation-"));
-            check(data.getName().startsWith("Data.staging-"));
+            check(data.getName().startsWith("Data.staging-") || data.getName().equals("Data"));
             Files.write(new File(state, "validation-only").toPath(), new byte[]{1});
-            if (reject) throw new IOException("bounded shared-loader failure");
+            if (reject || (rejectExisting && data.getName().equals("Data"))) throw new IOException("bounded shared-loader failure");
         }
         public void stop() { stops++; }
         public void bootstrap(File data, File state) { boots++; check(state.equals(liveState)); }
@@ -107,6 +107,38 @@ public final class DataImportTest {
             File outside = new File(root, "outside"); original(outside);
             Files.createSymbolicLink(new File(storage, "Data.staging-link").toPath(), outside.toPath());
             importer.recover(); check(new File(outside, "sentinel").exists());
+            // Embedded bootstrap uses the same transaction; valid existing Data wins.
+            Source embedded = new Source();
+            int bootsBefore = engine.boots, stopsBefore = engine.stops;
+            importer.bootstrap(embedded);
+            preserved(importer.data(), state);
+            check(embedded.opened == 0 && engine.boots == bootsBefore + 1);
+            check(engine.stops == stopsBefore);
+            engine.rejectExisting = true;
+            Source failedEmbedded = new Source(); failedEmbedded.unreadable = true;
+            rejects(() -> importer.bootstrap(failedEmbedded));
+            preserved(importer.data(), state);
+            check(engine.stops == stopsBefore);
+            engine.reject = true;
+            rejects(() -> importer.bootstrap(new Source()));
+            preserved(importer.data(), state);
+            engine.reject = false;
+            importer.bootstrap(new Source());
+            check(importer.data().list().length == 12);
+            check(Files.readAllBytes(new File(state, "settings").toPath())[0] == 9);
+            engine.rejectExisting = false;
+            DataImport.remove(importer.data());
+            importer.bootstrap((DataImport.Source)null); // ordinary asset-free shell
+            check(!importer.data().exists());
+            engine.reject = true;
+            rejects(() -> importer.bootstrap(new Source()));
+            check(!importer.data().exists() && storage.list().length == 0);
+            engine.reject = false;
+            Source initial = new Source(); initial.names.remove("pinball.cfg");
+            importer.bootstrap(initial);
+            check(importer.data().list().length == 11 && initial.closed == 11);
+            check(Files.readAllBytes(new File(state, "settings").toPath())[0] == 9);
+            check(storage.list().length == 1);
             System.out.println("PASS: filtering, optional CFG, cancellation, copy/validation/adoption failures, adoption, recovery, cleanup");
         } finally { DataImport.remove(root); }
     }

@@ -12,7 +12,8 @@ Local human-comparison screenshots, if needed, belong outside the repository.
 
 ## Build and run
 
-Use the ordinary `:app:assembleDebug` APK from `android-host`. Debug signing is
+Use the ordinary asset-free `:app:assembleDebug` APK or the local personal APK
+from `android-host`. Debug signing is
 sufficient. Do not change SDK levels, engine behavior, ABIs, or runtime options.
 The existing build packages arm64-v8a and x86_64; diagnostics default to OFF.
 The CI guest's `-Xint` workaround is a device setting, not part of the APK.
@@ -26,6 +27,33 @@ sh tools/build_android_engine.sh all
 gradle -p hosts/android :app:assembleDebug
 shasum -a 256 hosts/android/app/build/outputs/apk/debug/app-debug.apk
 ```
+
+For convenient private gameplay/device testing, build locally:
+
+```sh
+python3 tools/build_personal_android.py /path/to/originals
+# Output: release/personal/android/pinball-fantasies-personal.apk
+```
+
+This debug-signed APK contains the owner's commercial originals. Private/local
+use only; never upload or redistribute it. Public builds remain asset-free; A7
+release signing is not started. It can be installed by tapping the APK with the
+ordinary Android installer and launches from bundled data without adb or SAF.
+Existing valid Data wins and State is preserved. The personal builder separately
+builds and checks an asset-free public APK.
+
+Record **personal bundled** versus **public SAF** as the input source for each
+run. A personal APK may support compiled ART, four-table gameplay, touch,
+orientation, Oboe/focus/routes, lifecycle, persistence and practical performance
+observations. These do **not** certify any real SAF picker/provider/transaction
+check below. Leave those NOT TESTED until explicitly exercised through **Data /
+Import DOS folder**, on either APK. Overall A6 stays NOT TESTED until every
+required acceptance area has real evidence.
+
+The evidence helper's `--apk` option deliberately rejects commercial payloads.
+For the personal APK, install by tapping it (or ordinary `adb install -r`), then
+run the helper **without `--apk`** and record its APK hash independently. Do not
+weaken the helper's public-APK gate to collect personal gameplay evidence.
 
 Connect/unlock a physical Android device and authorize adb. Set the actual
 serial from `adb devices`; the helper never chooses an arbitrary device.
@@ -110,7 +138,7 @@ of an audible route. This helper never assigns a manual PASS or overall A6 PASS.
 | --- | --- |
 | Date / owner tester | To fill |
 | Tooling commit / engine source commit | To fill |
-| Asset-free APK build run / local command | To fill |
+| APK type (personal bundled / public SAF), build run / local command | To fill |
 | APK absolute path / SHA256 | To fill |
 | Debug signing identity / installed package version | To fill |
 | Physical model / manufacturer / Android version | To fill |
@@ -127,8 +155,9 @@ PASS means only the narrowly described check, never overall acceptance.
 | Check | Status | Short notes / local evidence |
 | --- | --- | --- |
 | Debug APK built, arm64-v8a + x86_64, unchanged SDKs | NOT TESTED | |
-| Native ELF + ZIP 16 KB alignment, debug signature, no DOS payload | NOT TESTED | |
-| Ordinary adb install / package and version metadata | NOT TESTED | |
+| Native ELF + ZIP 16 KB alignment, debug signature | NOT TESTED | |
+| Separately built public APK has no DOS/personal payload | NOT TESTED | Personal APK itself contains owner inputs |
+| Ordinary Android package install / package and version metadata | NOT TESTED | |
 | Physical-device preflight / no forced interpreted ART | NOT TESTED | Owner attestation also required |
 | ABI / page size / native mappings | NOT TESTED | |
 | Process alive at end of collection | NOT TESTED | |
@@ -242,7 +271,8 @@ testing with legitimate originals demonstrates normal compiled ART, successful
 real SAF/bootstrap, four playable tables, working controls, both orientations
 without reset, built-in Oboe audio, safe pause/resume/rotation/process relaunch,
 native state persistence, cancel/invalid re-import preservation, and no
-commercial payload in APK/repository/report. Headset/Bluetooth/USB must each
+commercial payload in the separately built public APK, repository or report.
+A local personal APK contains commercial originals and must remain private. Headset/Bluetooth/USB must each
 be explicitly PASS or NOT TESTED according to available hardware; report any
 FAIL honestly. Record unresolved failures and missing evidence here.
 

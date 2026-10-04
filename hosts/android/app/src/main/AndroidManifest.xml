@@ -11,7 +11,7 @@
         android:appCategory="game"
         android:extractNativeLibs="false"
         android:fullBackupContent="false"
-        android:label="@string/app_name"
+        android:label="${appLabel}"
         android:resizeableActivity="true"
         android:theme="@style/Theme.PinballFantasies">
 
@@ -19,7 +19,7 @@
             android:name=".PinballActivity"
             android:configChanges="density|keyboard|keyboardHidden|orientation|screenLayout|screenSize|uiMode"
             android:exported="true"
-            android:label="@string/app_name"
+            android:label="${appLabel}"
             android:theme="@style/Theme.PinballFantasies">
 
             <meta-data

@@ -2,6 +2,20 @@ plugins {
     id 'com.android.application'
 }
 
+// Only the local personal builder supplies these paired absolute paths. All
+// merged assets/APKs are isolated so its finally cleanup removes private bytes.
+def personalAssets = providers.gradleProperty('personalAssetsDir').orNull
+def personalOutput = providers.gradleProperty('personalBuildDir').orNull
+if ((personalAssets == null) != (personalOutput == null)) {
+    throw new GradleException('Personal assets require an isolated personalBuildDir')
+}
+if (personalAssets != null) {
+    if (!new File(personalAssets).isAbsolute() || !new File(personalOutput).isAbsolute()) {
+        throw new GradleException('Personal paths must be absolute')
+    }
+    layout.buildDirectory.set(file(personalOutput))
+}
+
 android {
     namespace 'io.github.voobrazimoe.pinballfantasies'
     compileSdk 36
@@ -11,6 +25,7 @@ android {
         applicationId 'io.github.voobrazimoe.pinballfantasies'
         minSdk 27
         targetSdk 36
+        manifestPlaceholders = [appLabel: personalAssets != null ? 'Pinball Fantasies (Personal)' : '@string/app_name']
         testInstrumentationRunner 'io.github.voobrazimoe.pinballfantasies.ImportInstrumentation'
         versionCode 1
         versionName '0.0.0-a4'
@@ -35,6 +50,7 @@ android {
     // CMake links the generated library; explicitly package both ABI outputs.
     sourceSets {
         main.jniLibs.srcDirs = ['../../../bin/android']
+        if (personalAssets != null) main.assets.srcDirs = [personalAssets]
     }
 
     buildFeatures {

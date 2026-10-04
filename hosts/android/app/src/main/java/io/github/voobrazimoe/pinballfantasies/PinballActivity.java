@@ -208,7 +208,16 @@ public final class PinballActivity extends GameActivity {
         worker.execute(() -> {
             try {
                 importer.recover();
-                importer.bootstrap();
+                String[] bundled = getAssets().list("personal-data");
+                DataImport.Source embedded = bundled == null || bundled.length == 0 ? null : new DataImport.Source() {
+                    public Map<String, String> entries() {
+                        Map<String, String> entries = new LinkedHashMap<>();
+                        for (String name : bundled) entries.put(name, "personal-data/" + name);
+                        return entries;
+                    }
+                    public InputStream open(String id) throws IOException { return getAssets().open(id); }
+                };
+                importer.bootstrap(embedded);
                 status(importer.data().exists() ? "A2_DATA_READY" : "A2_SHELL_NO_DATA",
                         importer.data().exists() ? "Real engine ready" : "Select your original DOS folder to import");
             } catch (IOException | RuntimeException failure) {

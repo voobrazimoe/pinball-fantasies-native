@@ -53,4 +53,7 @@ bin/
 /hosts/android/.kotlin/
 /hosts/android/app/.cxx/
 /hosts/android/app/build/
+/hosts/android/build/
 /.android-avd/
+
+/hosts/android/app/.personal-assets/
