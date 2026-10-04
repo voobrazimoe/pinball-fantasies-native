@@ -1,0 +1,430 @@
+#include <EGL/egl.h>
+#include <GLES2/gl2.h>
+#include <android/log.h>
+#include <android/native_window.h>
+#include <game-activity/native_app_glue/android_native_app_glue.h>
+
+#include <array>
+#include <cmath>
+#include <cstdint>
+#include <vector>
+
+namespace {
+
+constexpr char kLogTag[] = "PinballFantasies";
+constexpr int kFrameWidth = 320;
+constexpr int kFrameHeight = 609;
+
+#define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, kLogTag, __VA_ARGS__))
+#define LOGE(...) ((void)__android_log_print(ANDROID_LOG_ERROR, kLogTag, __VA_ARGS__))
+
+GLuint compileShader(GLenum type, const char* source) {
+    const GLuint shader = glCreateShader(type);
+    if (shader == 0U) {
+        LOGE("A1_GL_ERROR glCreateShader failed");
+        return 0U;
+    }
+
+    glShaderSource(shader, 1, &source, nullptr);
+    glCompileShader(shader);
+
+    GLint compiled = GL_FALSE;
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled);
+    if (compiled == GL_TRUE) {
+        return shader;
+    }
+
+    std::array<char, 512> message{};
+    GLsizei written = 0;
+    glGetShaderInfoLog(shader, static_cast<GLsizei>(message.size()), &written, message.data());
+    LOGE("A1_GL_ERROR shader compile failed: %s", message.data());
+    glDeleteShader(shader);
+    return 0U;
+}
+
+GLuint createProgram() {
+    constexpr char kVertexShader[] =
+            "attribute vec2 aPosition;\n"
+            "attribute vec2 aTexCoord;\n"
+            "varying vec2 vTexCoord;\n"
+            "void main() {\n"
+            "  gl_Position = vec4(aPosition, 0.0, 1.0);\n"
+            "  vTexCoord = aTexCoord;\n"
+            "}\n";
+    constexpr char kFragmentShader[] =
+            "precision mediump float;\n"
+            "varying vec2 vTexCoord;\n"
+            "uniform sampler2D uTexture;\n"
+            "void main() {\n"
+            "  gl_FragColor = texture2D(uTexture, vTexCoord);\n"
+            "}\n";
+
+    const GLuint vertex = compileShader(GL_VERTEX_SHADER, kVertexShader);
+    if (vertex == 0U) {
+        return 0U;
+    }
+    const GLuint fragment = compileShader(GL_FRAGMENT_SHADER, kFragmentShader);
+    if (fragment == 0U) {
+        glDeleteShader(vertex);
+        return 0U;
+    }
+
+    const GLuint program = glCreateProgram();
+    if (program == 0U) {
+        glDeleteShader(fragment);
+        glDeleteShader(vertex);
+        LOGE("A1_GL_ERROR glCreateProgram failed");
+        return 0U;
+    }
+
+    glAttachShader(program, vertex);
+    glAttachShader(program, fragment);
+    glLinkProgram(program);
+    glDeleteShader(fragment);
+    glDeleteShader(vertex);
+
+    GLint linked = GL_FALSE;
+    glGetProgramiv(program, GL_LINK_STATUS, &linked);
+    if (linked == GL_TRUE) {
+        return program;
+    }
+
+    std::array<char, 512> message{};
+    GLsizei written = 0;
+    glGetProgramInfoLog(program, static_cast<GLsizei>(message.size()), &written, message.data());
+    LOGE("A1_GL_ERROR program link failed: %s", message.data());
+    glDeleteProgram(program);
+    return 0U;
+}
+
+std::vector<std::uint8_t> makeSyntheticFrame() {
+    std::vector<std::uint8_t> pixels(
+            static_cast<std::size_t>(kFrameWidth) * static_cast<std::size_t>(kFrameHeight) * 4U);
+
+    for (int y = 0; y < kFrameHeight; ++y) {
+        for (int x = 0; x < kFrameWidth; ++x) {
+            const bool checker = (((x / 16) + (y / 16)) & 1) != 0;
+            const bool border = x < 3 || x >= kFrameWidth - 3 || y < 3 || y >= kFrameHeight - 3;
+            const bool center = x >= (kFrameWidth / 2) - 1 && x <= (kFrameWidth / 2) + 1;
+            const bool marker = (y % 64) < 2;
+
+            std::uint8_t red = checker ? 22U : 38U;
+            std::uint8_t green = checker ? 54U : 76U;
+            std::uint8_t blue = checker ? 78U : 104U;
+            if (marker) {
+                red = 70U;
+                green = 132U;
+                blue = 164U;
+            }
+            if (center) {
+                red = 214U;
+                green = 180U;
+                blue = 72U;
+            }
+            if (border) {
+                red = 238U;
+                green = 238U;
+                blue = 238U;
+            }
+
+            const std::size_t offset =
+                    (static_cast<std::size_t>(y) * static_cast<std::size_t>(kFrameWidth) +
+                     static_cast<std::size_t>(x)) *
+                    4U;
+            pixels[offset + 0U] = red;
+            pixels[offset + 1U] = green;
+            pixels[offset + 2U] = blue;
+            pixels[offset + 3U] = 255U;
+        }
+    }
+    return pixels;
+}
+
+class Renderer {
+public:
+    ~Renderer() {
+        detach();
+    }
+
+    Renderer(const Renderer&) = delete;
+    Renderer& operator=(const Renderer&) = delete;
+    Renderer() = default;
+
+    bool attach(ANativeWindow* window) {
+        detach();
+        if (window == nullptr) {
+            return false;
+        }
+
+        display_ = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+        if (display_ == EGL_NO_DISPLAY || eglInitialize(display_, nullptr, nullptr) != EGL_TRUE) {
+            LOGE("A1_EGL_ERROR failed to initialize display: 0x%x", eglGetError());
+            detach();
+            return false;
+        }
+
+        constexpr EGLint kConfigAttributes[] = {
+                EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
+                EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
+                EGL_RED_SIZE, 8,
+                EGL_GREEN_SIZE, 8,
+                EGL_BLUE_SIZE, 8,
+                EGL_ALPHA_SIZE, 8,
+                EGL_NONE};
+        EGLConfig config = nullptr;
+        EGLint configCount = 0;
+        if (eglChooseConfig(display_, kConfigAttributes, &config, 1, &configCount) != EGL_TRUE ||
+            configCount != 1) {
+            LOGE("A1_EGL_ERROR no RGBA8 GLES2 window config: 0x%x", eglGetError());
+            detach();
+            return false;
+        }
+
+        EGLint nativeFormat = 0;
+        if (eglGetConfigAttrib(display_, config, EGL_NATIVE_VISUAL_ID, &nativeFormat) != EGL_TRUE) {
+            LOGE("A1_EGL_ERROR failed to query native visual: 0x%x", eglGetError());
+            detach();
+            return false;
+        }
+        if (ANativeWindow_setBuffersGeometry(window, 0, 0, nativeFormat) != 0) {
+            LOGE("A1_EGL_ERROR failed to set native window format");
+            detach();
+            return false;
+        }
+
+        constexpr EGLint kContextAttributes[] = {EGL_CONTEXT_CLIENT_VERSION, 2, EGL_NONE};
+        context_ = eglCreateContext(display_, config, EGL_NO_CONTEXT, kContextAttributes);
+        if (context_ == EGL_NO_CONTEXT) {
+            LOGE("A1_EGL_ERROR failed to create GLES2 context: 0x%x", eglGetError());
+            detach();
+            return false;
+        }
+
+        surface_ = eglCreateWindowSurface(display_, config, window, nullptr);
+        if (surface_ == EGL_NO_SURFACE) {
+            LOGE("A1_EGL_ERROR failed to create window surface: 0x%x", eglGetError());
+            detach();
+            return false;
+        }
+        if (eglMakeCurrent(display_, surface_, surface_, context_) != EGL_TRUE) {
+            LOGE("A1_EGL_ERROR failed to make context current: 0x%x", eglGetError());
+            detach();
+            return false;
+        }
+        (void)eglSwapInterval(display_, 1);
+
+        program_ = createProgram();
+        if (program_ == 0U) {
+            detach();
+            return false;
+        }
+        positionLocation_ = glGetAttribLocation(program_, "aPosition");
+        texCoordLocation_ = glGetAttribLocation(program_, "aTexCoord");
+        textureLocation_ = glGetUniformLocation(program_, "uTexture");
+        if (positionLocation_ < 0 || texCoordLocation_ < 0 || textureLocation_ < 0) {
+            LOGE("A1_GL_ERROR required shader locations missing");
+            detach();
+            return false;
+        }
+
+        glGenTextures(1, &texture_);
+        if (texture_ == 0U) {
+            LOGE("A1_GL_ERROR failed to create texture");
+            detach();
+            return false;
+        }
+        const std::vector<std::uint8_t> pixels = makeSyntheticFrame();
+        glBindTexture(GL_TEXTURE_2D, texture_);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, kFrameWidth, kFrameHeight, 0, GL_RGBA,
+                     GL_UNSIGNED_BYTE, pixels.data());
+
+        glDisable(GL_BLEND);
+        glDisable(GL_DEPTH_TEST);
+        glDisable(GL_DITHER);
+        firstFrame_ = true;
+        lastSurfaceWidth_ = -1;
+        lastSurfaceHeight_ = -1;
+        LOGI("A1_SURFACE_READY source=%dx%d", kFrameWidth, kFrameHeight);
+        return true;
+    }
+
+    void detach() {
+        if (display_ != EGL_NO_DISPLAY && context_ != EGL_NO_CONTEXT && surface_ != EGL_NO_SURFACE) {
+            (void)eglMakeCurrent(display_, surface_, surface_, context_);
+            if (texture_ != 0U) {
+                glDeleteTextures(1, &texture_);
+            }
+            if (program_ != 0U) {
+                glDeleteProgram(program_);
+            }
+        }
+        texture_ = 0U;
+        program_ = 0U;
+        positionLocation_ = -1;
+        texCoordLocation_ = -1;
+        textureLocation_ = -1;
+
+        if (display_ != EGL_NO_DISPLAY) {
+            (void)eglMakeCurrent(display_, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+            if (surface_ != EGL_NO_SURFACE) {
+                (void)eglDestroySurface(display_, surface_);
+            }
+            if (context_ != EGL_NO_CONTEXT) {
+                (void)eglDestroyContext(display_, context_);
+            }
+            (void)eglTerminate(display_);
+        }
+        surface_ = EGL_NO_SURFACE;
+        context_ = EGL_NO_CONTEXT;
+        display_ = EGL_NO_DISPLAY;
+        lastSurfaceWidth_ = -1;
+        lastSurfaceHeight_ = -1;
+    }
+
+    [[nodiscard]] bool ready() const {
+        return display_ != EGL_NO_DISPLAY && surface_ != EGL_NO_SURFACE &&
+               context_ != EGL_NO_CONTEXT && program_ != 0U && texture_ != 0U;
+    }
+
+    bool draw() {
+        if (!ready()) {
+            return false;
+        }
+
+        EGLint surfaceWidth = 0;
+        EGLint surfaceHeight = 0;
+        if (eglQuerySurface(display_, surface_, EGL_WIDTH, &surfaceWidth) != EGL_TRUE ||
+            eglQuerySurface(display_, surface_, EGL_HEIGHT, &surfaceHeight) != EGL_TRUE ||
+            surfaceWidth <= 0 || surfaceHeight <= 0) {
+            return false;
+        }
+
+        int viewportX = 0;
+        int viewportY = 0;
+        int viewportWidth = surfaceWidth;
+        int viewportHeight = surfaceHeight;
+        const double sourceAspect = static_cast<double>(kFrameWidth) / static_cast<double>(kFrameHeight);
+        const double surfaceAspect = static_cast<double>(surfaceWidth) / static_cast<double>(surfaceHeight);
+        if (surfaceAspect > sourceAspect) {
+            viewportWidth = static_cast<int>(std::lround(static_cast<double>(surfaceHeight) * sourceAspect));
+            viewportX = (surfaceWidth - viewportWidth) / 2;
+        } else {
+            viewportHeight = static_cast<int>(std::lround(static_cast<double>(surfaceWidth) / sourceAspect));
+            viewportY = (surfaceHeight - viewportHeight) / 2;
+        }
+
+        if (surfaceWidth != lastSurfaceWidth_ || surfaceHeight != lastSurfaceHeight_) {
+            LOGI("A1_VIEWPORT surface=%dx%d orientation=%s viewport=%d,%d,%dx%d source=%dx%d",
+                 surfaceWidth, surfaceHeight,
+                 surfaceHeight >= surfaceWidth ? "portrait" : "landscape",
+                 viewportX, viewportY, viewportWidth, viewportHeight,
+                 kFrameWidth, kFrameHeight);
+            lastSurfaceWidth_ = surfaceWidth;
+            lastSurfaceHeight_ = surfaceHeight;
+        }
+
+        glViewport(0, 0, surfaceWidth, surfaceHeight);
+        glClearColor(0.0F, 0.0F, 0.0F, 1.0F);
+        glClear(GL_COLOR_BUFFER_BIT);
+        glViewport(viewportX, viewportY, viewportWidth, viewportHeight);
+
+        constexpr GLfloat kVertices[] = {
+                -1.0F, -1.0F, 0.0F, 1.0F,
+                 1.0F, -1.0F, 1.0F, 1.0F,
+                -1.0F,  1.0F, 0.0F, 0.0F,
+                 1.0F,  1.0F, 1.0F, 0.0F};
+
+        glUseProgram(program_);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texture_);
+        glUniform1i(textureLocation_, 0);
+        glBindBuffer(GL_ARRAY_BUFFER, 0U);
+        glEnableVertexAttribArray(static_cast<GLuint>(positionLocation_));
+        glEnableVertexAttribArray(static_cast<GLuint>(texCoordLocation_));
+        glVertexAttribPointer(static_cast<GLuint>(positionLocation_), 2, GL_FLOAT, GL_FALSE,
+                              4 * static_cast<GLsizei>(sizeof(GLfloat)), kVertices);
+        glVertexAttribPointer(static_cast<GLuint>(texCoordLocation_), 2, GL_FLOAT, GL_FALSE,
+                              4 * static_cast<GLsizei>(sizeof(GLfloat)), kVertices + 2);
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+        glDisableVertexAttribArray(static_cast<GLuint>(positionLocation_));
+        glDisableVertexAttribArray(static_cast<GLuint>(texCoordLocation_));
+
+        if (eglSwapBuffers(display_, surface_) != EGL_TRUE) {
+            LOGE("A1_EGL_ERROR eglSwapBuffers failed: 0x%x", eglGetError());
+            return false;
+        }
+        if (firstFrame_) {
+            firstFrame_ = false;
+            LOGI("A1_FRAME_PRESENTED surface=%dx%d viewport=%d,%d,%dx%d",
+                 surfaceWidth, surfaceHeight, viewportX, viewportY, viewportWidth, viewportHeight);
+        }
+        return true;
+    }
+
+private:
+    EGLDisplay display_ = EGL_NO_DISPLAY;
+    EGLSurface surface_ = EGL_NO_SURFACE;
+    EGLContext context_ = EGL_NO_CONTEXT;
+    GLuint program_ = 0U;
+    GLuint texture_ = 0U;
+    GLint positionLocation_ = -1;
+    GLint texCoordLocation_ = -1;
+    GLint textureLocation_ = -1;
+    int lastSurfaceWidth_ = -1;
+    int lastSurfaceHeight_ = -1;
+    bool firstFrame_ = true;
+};
+
+void handleAppCommand(android_app* app, int32_t command) {
+    auto* renderer = static_cast<Renderer*>(app->userData);
+    if (renderer == nullptr) {
+        return;
+    }
+
+    switch (command) {
+        case APP_CMD_INIT_WINDOW:
+            if (app->window != nullptr) {
+                (void)renderer->attach(app->window);
+            }
+            break;
+        case APP_CMD_TERM_WINDOW:
+            renderer->detach();
+            break;
+        default:
+            break;
+    }
+}
+
+}  // namespace
+
+extern "C" void android_main(struct android_app* app) {
+    Renderer renderer;
+    app->userData = &renderer;
+    app->onAppCmd = handleAppCommand;
+    LOGI("A1_HOST_STARTED");
+
+    while (app->destroyRequested == 0) {
+        int events = 0;
+        android_poll_source* source = nullptr;
+        const int timeoutMillis = renderer.ready() ? 16 : -1;
+        const int result = ALooper_pollOnce(
+                timeoutMillis, nullptr, &events, reinterpret_cast<void**>(&source));
+        if (result >= 0 && source != nullptr) {
+            source->process(app, source);
+        }
+        if (app->destroyRequested != 0) {
+            break;
+        }
+        if (renderer.ready()) {
+            (void)renderer.draw();
+        }
+    }
+
+    renderer.detach();
+    LOGI("A1_HOST_STOPPED");
+}
