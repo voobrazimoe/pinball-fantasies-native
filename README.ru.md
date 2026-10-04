@@ -8,9 +8,15 @@
 
 ## Быстрый старт
 
-Опубликованный [релиз `v0.1.1`](https://github.com/voobrazimoe/pinball-fantasies-native/releases/tag/v0.1.1) содержит `pinballfantasies.exe` для Windows, `PinballFantasies-x86_64.AppImage` для Linux и контрольные суммы. Сборок для macOS в нём нет.
+Скачайте опубликованный [prerelease v0.1.2](https://github.com/voobrazimoe/pinball-fantasies-native/releases/tag/v0.1.2) для своей платформы:
 
-Для macOS 13 и новее доступны отдельные нативные приложения для Apple Silicon ARM64 и Intel x86_64; см. [сборку и использование macOS-версии](docs/macos.md). Запустите приложение и выберите каталог оригинальной DOS-игры через нативный диалог импорта. Файлы проверяются и копируются в Application Support. Публичные Mac-сборки имеют ad-hoc подпись и не прошли нотариализацию; скачать их из Releases можно будет только после публикации следующего релиза с Mac-файлами.
+- [Windows x86_64: pinballfantasies.exe](https://github.com/voobrazimoe/pinball-fantasies-native/releases/download/v0.1.2/pinballfantasies.exe)
+- [Linux x86_64: PinballFantasies-x86_64.AppImage](https://github.com/voobrazimoe/pinball-fantasies-native/releases/download/v0.1.2/PinballFantasies-x86_64.AppImage)
+- [macOS Apple Silicon ARM64: PinballFantasies-arm64.zip](https://github.com/voobrazimoe/pinball-fantasies-native/releases/download/v0.1.2/PinballFantasies-arm64.zip)
+- [macOS Intel x86_64: PinballFantasies-x86_64.zip](https://github.com/voobrazimoe/pinball-fantasies-native/releases/download/v0.1.2/PinballFantasies-x86_64.zip)
+- [Контрольные суммы SHA256](https://github.com/voobrazimoe/pinball-fantasies-native/releases/download/v0.1.2/SHA256SUMS.txt)
+
+Для macOS 13 и новее скачайте ZIP для своего Mac, распакуйте его и запустите приложение. Выберите каталог оригинальной DOS-игры через нативный диалог импорта; файлы проверяются и копируются в Application Support. Публичные Mac-сборки имеют ad-hoc подпись и не прошли нотариализацию. Подробнее — в [инструкции по сборке и использованию macOS-версии](docs/macos.md).
 
 На Windows/Linux оригинальные DOS-данные можно положить рядом с исполняемым файлом либо указать каталог явно:
 

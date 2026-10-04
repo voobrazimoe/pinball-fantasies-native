@@ -8,9 +8,15 @@ First public beta of a native, source-guided reimplementation of the DOS version
 
 ## Quick start
 
-The published `v0.1.1` [release](https://github.com/voobrazimoe/pinball-fantasies-native/releases/tag/v0.1.1) contains `pinballfantasies.exe` for Windows, `PinballFantasies-x86_64.AppImage` for Linux and checksums. It does not contain macOS assets.
+Download the published [v0.1.2 prerelease](https://github.com/voobrazimoe/pinball-fantasies-native/releases/tag/v0.1.2) for your platform:
 
-For macOS 13 or later, use the separate native Apple Silicon ARM64 or Intel x86_64 app described in [macOS build and usage](docs/macos.md). Launch the app and select your original DOS game folder in the native import flow. Files are validated and copied into Application Support. Public Mac bundles are ad-hoc signed and not notarized; Mac release downloads will be available only after a later release publishes them.
+- [Windows x86_64: pinballfantasies.exe](https://github.com/voobrazimoe/pinball-fantasies-native/releases/download/v0.1.2/pinballfantasies.exe)
+- [Linux x86_64: PinballFantasies-x86_64.AppImage](https://github.com/voobrazimoe/pinball-fantasies-native/releases/download/v0.1.2/PinballFantasies-x86_64.AppImage)
+- [macOS Apple Silicon ARM64: PinballFantasies-arm64.zip](https://github.com/voobrazimoe/pinball-fantasies-native/releases/download/v0.1.2/PinballFantasies-arm64.zip)
+- [macOS Intel x86_64: PinballFantasies-x86_64.zip](https://github.com/voobrazimoe/pinball-fantasies-native/releases/download/v0.1.2/PinballFantasies-x86_64.zip)
+- [SHA256 checksums](https://github.com/voobrazimoe/pinball-fantasies-native/releases/download/v0.1.2/SHA256SUMS.txt)
+
+For macOS 13 or later, download the ZIP for your Mac, extract it and launch the app. Select your original DOS game folder in the native import flow; files are validated and copied into Application Support. Public Mac bundles are ad-hoc signed and not notarized. See [macOS build and usage](docs/macos.md) for details.
 
 On Windows/Linux, keep the original DOS data beside the executable, or point the port to it explicitly:
 
