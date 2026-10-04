@@ -85,6 +85,12 @@ jobs:
           OBJDUMP="${ANDROID_HOME}/ndk/${ANDROID_NDK_VERSION}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-objdump"
           while IFS= read -r library; do
             python3 tools/check_android_elf.py "$library" --objdump "$OBJDUMP"
+            if [[ "$library" == */libpinball_android.so ]]; then
+              "$OBJDUMP" -T "$library" > "${RUNNER_TEMP}/a1-symbols.txt"
+              for symbol in android_main GameActivity_onCreate Java_com_google_androidgamesdk_GameActivity_initializeNativeCode; do
+                grep -E "[[:space:]]\\.text[[:space:]].*[[:space:]]${symbol}$" "${RUNNER_TEMP}/a1-symbols.txt"
+              done
+            fi
           done < <(find "${RUNNER_TEMP}/a1-apk/lib" -type f -name '*.so' -print | sort)
 
       - name: Start 16 KB Android emulator

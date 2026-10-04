@@ -9,6 +9,7 @@ target_compile_features(pinball_android PRIVATE cxx_std_17)
 target_compile_options(pinball_android PRIVATE -Wall -Wextra -Werror)
 target_link_options(pinball_android PRIVATE
     "LINKER:-u,GameActivity_onCreate"
+    "LINKER:-u,Java_com_google_androidgamesdk_GameActivity_initializeNativeCode"
     "LINKER:-z,max-page-size=16384"
     "LINKER:-z,common-page-size=16384")
 
