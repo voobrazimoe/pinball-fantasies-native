@@ -60,6 +60,7 @@ jobs:
           mkdir -p "$ANDROID_AVD_HOME"
 
       - name: Build A1 debug APK
+        id: apk-build
         run: gradle -p hosts/android :app:assembleDebug --stacktrace
 
       - name: Verify public APK and native alignment
@@ -81,6 +82,11 @@ jobs:
           done < <(find "${RUNNER_TEMP}/a1-apk/lib" -type f -name '*.so' -print | sort)
 
       - name: Start 16 KB Android emulator
+        # The API 35 ps16k image crashes in precompiled services.odex
+        # AppIdSettingMap.getSetting during package installation/launch. Run
+        # Java in the ART interpreter for this image; native EGL/JNI code and
+        # the 16 KB page-size checks still execute normally. This is not a
+        # performance/physical-device acceptance test.
         shell: bash
         run: |
           AVDMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/avdmanager"
@@ -89,10 +95,12 @@ jobs:
           if [ -e /dev/kvm ]; then sudo chown "$USER" /dev/kvm; fi
           nohup "${ANDROID_HOME}/emulator/emulator" \
             -avd pf-a1 -no-window -no-audio -no-snapshot -no-boot-anim \
+            -prop dalvik.vm.extra-opts=-Xint \
             -no-metrics -gpu swiftshader_indirect >"${RUNNER_TEMP}/a1-emulator.log" 2>&1 &
           timeout 180 adb wait-for-device
           timeout 240 bash -c 'until [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d "\r")" = 1 ]; do sleep 2; done'
           test "$(adb shell getconf PAGE_SIZE | tr -d '\r')" = 16384
+          test "$(adb shell getprop dalvik.vm.extra-opts | tr -d '\r')" = '-Xint'
 
       - name: Install and exercise A1 surface rotation
         shell: bash
@@ -123,6 +131,7 @@ jobs:
           adb logcat -d | grep -E 'A1_(HOST_STARTED|SURFACE_READY|VIEWPORT|FRAME_PRESENTED)'
 
       - name: Upload A1 APK
+        if: ${{ !cancelled() && steps.apk-build.outcome == 'success' }}
         uses: actions/upload-artifact@v4
         with:
           name: pinball-fantasies-android-a1-debug
