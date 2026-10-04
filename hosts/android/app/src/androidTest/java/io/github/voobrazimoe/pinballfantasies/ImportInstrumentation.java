@@ -100,6 +100,8 @@ public final class ImportInstrumentation extends Instrumentation {
             }
             menu.snapshot(SemanticUi.INITIALS,1,0); measure(root,shape[0],shape[1]);
             check(findButton(menu.sheet,"A")!=null);
+            menu.menu.performClick(); measure(root,shape[0],shape[1]); check(!hasScroll(menu.sheet));
+            check(menu.dismiss()); measure(root,shape[0],shape[1]);
             menu.snapshot(SemanticUi.ENTRY_WAIT,1,0); measure(root,shape[0],shape[1]);
             check(menu.sheet.getVisibility()==android.view.View.GONE && !c.gameplay);
         }

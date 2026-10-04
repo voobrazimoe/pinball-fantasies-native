@@ -63,7 +63,7 @@ final class ControlMenu extends FrameLayout {
     }
     private void rebuild() {
         sheet.removeAllViews();
-        selector=null; scrollable=advanced || state.mode==SemanticUi.INITIALS;
+        selector=null; scrollable=advanced || (!opened && state.mode==SemanticUi.INITIALS);
         content=new LinearLayout(getContext()); content.setOrientation(LinearLayout.VERTICAL);
         content.setPadding(dp(8),dp(8),dp(8),dp(8));
         if(scrollable) { ScrollView scroll=new ScrollView(getContext()); scroll.addView(content); sheet.addView(scroll); }
