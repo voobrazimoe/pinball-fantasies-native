@@ -36,32 +36,105 @@ This is an asset-free platform prototype, not a playable Android release.
   and macOS native-host workflows also passed at that commit. A1 is an empty
   native-shell gate only; normal compiled-runtime and physical-device testing
   remain outstanding.
-- A2–A7 are outstanding. There is no SAF import, packaged engine integration,
-  real game framebuffer, touch/keyboard controls, Oboe audio, engine lifecycle
-  or audio focus handling, original-backed Android parity, physical-device
-  acceptance, or signed release APK/AAB yet.
+- A2 implementation adds SAF import, private Data/State, packaged ABI 1 validation
+  and persistent engine creation. Hosted acceptance is pending; no original-backed
+  Android acceptance is claimed. A3–A7 remain outstanding.
 
-Run the shell build and smoke with an installed SDK/NDK/JDK, Gradle 9.6.0 and
-an already booted emulator:
+Build the engine first with an installed Go 1.27.1, SDK/NDK/JDK and Gradle 9.6.0:
 
 ```sh
-gradle -p hosts/android :app:assembleDebug
+export ANDROID_NDK_HOME=/path/to/android-ndk
+# On macOS also set PF_ANDROID_NDK_HOST_TAG=darwin-x86_64.
+sh tools/build_android_engine.sh all
+sh tools/test_android_import.sh
+gradle -p hosts/android :app:assembleDebug :app:assembleDebugAndroidTest
 sh tools/run_android_host_smoke.sh
 python3 tools/test_check_android_elf.py
 ```
 
-The last command tests the alignment checker without an Android SDK. The smoke
-changes emulator orientation settings and restarts the test app; use a dedicated
-test device. CI preserves a successfully built debug APK even if runtime checks
-fail. It contains synthetic pixels only.
+The alignment checker needs no SDK. The transaction tests need only JDK 17.
+The smoke rotates and restarts the app; use a dedicated emulator/device.
 
-The next implementation milestone is A2: package the unchanged ABI 1 engine,
-copy only the 11 required PRG/MOD files plus optional CFG through SAF to a private
-staging directory, validate via the shared loader with disposable state, then
-adopt the validated directory without damaging the previous installation.
-Keep commercial inputs under `noBackupFilesDir` and player state under
-`filesDir`; never pass a `content://` URI to Go. Import rejection/cancellation
-must leave the existing Data and State untouched.
+## A2 import and engine bootstrap
+
+Tap **Import DOS folder** to open Android's `ACTION_OPEN_DOCUMENT_TREE` picker.
+Select the folder containing the original DOS runtime files. Only direct children
+are enumerated; subdirectories are not traversed. Provider names are matched
+case-insensitively and ambiguous duplicates are rejected. Only these files are
+copied, with canonical uppercase private filenames:
+
+- Required: `INTRO.PRG`, `INTRO.MOD`, `MOD2.MOD`, and `TABLE1.PRG`/`TABLE1.MOD`
+  through `TABLE4.PRG`/`TABLE4.MOD` (11 files).
+- Optional: `PINBALL.CFG`; it is user state and is not pinned to a pristine hash.
+
+Executables, `TABLE*.HI`, other files and directories are ignored. Cursors,
+provider input streams and private output streams use try-with-resources.
+No persistable URI permission is needed after copying. There is no external
+storage output and no commercial fallback in the APK or tests.
+
+Exact paths (Android resolves the device/user-specific prefixes):
+
+| Purpose | Path |
+| --- | --- |
+| Adopted commercial inputs | `getNoBackupFilesDir()/Data/` |
+| Persistent native player state | `getFilesDir()/State/` |
+| Fresh candidate input | `getNoBackupFilesDir()/Data.staging-<random>/` |
+| Disposable validation state | `getNoBackupFilesDir()/State.validation-<random>/` |
+| Recoverable previous inputs | `getNoBackupFilesDir()/Data.previous/` |
+
+The Java worker copies and syncs selected files into a fresh staging directory.
+JNI sends absolute normal filesystem paths as standard UTF-8 byte arrays, with a
+native guard against URIs, relative paths and embedded NULs. C++ links the existing
+`cmd/pfengine` shared library, checks `pf_engine_abi_version() == PF_ABI_VERSION == 1`,
+and calls `pf_engine_create(candidate, disposableState, CLOCK_MONOTONIC ns, error,
+1024)`. A zero handle rejects the candidate. The bounded shared-loader error is
+logged and shown in a Toast. A successful validation handle is destroyed before
+validation State is deleted. There is no Android PRG/MOD parser.
+
+After validation, the worker closes the old persistent engine, renames `Data`
+to `Data.previous` if present, then atomically renames the staging directory to
+`Data`, all on the same private filesystem. The second rename is the commit.
+If it fails, the previous directory is renamed back and its engine is bootstrapped.
+Failure of the first rename leaves Data untouched. No deletion of adopted Data
+occurs before commit. If rollback itself is prevented by a filesystem error, the
+old directory remains at `Data.previous` for relaunch recovery. Backup deletion is
+best-effort after commit. On relaunch, an absent Data is restored from the backup;
+if both exist the committed Data wins. Stale staging/validation directories are
+removed without following symlinks. This supports process interruption recovery;
+power-loss durability of directory metadata remains device-dependent.
+
+Picker cancellation performs no transaction. Enumeration, copy or validation
+failure preserves adopted Data and persistent State; validation never receives
+live State. Successful adoption creates one persistent native engine using
+`Data`, `filesDir/State`, and monotonic time. Native session tokens and a mutex
+serialize creation/destruction and prevent an old Activity's worker from creating
+another persistent instance after close. Activity destruction closes the native
+handle. A2 does not advance it. Relaunch bootstraps adopted Data automatically;
+missing Data stays in the shell, and malformed/incomplete Data reports failure.
+An engine/bootstrap failure after commit leaves validated Data installed and
+reports the error; importing again does not require deleting it.
+
+Log events distinguish `A2_SHELL_NO_DATA`, `A2_IMPORT_REQUESTED`,
+`A2_IMPORT_CANCELLED`, `A2_IMPORT_REJECTED`, `A2_CANDIDATE_VALIDATED`,
+`A2_DATA_ADOPTED`, `A2_ENGINE_BOOTSTRAPPED`, and `A2_BOOTSTRAP_REJECTED`.
+The A1 synthetic renderer and its timing are unchanged and never clock the engine.
+There are no gameplay controls, framebuffer upload, or audio device operations.
+
+Asset-free hosted checks build/package both ABIs, check exported engine/host
+symbols and every packaged ELF's 16 KB alignment, run ZIP alignment and commercial
+filename scans, and retain the A1 rendering/rotation/lifecycle smoke. JDK tests
+exercise filtering, optional CFG, closed streams, incomplete/ambiguous sets,
+cancellation, copy/validation/rename failures, successful adoption, crash recovery
+and safe cleanup using invented bytes and an injected validator. Instrumentation
+calls the **packaged real engine** through JNI with missing/malformed invented
+inputs, requires bounded rejection, and tests the filesystem-path guard. These
+checks do not substitute for a successful original-backed import.
+
+A6 physical-device acceptance must still select real originals through providers,
+verify successful validation/adoption/bootstrap and automatic relaunch, optional
+CFG and persistent State separation, cancellation/rejection preserving a prior
+installation, and normal compiled ART on both supported architectures. Do not
+commit those inputs or upload original-backed private directories to CI.
 
 ## Fixed platform decisions
 

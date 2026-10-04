@@ -34,6 +34,10 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.1'
+          cache: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.x'
@@ -65,9 +69,15 @@ jobs:
           echo "${ANDROID_HOME}/emulator" >> "$GITHUB_PATH"
           mkdir -p "$ANDROID_AVD_HOME"
 
-      - name: Build A1 debug APK
+      - name: Asset-free import transaction tests
+        run: sh tools/test_android_import.sh
+      - name: Build unchanged ABI 1 engine for both public ABIs
+        run: |
+          export ANDROID_NDK_HOME="${ANDROID_HOME}/ndk/${ANDROID_NDK_VERSION}"
+          sh tools/build_android_engine.sh all
+      - name: Build A2 debug APK
         id: apk-build
-        run: gradle -p hosts/android :app:assembleDebug --stacktrace
+        run: gradle -p hosts/android :app:assembleDebug :app:assembleDebugAndroidTest --stacktrace
 
       - name: Verify public APK and native alignment
         shell: bash
@@ -82,9 +92,19 @@ jobs:
           rm -rf "${RUNNER_TEMP}/a1-apk"
           mkdir -p "${RUNNER_TEMP}/a1-apk"
           unzip -q "$APK" 'lib/*/*.so' -d "${RUNNER_TEMP}/a1-apk"
+          for abi in arm64-v8a x86_64; do
+            test -f "${RUNNER_TEMP}/a1-apk/lib/$abi/libpfengine.so"
+            test -f "${RUNNER_TEMP}/a1-apk/lib/$abi/libpinball_android.so"
+          done
           OBJDUMP="${ANDROID_HOME}/ndk/${ANDROID_NDK_VERSION}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-objdump"
           while IFS= read -r library; do
             python3 tools/check_android_elf.py "$library" --objdump "$OBJDUMP"
+            if [[ "$library" == */libpfengine.so ]]; then
+              "$OBJDUMP" -T "$library" > "${RUNNER_TEMP}/engine-symbols.txt"
+              for symbol in pf_engine_abi_version pf_engine_create pf_engine_destroy; do
+                grep -E "[[:space:]]\\.text[[:space:]].*[[:space:]]${symbol}$" "${RUNNER_TEMP}/engine-symbols.txt"
+              done
+            fi
             if [[ "$library" == */libpinball_android.so ]]; then
               "$OBJDUMP" -T "$library" > "${RUNNER_TEMP}/a1-symbols.txt"
               for symbol in android_main GameActivity_onCreate Java_com_google_androidgamesdk_GameActivity_initializeNativeCode; do
@@ -124,14 +144,24 @@ jobs:
           test "$(adb shell getprop dalvik.vm.extra-opts | tr -d '\r')" = '-Xint'
           test "$(adb shell getprop dalvik.vm.usejit | tr -d '\r')" = 'false'
 
+      - name: Exercise packaged ABI through A2 JNI (invented invalid data only)
+        shell: bash
+        run: |
+          adb install -r hosts/android/app/build/outputs/apk/debug/app-debug.apk
+          adb install -r hosts/android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+          timeout 90 adb shell am instrument -w io.github.voobrazimoe.pinballfantasies.test/io.github.voobrazimoe.pinballfantasies.ImportInstrumentation | tee "${RUNNER_TEMP}/a2-instrumentation.txt"
+          grep -q 'PASS: packaged ABI 1 JNI' "${RUNNER_TEMP}/a2-instrumentation.txt"
+          if grep -q 'FAIL:' "${RUNNER_TEMP}/a2-instrumentation.txt"; then exit 1; fi
+          adb shell am force-stop io.github.voobrazimoe.pinballfantasies
+
       - name: Exercise A1 rendering, rotation and lifecycle
         run: sh tools/run_android_host_smoke.sh
 
-      - name: Upload A1 APK
+      - name: Upload A2 APK
         if: ${{ !cancelled() && steps.apk-build.outcome == 'success' }}
         uses: actions/upload-artifact@v4
         with:
-          name: pinball-fantasies-android-a1-debug
+          name: pinball-fantasies-android-a2-debug
           if-no-files-found: error
           path: hosts/android/app/build/outputs/apk/debug/app-debug.apk
 

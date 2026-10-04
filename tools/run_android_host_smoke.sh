@@ -31,7 +31,7 @@ begin_phase() {
 }
 
 snapshot() {
-    if grep -Eq 'A1_.*ERROR|FATAL EXCEPTION|UnsatisfiedLinkError|Fatal signal' "$scratch/log"; then
+    if grep -Eq 'A1_.*ERROR|A2_BOOTSTRAP_REJECTED|FATAL EXCEPTION|UnsatisfiedLinkError|Fatal signal' "$scratch/log"; then
         cat "$scratch/log" >&2
         exit 1
     fi
@@ -74,6 +74,7 @@ timeout 10 adb shell wm dismiss-keyguard
 begin_phase
 timeout 30 adb shell am start -W -n "$COMPONENT"
 wait_for A1_FRAME_PRESENTED
+wait_for A2_SHELL_NO_DATA
 wait_for 'A1_VIEWPORT.*orientation=portrait'
 test "$(grep -c A1_HOST_STARTED "$scratch/log")" -eq 1
 initial_pid=$(timeout 10 adb shell pidof "$PACKAGE" | tr -d '\r')
@@ -103,5 +104,6 @@ timeout 10 adb shell am force-stop "$PACKAGE"
 begin_phase
 timeout 30 adb shell am start -W -n "$COMPONENT"
 wait_for A1_FRAME_PRESENTED
+wait_for A2_SHELL_NO_DATA
 test "$(grep -c A1_HOST_STARTED "$scratch/log")" -eq 1
 echo 'OK: Android A1 frame, rotation, background/resume and fresh process'
