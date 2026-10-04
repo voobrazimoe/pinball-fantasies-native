@@ -24,5 +24,15 @@ public final class AudioTestActivity extends Activity {
     @Override public void onDestroy() { audio.close(); super.onDestroy(); }
     void injectFocus(int event) { audio.focus(event); }
     void injectRoute() { audio.route(); }
+    void injectNoisy() {
+        // This is a protected system broadcast. Inject receiver delivery rather
+        // than attempting to send it under the application UID.
+        try {
+            java.lang.reflect.Field field=AndroidAudio.class.getDeclaredField("noisy");
+            field.setAccessible(true);
+            ((android.content.BroadcastReceiver)field.get(audio)).onReceive(this,
+                    new android.content.Intent(android.media.AudioManager.ACTION_AUDIO_BECOMING_NOISY));
+        } catch (ReflectiveOperationException failure) { throw new AssertionError(failure); }
+    }
     void injectBackground(boolean value) { resumed=!value; sync(); }
 }

@@ -68,8 +68,8 @@ class AudioOutput final {
             stream->getFormat()!=oboe::AudioFormat::I16) { close(); return false; }
         // Two device bursts; the ring absorbs source batches independently.
         stream->setBufferSizeInFrames(stream->getFramesPerBurst()*2);
-        PF_LOGI("A4_STREAM_OPEN rate=48000 channels=2 format=I16 sharing=%d performance=%d burst=%d",
-            int(stream->getSharingMode()), int(stream->getPerformanceMode()), stream->getFramesPerBurst());
+        PF_LOGI("A4_STREAM_OPEN rate=48000 channels=2 format=I16 sharing=%d performance=%d burst=%d device=%d",
+            int(stream->getSharingMode()), int(stream->getPerformanceMode()), stream->getFramesPerBurst(), stream->getDeviceId());
         state->currentStream.store(stream.get(), std::memory_order_release);
         if (stream->requestStart()!=oboe::Result::OK) { close(); return false; }
         // Discard all pre-open PCM; a failed device never accumulates audio.

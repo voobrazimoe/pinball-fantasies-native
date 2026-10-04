@@ -541,7 +541,7 @@ LowLatency, Exclusive preference and two-burst target remain unchanged.
 
 Normal public launches remain quiet. Opt-in `PF_DIAGNOSTICS=1` (or the existing
 boolean intent extra) adds `A5_FOCUS_REQUEST`, focus class and cumulative loss/gain
-counters, route/device type/ID, noisy event, native route epoch and deferred stream
+counters, route/device notification type/ID, opened stream device ID, noisy event, native route epoch and deferred stream
 transition/reopen diagnostics. A4 aggregate callback/ring counters remain throttled
 to five seconds. No callback-by-callback logging is added.
 
@@ -558,7 +558,8 @@ Debug-only `AudioTestActivity` shares the production Android focus/device adapte
 but uses an isolated synthetic PCM controller with no engine/assets. Instrumentation
 requires a real foreground AudioManager grant, injects transient/permanent/gain
 notifications into that adapter, checks silence/fresh callback consumption,
-background/resume, deferred route reopen and the registered becoming-noisy receiver. Its Java Activity/manifest and native
+background/resume, deferred route reopen and injected delivery to the registered
+becoming-noisy receiver (the system broadcast is protected against application senders). Its Java Activity/manifest and native
 JNI hooks are excluded from release builds; no production intent extra enables them.
 All A1–A4 packaged ABI, controls, framebuffer, rotation, quiet-launch, background and
 16 KiB checks remain. Host-only changes do not trigger A0 or desktop/macOS matrices.

@@ -67,8 +67,7 @@ public final class ImportInstrumentation extends Instrumentation {
             while(AudioTestActivity.nativeTestAudio(4)<=opens && android.os.SystemClock.uptimeMillis()<end) Thread.sleep(20);
             check(AudioTestActivity.nativeTestAudio(4)>opens); consumeFresh();
             opens=AudioTestActivity.nativeTestAudio(4);
-            activity.sendBroadcast(new android.content.Intent(android.media.AudioManager.ACTION_AUDIO_BECOMING_NOISY)
-                    .setPackage(getTargetContext().getPackageName()));
+            runOnMainSync(activity::injectNoisy);
             end=android.os.SystemClock.uptimeMillis()+5000;
             while(AudioTestActivity.nativeTestAudio(4)<=opens && android.os.SystemClock.uptimeMillis()<end) Thread.sleep(20);
             check(AudioTestActivity.nativeTestAudio(4)>opens && (AudioTestActivity.nativeTestAudio(5)&1)!=0);

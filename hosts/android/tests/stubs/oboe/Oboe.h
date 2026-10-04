@@ -36,6 +36,7 @@ public:
     AudioFormat getFormat() { return AudioFormat::I16; }
     SharingMode getSharingMode() { return sharing; }
     PerformanceMode getPerformanceMode() { return PerformanceMode::LowLatency; }
+    int getDeviceId() { return 0; }
     int getFramesPerBurst() { return 192; }
     Result setBufferSizeInFrames(int) { return Result::OK; }
     Result requestStart() {
