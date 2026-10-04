@@ -42,7 +42,7 @@ physical keyboard acceptance. Hosted CI continues to test the default arm64 targ
 For input-lag investigation, extract the zip and launch `RunWithTiming.command`
 beside the app, then play with the built-in or attached keyboard. This writes
 `~/Desktop/PinballFantasies-timing.csv` with one summary per second: source ticks,
-draw/event counts and maximum timer gap, engine advance, frame copy, drawing,
+raster/draw/event counts and maximum timer gap, engine advance, frame copy, drawing,
 event-queue delay and event-to-draw time. Event-to-draw waits for a source tick
 after receipt; it measures AppKit drawing completion, not physical screen scanout
 or remote video latency. Normal launches do not open a log. The equivalent CLI
@@ -100,8 +100,10 @@ renderer is introduced.
 A non-spinning 120 Hz AppKit timer in common run-loop modes supplies
 `mach_absolute_time()` converted by `mach_timebase_info` to monotonic nanoseconds.
 Integer conversion uses 128-bit arithmetic to avoid overflow. The Go Runner
-owns 60/71 Hz scheduling and drains every due task; presentation can skip frames
-without dropping source ticks. Resize and AppKit fullscreen do not change source
+owns 60/71 Hz scheduling and drains every due task. The host retrieves a new
+frame only after a source tick advances; intervening 120 Hz polls do not rebuild
+and copy identical rasters. Expose and resize events draw the view's retained
+pixels. Presentation can skip frames without dropping source ticks. Resize and AppKit fullscreen do not change source
 time or physical monitor modes. Option-Return and View → Toggle Full Screen
 (Command-F) invoke native fullscreen, with a pending-command guard and native
 restoration callbacks.

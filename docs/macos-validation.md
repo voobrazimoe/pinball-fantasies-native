@@ -1,5 +1,36 @@
 # Foundation integration and macOS validation record
 
+## 2026-10-04 input and latency follow-up
+
+The owner confirmed left/right Shift, Control and Option on an Intel MacBook's
+built-in keyboard. Command remains reserved for native shortcuts. Parsec input
+on the development Mac was observed to omit modifier side identity in both
+AppKit and CoreGraphics events; Z/slash and Left/Right Arrow provide independent
+alternate flipper controls without changing normal sided modifier semantics.
+The owner still reports severe latency with held keys and the alternate controls
+on Intel hardware; that acceptance issue remains unresolved pending its timing log.
+
+The host now retrieves/copies a raster only after source ticks advance instead
+of doing that work at every 120 Hz poll. Local AppKit logging confirms about
+71 rasters and 60 draws per second during gameplay; a sampled input interval
+measured 20.740 ms from event to post-source-tick drawing completion. This is
+an Apple Silicon development measurement, not Intel or physical screen latency
+acceptance. `RunWithTiming.command` in each zip enables the optional timing log.
+
+Using the owner's imported originals read-only and temporary native state,
+all eight macOS loaded-C-library/direct-Go replays passed (four tables in SOFT
+and OFF, 2,714 checkpoints each with frame/PCM/state parity). All 32 Apple-linked
+native journeys passed (four tables, four scrolling settings, two resolutions).
+A direct engine probe observed first flipper movement on the next scheduled
+update and full travel after 50 ms at its 60 Hz host polling cadence on all four
+tables. Asset-free native tests and source/engine/frontend regressions pass.
+The Intel artifact is cross-built and checked for x86_64 architecture, signature
+and public bundle hygiene; native Intel test execution remains owner-side.
+
+The historical milestone record below is retained. The macOS PR remains draft
+and unmerged; current original-backed automated results do not establish full
+physical acceptance or resolve the owner's Intel input-lag report.
+
 This records the two milestones separately. The macOS branch is **not merged**.
 Original-backed macOS replay and physical acceptance are **PENDING** on the
 owner's authorized Apple Silicon Mac with Codex, as explicitly agreed during

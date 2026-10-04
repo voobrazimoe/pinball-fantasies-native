@@ -33,10 +33,12 @@ static void inputEvent(void *context,PFHostEvent event,int32_t a,int32_t b) {
     FILE *_pacing;
     int64_t _lastStep, _lastReport;
     uint64_t _lastTicks, _reportTicks;
+    uint64_t _frameTicks;
+    BOOL _haveFrame;
     double _stepGap, _advanceTime, _frameTime, _drawTime, _eventDelay, _inputDraw;
     NSTimeInterval _inputTimestamp;
     BOOL _inputAdvanced;
-    unsigned _draws, _events;
+    unsigned _draws, _events, _frames;
     uint32_t _mode;
 }
 - (int64_t)now { return pf_clock_ns(mach_absolute_time(),_epoch,_timebase.numer,_timebase.denom); }
@@ -57,7 +59,7 @@ static void inputEvent(void *context,PFHostEvent event,int32_t a,int32_t b) {
         if (!_pacing) NSLog(@"Could not open timing log: %s",pacingPath);
         else {
             fprintf(_pacing,"# Pinball macOS host timing; milliseconds; maxima per interval; input_draw includes event queue and waits for a source tick\n");
-            fprintf(_pacing,"seconds,mode,ticks,draws,events,step_gap_ms,advance_ms,frame_copy_ms,draw_ms,event_queue_ms,input_draw_ms\n");
+            fprintf(_pacing,"seconds,mode,ticks,frames,draws,events,step_gap_ms,advance_ms,frame_copy_ms,draw_ms,event_queue_ms,input_draw_ms\n");
             fflush(_pacing);
         }
     }
@@ -146,12 +148,19 @@ static void inputEvent(void *context,PFHostEvent event,int32_t a,int32_t b) {
     if (mode==PF_MODE_PAUSED || mode==PF_MODE_QUIT_QUESTION) pf_audio_pause(&_audio);
     else pf_audio_play(&_audio);
     [self updateCursor];
-    uint8_t *pixels; int32_t width,height,stride;
-    start=[self now];
-    [self check:pf_engine_frame(_engine,&pixels,&width,&height,&stride)];
-    if (![_view acceptPixels:pixels width:width height:height stride:stride])
-        [self fail:@"Invalid framebuffer or insufficient memory"];
-    if (_pacing) _frameTime=fmax(_frameTime,([self now]-start)/1e6);
+    /* Poll at 120 Hz for timely input/source service, but rasterize only new
+       source state. Rebuilding identical Go frames on intervening polls wastes
+       main-thread time that AppKit needs for keyboard dispatch and drawing.
+       Expose/resize draws use the view's retained copy without an engine call. */
+    if (!_haveFrame || ticks!=_frameTicks) {
+        uint8_t *pixels; int32_t width,height,stride;
+        start=[self now];
+        [self check:pf_engine_frame(_engine,&pixels,&width,&height,&stride)];
+        if (![_view acceptPixels:pixels width:width height:height stride:stride])
+            [self fail:@"Invalid framebuffer or insufficient memory"];
+        _frameTicks=ticks; _haveFrame=YES; _frames++;
+        if (_pacing) _frameTime=fmax(_frameTime,([self now]-start)/1e6);
+    }
     [self reportPacing];
 }
 - (void)noteInput:(NSEvent *)e {
@@ -173,12 +182,12 @@ static void inputEvent(void *context,PFHostEvent event,int32_t a,int32_t b) {
     if (!_pacing) return;
     int64_t now=[self now];
     if (now-_lastReport<1000000000LL) return;
-    fprintf(_pacing,"%.3f,%u,%llu,%u,%u,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f\n",
-        now/1e9,_mode,(unsigned long long)(_lastTicks-_reportTicks),_draws,_events,
+    fprintf(_pacing,"%.3f,%u,%llu,%u,%u,%u,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f\n",
+        now/1e9,_mode,(unsigned long long)(_lastTicks-_reportTicks),_frames,_draws,_events,
         _stepGap,_advanceTime,_frameTime,_drawTime,_eventDelay,_inputDraw);
     fflush(_pacing);
     _lastReport=now; _reportTicks=_lastTicks;
-    _draws=_events=0;
+    _draws=_events=_frames=0;
     _stepGap=_advanceTime=_frameTime=_drawTime=_eventDelay=_inputDraw=0;
 }
 - (void)emit:(PFHostEvent)e a:(int32_t)a b:(int32_t)b {
