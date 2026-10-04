@@ -1,48 +1,57 @@
 #!/bin/bash
-# Must run natively on Apple Silicon with the Apple SDK/compiler.
+# Build on macOS with the Apple SDK/compiler; optional target: arm64 or x86_64.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 test "$(uname -s)" = Darwin
-test "$(uname -m)" = arm64
-export GOOS=darwin GOARCH=arm64 CGO_ENABLED=1
+target=${1:-arm64}
+case "$target" in
+    arm64) goarch=arm64; build=bin/macos; release=release/macos ;;
+    x86_64) goarch=amd64; build=bin/macos-x86_64; release=release/macos-x86_64 ;;
+    *) echo 'Usage: tools/build_macos.sh [arm64|x86_64]' >&2; exit 2 ;;
+esac
+export GOOS=darwin GOARCH="$goarch" CGO_ENABLED=1
 export CC="$(xcrun --find clang)"
 export MACOSX_DEPLOYMENT_TARGET=13.0
 sdk=$(xcrun --sdk macosx --show-sdk-path)
 export SDKROOT="$sdk"
-export CGO_CFLAGS="-isysroot $sdk -arch arm64 -mmacosx-version-min=13.0"
-export CGO_LDFLAGS="-isysroot $sdk -arch arm64 -mmacosx-version-min=13.0"
-mkdir -p bin/macos release/macos
-./tools/build_engine.sh c-archive bin/macos/libpfengine.a
-./tools/build_engine.sh c-shared bin/macos/libpfengine.dylib
-./tools/go.sh build -buildvcs=false -trimpath -o bin/macos/pftrace ./cmd/pftrace
-app='release/macos/Pinball Fantasies.app'
+export CGO_CFLAGS="-isysroot $sdk -arch $target -mmacosx-version-min=13.0"
+export CGO_LDFLAGS="-isysroot $sdk -arch $target -mmacosx-version-min=13.0"
+mkdir -p "$build" "$release"
+./tools/build_engine.sh c-archive "$build/libpfengine.a"
+./tools/build_engine.sh c-shared "$build/libpfengine.dylib"
+./tools/go.sh build -buildvcs=false -trimpath -o "$build/pftrace" ./cmd/pftrace
+app="$release/Pinball Fantasies.app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 cp hosts/macos/Info.plist "$app/Contents/Info.plist"
 cp LICENSE "$app/Contents/Resources/LICENSE.txt"
 cp "$(./tools/go.sh env GOROOT)/LICENSE" "$app/Contents/Resources/Go-LICENSE.txt"
 ./tools/go.sh env GOVERSION > "$app/Contents/Resources/Go-version.txt"
-common=(-arch arm64 -isysroot "$sdk" -mmacosx-version-min=13.0 -Wall -Wextra -Werror -O2)
+common=(-arch "$target" -isysroot "$sdk" -mmacosx-version-min=13.0 -Wall -Wextra -Werror -O2)
 objc=(-fobjc-arc -fblocks -framework AppKit -framework AudioToolbox -framework CoreAudio -framework IOKit -framework Security -framework CoreFoundation -framework CoreGraphics)
-"$CC" "${common[@]}" -std=c11 -pthread hosts/macos/host_logic.c hosts/macos/logic_tests.c -o bin/macos/logic-tests
-"$CC" "${common[@]}" "${objc[@]}" hosts/macos/main.m hosts/macos/frame_view.m hosts/macos/storage.m hosts/macos/audio_host.m hosts/macos/native_input.m hosts/macos/host_logic.c bin/macos/libpfengine.a -o "$app/Contents/MacOS/pinballfantasies"
-"$CC" "${common[@]}" "${objc[@]}" hosts/macos/native_tests.m hosts/macos/frame_view.m hosts/macos/storage.m hosts/macos/audio_host.m hosts/macos/native_input.m hosts/macos/host_logic.c bin/macos/libpfengine.a -o bin/macos/native-tests
+"$CC" "${common[@]}" -std=c11 -pthread hosts/macos/host_logic.c hosts/macos/logic_tests.c -o "$build/logic-tests"
+"$CC" "${common[@]}" "${objc[@]}" hosts/macos/main.m hosts/macos/frame_view.m hosts/macos/storage.m hosts/macos/audio_host.m hosts/macos/native_input.m hosts/macos/host_logic.c "$build/libpfengine.a" -o "$app/Contents/MacOS/pinballfantasies"
+"$CC" "${common[@]}" "${objc[@]}" hosts/macos/native_tests.m hosts/macos/frame_view.m hosts/macos/storage.m hosts/macos/audio_host.m hosts/macos/native_input.m hosts/macos/host_logic.c "$build/libpfengine.a" -o "$build/native-tests"
 codesign --force --sign - "$app"
 codesign --verify --strict "$app"
 file "$app/Contents/MacOS/pinballfantasies"
-test "$(lipo -archs "$app/Contents/MacOS/pinballfantasies")" = arm64
+test "$(lipo -archs "$app/Contents/MacOS/pinballfantasies")" = "$target"
 otool -L "$app/Contents/MacOS/pinballfantasies"
 plutil -lint "$app/Contents/Info.plist"
-bin/macos/logic-tests
-python3 tools/test_engine_abi_contract.py --library "$PWD/bin/macos/libpfengine.dylib"
-if [ -n "${PF_ENGINE_DATA_DIR:-}" ]; then
-    bin/macos/native-tests "$PF_ENGINE_DATA_DIR"
+if [ "$(uname -m)" = "$target" ]; then
+    "$build/logic-tests"
+    python3 tools/test_engine_abi_contract.py --library "$PWD/$build/libpfengine.dylib"
+    if [ -n "${PF_ENGINE_DATA_DIR:-}" ]; then
+        "$build/native-tests" "$PF_ENGINE_DATA_DIR"
+    else
+        "$build/native-tests"
+    fi
+    if [ -n "${PF_ENGINE_DATA_DIR:-}" ]; then
+        python3 tools/test_engine_abi.py --library "$PWD/$build/libpfengine.dylib" --oracle "$PWD/$build/pftrace" --data "$PF_ENGINE_DATA_DIR"
+    else
+        echo 'UNVERIFIED: four-table original-backed macOS C conformance requires external originals'
+    fi
 else
-    bin/macos/native-tests
-fi
-if [ -n "${PF_ENGINE_DATA_DIR:-}" ]; then
-    python3 tools/test_engine_abi.py --library "$PWD/bin/macos/libpfengine.dylib" --oracle "$PWD/bin/macos/pftrace" --data "$PF_ENGINE_DATA_DIR"
-else
-    echo 'UNVERIFIED: four-table original-backed macOS C conformance requires external originals'
+    echo "UNVERIFIED: $target executables cross-built on $(uname -m); run logic/native/ABI tests on the target Mac"
 fi
 python3 tools/check_macos_bundle.py "$app"
-ditto -c -k --sequesterRsrc --keepParent "$app" 'release/macos/PinballFantasies-arm64.zip'
+ditto -c -k --sequesterRsrc --keepParent "$app" "$release/PinballFantasies-$target.zip"

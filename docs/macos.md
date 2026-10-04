@@ -1,4 +1,4 @@
-# Native macOS arm64 host
+# Native macOS host
 
 The experimental macOS MVP is an Objective-C AppKit shell around the existing
 ABI 1 (`cmd/pfengine/abi.h`). It lives on `codex/macos-arm64-host`. The foundation
@@ -9,8 +9,9 @@ Android work has not started.
 
 Supported build target: **Apple Silicon arm64, macOS 13 or later**. Hosted
 validation uses macOS 15. Deployment to macOS 13/14 has not been exercised.
-Intel and universal binaries are outside this milestone. This is not a signed,
-notarized production distribution.
+An experimental Intel x86_64 test build is also available for local keyboard
+acceptance on an Intel Mac; Intel hardware validation remains pending. Universal
+binaries are outside this milestone. This is not a notarized production distribution.
 
 ## Build and CI
 
@@ -26,6 +27,17 @@ xcrun clang --version
 go version
 ./tools/build_macos.sh
 ```
+
+For an Intel test bundle, run `./tools/build_macos.sh x86_64` on a Mac with the
+Apple SDK. Go uses `darwin/amd64` and clang uses `x86_64`. The separate outputs are
+`bin/macos-x86_64/`, `release/macos-x86_64/Pinball Fantasies.app` and
+`release/macos-x86_64/PinballFantasies-x86_64.zip`; the Apple Silicon app is preserved.
+The Intel app requires macOS 13 or newer and contains no commercial originals.
+Run it on the Intel Mac and import the owner's original game files normally.
+The script runs native executable/ABI tests only when host and target architecture
+match. Cross-building on Apple Silicon verifies compile/link, architecture,
+ad-hoc signature and bundle structure, but does not establish Intel runtime or
+physical keyboard acceptance. Hosted CI continues to test the default arm64 target.
 
 The script selects Apple's compiler/SDK through `xcrun`, passes the SDK to cgo,
 builds both `bin/macos/libpfengine.a` and `libpfengine.dylib`, and keeps the stable
