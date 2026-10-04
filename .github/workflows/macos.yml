@@ -12,6 +12,9 @@ on:
       - 'tools/run_android_abi_smoke.sh'
       - 'tools/run_android_host_smoke.sh'
       - 'tools/test_android_import.sh'
+      - 'tools/test_android_a3.sh'
+      - 'tools/test_android_a4.sh'
+      - 'tools/test_android_a5.sh'
   pull_request:
     paths-ignore:
       - 'hosts/android/**'
@@ -24,6 +27,9 @@ on:
       - 'tools/run_android_abi_smoke.sh'
       - 'tools/run_android_host_smoke.sh'
       - 'tools/test_android_import.sh'
+      - 'tools/test_android_a3.sh'
+      - 'tools/test_android_a4.sh'
+      - 'tools/test_android_a5.sh'
   workflow_dispatch:
 permissions:
   contents: read
