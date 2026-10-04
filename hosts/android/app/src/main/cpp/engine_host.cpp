@@ -1,6 +1,7 @@
 #include "abi.h"
 #include "a3_host.h"
 #include "diagnostics.h"
+#include "audio_host.h"
 #include <jni.h>
 #include <time.h>
 #include <array>
@@ -40,6 +41,7 @@ jstring error(JNIEnv* env, const char* message) {
     return static_cast<jstring>(env->NewObject(stringClass, constructor, bytes, encoding));
 }
 void stop() {
+    androidAudioBuffer().reset();
     if (persistent != 0) {
         pf_engine_destroy(persistent);
         persistent = 0;
@@ -77,6 +79,7 @@ extern "C" JNIEXPORT jstring JNICALL JNI_METHOD(nativeEngine)(
         PF_LOGI("A2_CANDIDATE_VALIDATED");
     } else {
         persistent = handle;
+        androidAudioBuffer().setActive(active());
         if (!active()) pf_engine_suspend(persistent);
         PF_LOGI("A2_ENGINE_BOOTSTRAPPED ABI=1");
     }
@@ -93,6 +96,7 @@ extern "C" JNIEXPORT void JNICALL JNI_METHOD(nativeActive)(JNIEnv*, jclass, jlon
  if (persistent && before != active()) {
   if (active()) pf_engine_resume(persistent, now());
   else pf_engine_suspend(persistent);
+  androidAudioBuffer().setActive(active());
  }
 }
 extern "C" JNIEXPORT void JNICALL JNI_METHOD(nativeInput)(JNIEnv*, jclass, jlong token, jint kind, jint a, jint b) {
@@ -109,10 +113,10 @@ extern "C" JNIEXPORT void JNICALL JNI_METHOD(nativeInput)(JNIEnv*, jclass, jlong
 bool androidEngineFrame(bool portrait, std::vector<uint8_t>& pixels, int& width, int& height) {
  std::lock_guard<std::mutex> guard(lock);
  if (!opened || !persistent || !active()) return false;
- // NULL sink safely discards PCM synchronously. Runner owns every due 60/71 Hz
- // source tick; this display wake supplies wall time, never a simulation delta.
+ // Sink only copies borrowed PCM. Runner owns every due 60/71 Hz source tick;
+ // queue depth/device callbacks never influence this monotonic deadline.
  if (pf_engine_set_presentation(persistent, portrait ? 1 : 0) != PF_OK ||
-     pf_engine_advance(persistent, now(), nullptr, nullptr) != PF_OK) return false;
+     pf_engine_advance(persistent, now(), a4::PcmBuffer::sink, &androidAudioBuffer()) != PF_OK) return false;
  uint8_t* borrowed = nullptr;
  int32_t w = 0, h = 0, stride = 0;
  if (pf_engine_frame(persistent, &borrowed, &w, &h, &stride) != PF_OK ||

@@ -44,7 +44,7 @@ This is an asset-free platform prototype, not a playable Android release.
   and [macOS native hosts](https://github.com/voobrazimoe/pinball-fantasies-native/actions/runs/37202017274)
   also passed. A2 supplies SAF import, private Data/State, shared-loader validation
   and persistent engine creation. Successful original-backed Android import/bootstrap
-  and physical-device acceptance remain unverified for A6. A3 implementation is described below; A4–A7 remain outstanding.
+  and physical-device acceptance remain unverified for A6. A3 implementation is described below; A4 output is implemented below; A5–A7 remain outstanding.
 
 - A3 implementation passed [hosted Android CI at `806d4de`](https://github.com/voobrazimoe/pinball-fantasies-native/actions/runs/37206531433):
   both-ABI APK/exports/16 KB checks, payload scan, A2 import transactions, A3
@@ -134,7 +134,7 @@ Log events distinguish `A2_SHELL_NO_DATA`, `A2_IMPORT_REQUESTED`,
 `A2_IMPORT_CANCELLED`, `A2_IMPORT_REJECTED`, `A2_CANDIDATE_VALIDATED`,
 `A2_DATA_ADOPTED`, `A2_ENGINE_BOOTSTRAPPED`, and `A2_BOOTSTRAP_REJECTED`.
 The no-data shell retains the A1 synthetic renderer. A3 adds gameplay controls
-and real framebuffer upload; there are no audio device operations.
+and real framebuffer upload; A4 adds host audio output.
 
 Asset-free hosted checks build/package both ABIs, check exported engine/host
 symbols and every packaged ELF's 16 KB alignment, run ZIP alignment and commercial
@@ -162,9 +162,9 @@ rather than a tick count or frame delta. The existing Go `source.Runner.Advance`
 executes every due source task at its existing 60/71 Hz cadence, including when
 presentation is slower. EGL swap interval and the host's 16 ms poll timeout only
 pace presentation/wakes. Neither creates an Android simulation clock.
-`pf_engine_advance` receives a null PCM sink: the engine/tracker still progress
-normally and returned PCM is discarded synchronously. No Oboe, device, PCM ring
-or device buffering has been added.
+`pf_engine_advance` now receives A4’s synchronous copy-only PCM sink. The engine
+and tracker progression and monotonic Runner deadlines are unchanged. Device
+callbacks consume host storage independently.
 
 ### Ownership and lifecycle
 
@@ -347,6 +347,120 @@ sh tools/test_android_a3.sh
 sh tools/go.sh test -count=1 ./internal/physics ./internal/presentation ./internal/engine ./internal/frontend ./internal/source
 ```
 
+## A4 Oboe output and bounded PCM
+
+A4 integrates the pinned `com.google.oboe:oboe:1.10.0` Prefab package following
+[Oboe’s integration guidance](https://github.com/google/oboe/blob/1.10.0/docs/GettingStarted.md).
+The output builder requests 48,000 Hz, two channels, interleaved signed I16,
+callback output, LowLatency performance and Exclusive sharing. If opening fails,
+it retries Shared; a final Shared attempt permits Oboe format/sample-rate
+conversion on the host side. The application-facing stream must still report
+48 kHz stereo I16. The device buffer target is two native bursts (Oboe/device may
+clamp it). No callback size or audio clock is used to advance gameplay.
+
+### Ownership and bounded storage
+
+- The GameActivity native glue/render thread calls `pf_engine_advance` using A3
+  monotonic time. A3’s mutex continues to serialize every persistent-engine call.
+- The synchronous `pf_pcm_sink` on that same engine/producer call path copies
+  borrowed PCM immediately. It only writes host storage; no device write, wait,
+  engine reentry, retained pointer or deadline adjustment occurs in the sink.
+- Oboe’s realtime data callback is the sole live ring consumer. It performs only
+  bounded frame copies, silence filling and lock-free atomic operations. There
+  are no allocations, mutexes, log calls or engine ABI calls on this path.
+- A dedicated native audio control thread owns open/start/close and deferred
+  restart. JNI session/lifecycle calls publish atomic desired state while holding
+  the engine mutex; they never wait for this thread or a stream operation. The
+  controller polls at 10 ms, independently of rendering or the engine mutex.
+  After stream close has joined data callbacks, control may discard stale ring
+  frames. Callback objects and their storage are retained with Oboe shared
+  ownership, including across delayed error notifications.
+
+The SPSC ring has **4,096 stereo frames**, or **85.33 ms** at 48 kHz. Audio payload
+is 16 KiB; per-frame generation tags and padding make the fixed slot storage
+64 KiB, plus bounded atomic counters. This accommodates several 60/71 Hz source
+batches and ordinary display-wake jitter while bounding queued latency below
+macOS’s one-second ring capacity. It is a capacity ceiling, not a latency promise
+or a requirement to fill before output. All indexing/capacity accounting uses
+stereo frames; each frame copies four bytes, even for an unaligned borrowed input.
+Release/acquire cursors protect slot reuse; only the producer writes the write
+cursor and only the consumer writes the read cursor. Both public ABIs require
+always-lock-free 64-bit atomics at compile time.
+
+On underrun the callback fills missing frames with zeroes. It never repeats old
+samples, stretches PCM, calls the engine or advances source time. On overflow it
+accepts the available **prefix** of incoming frames and drops the **tail**,
+preserving existing queued ordering and the contiguous oldest pending audio,
+matching the macOS ring policy. The producer neither waits nor overwrites a slot
+being consumed. Prolonged stalls can lose audio; they cannot change Runner cadence
+or grow memory. No queue-depth feedback enters gameplay.
+
+### Pause, close and ordinary stream errors
+
+Audio is eligible only with a persistent engine and A3’s existing resumed AND
+focused state. Bootstrap may make it available; an active session starts output.
+Suspension atomically disables consumption and changes the PCM generation while
+preserving the engine and its source/game time. A callback racing that transition
+silences its current block if it observes the generation change. The controller
+closes output and drops invalidated storage; resume starts a fresh generation and
+accepts newly produced PCM. Even a rapid pause/resume before control wakes cannot
+replay old queued frames: the consumer skips generation-mismatched slots. Already
+submitted device frames may finish for the device’s short buffer duration; there
+is no continuing stale ring playback. Engine close, Activity replacement and
+import engine replacement invalidate audio in the same way. Live SPSC cursors
+are never reset from a producer/UI thread.
+
+An ordinary Oboe error only increments counters and signals deferred restart.
+The application takes responsibility for closing the failed stream; the control
+thread closes it, then retries after 250 ms if the engine is still active. Failed
+opens retry no faster than once per second; pause/close cancels that retry. All
+construction/destruction/waits stay outside realtime callbacks and the engine
+mutex. Comprehensive route changes and interruptions remain A5.
+
+### Diagnostics and asset-free checks
+
+Normal launches have no routine A4 logs. `PF_DIAGNOSTICS=1` or the existing Android
+`PF_DIAGNOSTICS` boolean launch extra enables stream-open configuration and an aggregate
+`A4_AUDIO` report at most every five seconds. Process-lifetime counters include
+PCM frames produced (including overflow drops), valid PCM frames consumed,
+callback count, underrun events/missing frames, overflow events/dropped frames,
+stale invalidated frames, stream opens/errors/restarts, physical ring depth and
+high-water depth. Depth may briefly include invalidated frames pending consumer
+cleanup. No per-callback log is emitted; device/API failures do not re-enable the
+previously disabled routine host diagnostics.
+
+```sh
+sh tools/test_android_a4.sh
+sh tools/test_android_a3.sh
+sh tools/test_android_import.sh
+```
+
+A4’s native tests exercise stereo ordering, unbounded producer stress against a
+bounded consumer ring, wraparound, exact full/empty, silence, deterministic partial
+overflow, generation invalidation and fresh resume. Allocation guards run on the
+actual consumer/error callback paths. The actual A3 JNI/session test emits borrowed
+mock PCM, overwrites its input immediately and verifies the copied samples,
+suspend/resume/close and retained ABI serialization. The production Oboe
+controller links against a device double **without any engine ABI implementation**
+and tests Shared fallback, deferred disconnect recovery, bounded open retry and
+quiet default diagnostics. Hosted CI additionally runs the ring under TSAN.
+
+Android CI builds both real Oboe/engine ABIs, retains ELF/ZIP 16 KiB alignment,
+payload scans and all A1–A3 checks. Packaged JNI instrumentation uses a separate
+production audio controller with invented quiet stereo PCM and requires stream
+opens, data callbacks, ring consumption, pause/resume and safe close on the 16 KiB
+emulator. The dummy host audio backend requires no audible machine output. No
+commercial data is used. A0 is unchanged and runs only for its existing boundary
+paths; shared engine/audio code is unchanged, so new desktop/macOS regressions
+are not required for A4.
+
+This is host/output evidence, **not physical-device audio acceptance**. Physical
+latency, original-backed Android audio/playability and normal compiled ART remain
+unverified. A5 still owns audio focus, interruptions, route changes,
+Bluetooth/headset policy and comprehensive lifecycle recovery; A6 owns
+original-backed parity and physical-device acceptance; A7 owns signed release
+packaging.
+
 ## Fixed platform decisions
 
 - `minSdk 27`, `compileSdk 36`, `targetSdk 36`.
@@ -386,9 +500,9 @@ The second argument is the required device page size. Omit it for a normal 4 KB 
 ## Remaining phases
 
 A3 implements cadence, framebuffer upload, touch/keyboard translation and transient
-portrait presentation on the A2 engine. A4 remains Oboe plus the bounded host PCM
-ring/device output; Android is currently silent. A5 remains broader lifecycle and
+portrait presentation on the A2 engine. A4 implements Oboe plus a bounded host PCM
+ring/device output. A5 remains broader lifecycle and
 audio-focus handling. A6 remains original-backed Android parity, practical touch
 charging/layout acceptance, normal compiled ART, hardware keyboards and physical
 devices. A7 remains signed APK/AAB packaging and release payload scanning.
-No A4 work or main merge is authorized by A3.
+A5 and a main merge require owner approval. No physical-device audio acceptance is claimed.

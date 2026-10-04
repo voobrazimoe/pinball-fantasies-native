@@ -10,6 +10,7 @@ on:
       - 'tools/run_android_host_smoke.sh'
       - 'tools/test_android_import.sh'
       - 'tools/test_android_a3.sh'
+      - 'tools/test_android_a4.sh'
       - 'tools/build_android_engine.sh'
       - 'tools/build_engine.sh'
       - 'cmd/pfengine/**'
@@ -24,6 +25,7 @@ on:
       - 'tools/run_android_host_smoke.sh'
       - 'tools/test_android_import.sh'
       - 'tools/test_android_a3.sh'
+      - 'tools/test_android_a4.sh'
       - 'tools/build_android_engine.sh'
       - 'tools/build_engine.sh'
       - 'cmd/pfengine/**'
@@ -40,7 +42,7 @@ env:
   ANDROID_AVD_HOME: ${{ github.workspace }}/.android-avd
 
 jobs:
-  a3-engine-host:
+  a4-engine-host:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -87,13 +89,21 @@ jobs:
         run: sh tools/test_android_import.sh
       - name: Asset-free A3 controls, framebuffer and native serialization tests
         run: sh tools/test_android_a3.sh
+      - name: Asset-free A4 PCM ring and Oboe controller tests
+        run: sh tools/test_android_a4.sh
+      - name: A4 concurrent ring under ThreadSanitizer
+        run: |
+          # Keep the dedicated runner address space compatible with GCC TSAN.
+          sudo sysctl -w vm.mmap_rnd_bits=28
+          c++ -std=c++17 -pthread -fsanitize=thread -g -O1 -Ihosts/android/app/src/main/cpp hosts/android/tests/pcm_ring_test.cpp -o "${RUNNER_TEMP}/a4-ring-tsan"
+          "${RUNNER_TEMP}/a4-ring-tsan"
       - name: Shared presentation policy regressions
         run: go test -count=1 ./internal/physics ./internal/presentation ./internal/engine ./internal/frontend ./internal/source
       - name: Build ABI 1 engine for both public ABIs
         run: |
           export ANDROID_NDK_HOME="${ANDROID_HOME}/ndk/${ANDROID_NDK_VERSION}"
           sh tools/build_android_engine.sh all
-      - name: Build A3 debug APK
+      - name: Build A4 debug APK
         id: apk-build
         run: gradle -p hosts/android :app:assembleDebug :app:assembleDebugAndroidTest --stacktrace
 
@@ -162,8 +172,9 @@ jobs:
           echo no | "$AVDMANAGER" create avd --force --name pf-a1 --package "${ANDROID_16K_IMAGE}" --device pixel_6
           test -f "${ANDROID_AVD_HOME}/pf-a1.ini"
           if [ -e /dev/kvm ]; then sudo chown "$USER" /dev/kvm; fi
-          nohup "${ANDROID_HOME}/emulator/emulator" \
-            -avd pf-a1 -no-window -no-audio -no-snapshot -no-boot-anim \
+          # Dummy host backend: guest callbacks run without audible host output.
+          nohup env QEMU_AUDIO_DRV=none "${ANDROID_HOME}/emulator/emulator" \
+            -avd pf-a1 -no-window -no-snapshot -no-boot-anim \
             -no-metrics -gpu swiftshader_indirect >"${RUNNER_TEMP}/a1-emulator.log" 2>&1 &
           timeout 180 adb wait-for-device
           timeout 240 bash -c 'until [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d "\r")" = 1 ]; do sleep 2; done'
@@ -200,6 +211,7 @@ jobs:
           adb install -r hosts/android/app/build/outputs/apk/debug/app-debug.apk
           adb install -r hosts/android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
           timeout 90 adb shell am instrument -w io.github.voobrazimoe.pinballfantasies.test/io.github.voobrazimoe.pinballfantasies.ImportInstrumentation | tee "${RUNNER_TEMP}/a2-instrumentation.txt"
+          grep -q 'PASS: A4 packaged Oboe' "${RUNNER_TEMP}/a2-instrumentation.txt"
           grep -q 'PASS: packaged ABI 1 JNI' "${RUNNER_TEMP}/a2-instrumentation.txt"
           if grep -q 'FAIL:' "${RUNNER_TEMP}/a2-instrumentation.txt"; then exit 1; fi
           adb shell am force-stop io.github.voobrazimoe.pinballfantasies
@@ -207,11 +219,11 @@ jobs:
       - name: Exercise A1 rendering, rotation and lifecycle
         run: sh tools/run_android_host_smoke.sh
 
-      - name: Upload A3 APK
+      - name: Upload A4 APK
         if: ${{ !cancelled() && steps.apk-build.outcome == 'success' }}
         uses: actions/upload-artifact@v4
         with:
-          name: pinball-fantasies-android-a3-debug
+          name: pinball-fantasies-android-a4-debug
           if-no-files-found: error
           path: hosts/android/app/build/outputs/apk/debug/app-debug.apk
 

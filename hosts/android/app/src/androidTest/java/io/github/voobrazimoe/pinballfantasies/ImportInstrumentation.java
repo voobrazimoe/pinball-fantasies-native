@@ -11,6 +11,7 @@ import java.util.*;
 
 /** Runs against the packaged Go library. All candidate bytes are invented and invalid. */
 public final class ImportInstrumentation extends Instrumentation {
+    private static native boolean nativeAudioSmoke();
     @Override public void onCreate(Bundle arguments) { super.onCreate(arguments); start(); }
     static void check(boolean value) { if (!value) throw new AssertionError(); }
     private void testOverlay() {
@@ -81,7 +82,8 @@ public final class ImportInstrumentation extends Instrumentation {
             PinballActivity.nativeActive(session,true,true);
             for (int kind=0;kind<5;kind++) PinballActivity.nativeInput(session,kind,0,1);
             testOverlay();
-            result.putString("stream", "PASS: A3 real Android MotionEvent pointer/cancel/plunger dispatch and no-data lifecycle/input JNI\nPASS: packaged ABI 1 JNI missing/malformed rejection, bounded error, URI/session guards\n");
+            check(nativeAudioSmoke());
+            result.putString("stream", "PASS: A4 packaged Oboe 48 kHz stereo opens, callbacks, synthetic PCM, pause/resume and close\nPASS: A3 real Android MotionEvent pointer/cancel/plunger dispatch and no-data lifecycle/input JNI\nPASS: packaged ABI 1 JNI missing/malformed rejection, bounded error, URI/session guards\n");
             outcome = Activity.RESULT_OK;
         } catch (Throwable failure) {
             result.putString("stream", "FAIL: " + failure + "\n");
