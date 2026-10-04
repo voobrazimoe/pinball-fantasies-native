@@ -23,18 +23,28 @@ static void audioTests(void) {
 }
 static void modifierTests(void) {
     PFInput input; pf_input_init(&input,NULL,NULL); pf_input_focus(&input,true);
-    pf_macos_modifiers(&input,NX_DEVICELALTKEYMASK);
+    pf_macos_modifiers(&input,58,NX_DEVICELALTKEYMASK);
     assert(input.held[PF_LEFT] && !input.held[PF_RIGHT]);
-    pf_macos_modifiers(&input,NX_DEVICELALTKEYMASK|NX_DEVICERALTKEYMASK);
+    pf_macos_modifiers(&input,61,NX_DEVICELALTKEYMASK|NX_DEVICERALTKEYMASK);
     assert(input.held[PF_LEFT] && input.held[PF_RIGHT]);
-    pf_macos_modifiers(&input,NX_DEVICERALTKEYMASK|NX_DEVICERCTLKEYMASK);
+    pf_macos_modifiers(&input,58,NX_DEVICERALTKEYMASK);
     assert(!input.held[PF_LEFT] && input.held[PF_RIGHT]);
-    pf_macos_modifiers(&input,NX_DEVICERCTLKEYMASK|NX_DEVICELSHIFTKEYMASK);
+    pf_macos_modifiers(&input,62,NX_DEVICERALTKEYMASK|NX_DEVICERCTLKEYMASK);
+    pf_macos_modifiers(&input,61,NX_DEVICERCTLKEYMASK);
+    pf_macos_modifiers(&input,56,NX_DEVICERCTLKEYMASK|NX_DEVICELSHIFTKEYMASK);
     assert(input.held[PF_LEFT] && input.held[PF_RIGHT]);
-    pf_macos_modifiers(&input,0); assert(!input.held[PF_LEFT] && !input.held[PF_RIGHT]);
-    pf_macos_modifiers(&input,NX_DEVICELCTLKEYMASK|NX_DEVICERSHIFTKEYMASK);
+    pf_macos_modifiers(&input,56,0); assert(!input.held[PF_LEFT] && !input.held[PF_RIGHT]);
+    pf_macos_modifiers(&input,59,NX_DEVICELCTLKEYMASK);
+    pf_macos_modifiers(&input,60,NX_DEVICELCTLKEYMASK|NX_DEVICERSHIFTKEYMASK);
     pf_input_focus(&input,false); assert(!input.held[PF_LEFT] && !input.held[PF_RIGHT]);
     pf_input_focus(&input,true); assert(!input.held[PF_LEFT] && !input.held[PF_RIGHT]);
+    pf_macos_modifiers(&input,56,NX_DEVICELSHIFTKEYMASK|NX_DEVICERSHIFTKEYMASK);
+    assert(input.held[PF_LEFT] && !input.held[PF_RIGHT]); /* old right Shift held across regain */
+    pf_macos_modifiers(&input,56,NX_DEVICERSHIFTKEYMASK);
+    assert(!input.held[PF_LEFT] && !input.held[PF_RIGHT]);
+    pf_macos_modifiers(&input,60,0);
+    pf_macos_modifiers(&input,60,NX_DEVICERSHIFTKEYMASK);
+    assert(input.held[PF_RIGHT]); /* fresh make accepted */
     mach_timebase_info_data_t scale; assert(mach_timebase_info(&scale)==KERN_SUCCESS);
     uint64_t epoch=mach_absolute_time(); assert(pf_clock_ns(epoch,epoch,scale.numer,scale.denom)==0);
     int64_t previous=0;

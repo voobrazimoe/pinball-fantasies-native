@@ -133,7 +133,7 @@ static void inputEvent(void *context,PFHostEvent event,int32_t a,int32_t b) {
                  (e.modifierFlags & NSEventModifierFlagOption)!=0);
 }
 - (void)modifiers:(NSEvent *)e {
-    pf_macos_modifiers(&_input,e.modifierFlags);
+    pf_macos_modifiers(&_input,e.keyCode,e.modifierFlags);
 }
 - (void)motion:(NSEvent *)e {
     [self updateCursor];

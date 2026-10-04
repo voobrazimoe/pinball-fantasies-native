@@ -28,6 +28,8 @@ static void input_tests(void) {
     pf_input_key(&p,49,false,false,false,false); assert(count==5);
     count=0; bool sides[6]={true,false,false,false,false,false};
     pf_input_modifiers(&p,sides); assert(p.held[0] && !p.held[1]);
+    assert(count==2 && events[0].type==PF_EVENT_ACTION && events[1].type==PF_EVENT_KEY && events[1].a==127);
+    pf_input_modifiers(&p,sides); assert(count==2); /* duplicate flags create no make */
     sides[1]=true; pf_input_modifiers(&p,sides); assert(p.held[0] && p.held[1]);
     sides[0]=false; pf_input_modifiers(&p,sides); assert(!p.held[0] && p.held[1]);
     sides[5]=true; pf_input_modifiers(&p,sides); assert(p.held[1]);

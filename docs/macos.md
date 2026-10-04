@@ -96,7 +96,9 @@ the shared generic resume/quit make.
 
 Modifier-only input uses `flagsChanged` and Apple's IOKit device-side masks,
 not aggregate flag toggles or Win32 pairing logic. Independent contributors
-are combined before issuing held actions. Automated tests exercise both-side
+are combined before issuing held actions. Only the event's changed side can
+start a new hold; unchanged siblings held across focus regain stay cleared.
+Fresh modifier makes also reach the shared generic pause/quit key semantics. Automated tests exercise both-side
 press/release, mixed modifiers, repeat/shortcut suppression and ordered SNAIL
 makes. Physical keyboard layouts/devices still need acceptance.
 

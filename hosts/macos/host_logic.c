@@ -54,8 +54,15 @@ void pf_input_key(PFInput *p, uint16_t k, bool down, bool repeat, bool command, 
 void pf_input_modifiers(PFInput *p, const bool sides[6]) {
     if (!p->focused) return;
     const unsigned keys[6]={56,60,59,62,58,61};
-    for (unsigned i=0;i<6;i++) p->down[keys[i]]=sides[i];
+    unsigned makes=0;
+    for (unsigned i=0;i<6;i++) {
+        if (sides[i] && !p->down[keys[i]]) makes++;
+        p->down[keys[i]]=sides[i];
+    }
     holds(p);
+    /* Modifier-only native events must also reach shared pause/quit semantics,
+       as ordinary desktop modifier makes do. They are never auto-repeat. */
+    while (makes--) event(p,PF_EVENT_KEY,127,0);
 }
 void pf_input_focus(PFInput *p, bool focused) {
     if (!focused) {
