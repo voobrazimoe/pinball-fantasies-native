@@ -133,7 +133,7 @@ jobs:
         name: Emulator diagnostics
         shell: bash
         run: |
-          adb shell getprop ro.build.version.release || true
-          adb shell getconf PAGE_SIZE || true
-          adb logcat -d | tail -300 || true
+          timeout 5 adb shell getprop ro.build.version.release || true
+          timeout 5 adb shell getconf PAGE_SIZE || true
+          timeout 5 adb logcat -d | tail -300 || true
           tail -200 "${RUNNER_TEMP}/a1-emulator.log" || true
