@@ -314,6 +314,12 @@ in the no-data shell, and requires the same host to survive. Timeout diagnostics
 include rotation policy and focused Activity/window state. Smoke waits for
 `A3_INPUT_STATE resumed=1 focused=1` before rotation/inputs and after resume
 or restart, so disabled early callbacks cannot count as input acceptance.
+The disposable CI guest pre-acknowledges Android's first-run immersive education
+via `immersive_mode_confirmations=confirmed` before its system-server restart.
+Without that acknowledgement, `ImmersiveModeConfirmation` can own window focus
+across resume; the game correctly suspends underneath it. This changes only CI
+setup, never the APK or its lifecycle/input rules. Standalone dedicated-device
+smoke requires dismissing that system tutorial first.
 
 Asset-free Go regressions exercise the actual Engine → Runtime → four-table
 render/composition path using invented zero indexed pixels, verify 320×609 and
