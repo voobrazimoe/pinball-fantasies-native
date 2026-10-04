@@ -3,6 +3,7 @@
 #import <mach/mach_time.h>
 #import "native_input.h"
 #include <stdio.h>
+static const char *pacingPath;
 /* OS helpers are separate modules; gameplay stays behind abi.h. */
 #import "audio_host.h"
 #import "storage.h"
@@ -13,6 +14,8 @@
 - (void)deviceChanged;
 - (void)step;
 - (void)toggleFullscreen:(id)sender;
+- (void)noteInput:(NSEvent *)event;
+- (void)reportPacing;
 @end
 static void inputEvent(void *context,PFHostEvent event,int32_t a,int32_t b) {
     [(__bridge PFApp *)context emit:event a:a b:b];
@@ -27,6 +30,14 @@ static void inputEvent(void *context,PFHostEvent event,int32_t a,int32_t b) {
     PFAudio _audio;
     BOOL _focused, _mouseActive, _cursorHidden, _failed, _sleeping;
     id _sleepObserver, _wakeObserver;
+    FILE *_pacing;
+    int64_t _lastStep, _lastReport;
+    uint64_t _lastTicks, _reportTicks;
+    double _stepGap, _advanceTime, _frameTime, _drawTime, _eventDelay, _inputDraw;
+    NSTimeInterval _inputTimestamp;
+    BOOL _inputAdvanced;
+    unsigned _draws, _events;
+    uint32_t _mode;
 }
 - (int64_t)now { return pf_clock_ns(mach_absolute_time(),_epoch,_timebase.numer,_timebase.denom); }
 - (void)fail:(NSString *)message {
@@ -41,6 +52,15 @@ static void inputEvent(void *context,PFHostEvent event,int32_t a,int32_t b) {
 - (void)applicationDidFinishLaunching:(NSNotification *)notification {
     (void)notification;
     mach_timebase_info(&_timebase); _epoch=mach_absolute_time();
+    if (pacingPath) {
+        _pacing=fopen(pacingPath,"w");
+        if (!_pacing) NSLog(@"Could not open timing log: %s",pacingPath);
+        else {
+            fprintf(_pacing,"# Pinball macOS host timing; milliseconds; maxima per interval; input_draw includes event queue and waits for a source tick\n");
+            fprintf(_pacing,"seconds,mode,ticks,draws,events,step_gap_ms,advance_ms,frame_copy_ms,draw_ms,event_queue_ms,input_draw_ms\n");
+            fflush(_pacing);
+        }
+    }
     pf_input_init(&_input,inputEvent,(__bridge void *)self); pf_audio_init(&_audio);
     NSString *data=nil,*state=nil; NSError *error=nil;
     if (!pf_storage_prepare(&data,&state,&error)) {
@@ -93,9 +113,11 @@ static void inputEvent(void *context,PFHostEvent event,int32_t a,int32_t b) {
     _focused=next;
     if (next) {
         [self check:pf_engine_resume(_engine,[self now])]; pf_macos_focus(&_input,true,NSEvent.modifierFlags);
+        _lastStep=0;
     } else {
         [self check:pf_engine_suspend(_engine)]; pf_macos_focus(&_input,false,NSEvent.modifierFlags);
         pf_audio_pause(&_audio); _mouseActive=NO;
+        _inputTimestamp=0; _inputAdvanced=NO;
     }
     [self updateCursor];
 }
@@ -103,14 +125,21 @@ static void inputEvent(void *context,PFHostEvent event,int32_t a,int32_t b) {
     if (!_engine || _failed) return;
     [self syncFocus];
     if (!_focused) return;
+    int64_t start=[self now];
+    if (_pacing && _lastStep) _stepGap=fmax(_stepGap,(start-_lastStep)/1e6);
+    _lastStep=start;
     uint64_t dropped=atomic_load(&_audio.ring.dropped);
     [self check:pf_engine_advance(_engine,[self now],pf_audio_enqueue,&_audio)];
+    if (_pacing) _advanceTime=fmax(_advanceTime,([self now]-start)/1e6);
     if (atomic_load(&_audio.ring.dropped)!=dropped) {
         pf_audio_pause(&_audio);
         NSLog(@"Audio queue overrun: discarded stale PCM, source advancement preserved");
     }
     uint64_t ticks; uint32_t mode,table,flags;
     [self check:pf_engine_state(_engine,&ticks,&mode,&table,&flags)];
+    _mode=mode;
+    if (ticks!=_lastTicks && _inputTimestamp) _inputAdvanced=YES;
+    _lastTicks=ticks;
     (void)ticks; (void)table;
     if (flags&2) { [NSApp terminate:nil]; return; }
     _mouseActive=(flags&4)!=0;
@@ -118,9 +147,39 @@ static void inputEvent(void *context,PFHostEvent event,int32_t a,int32_t b) {
     else pf_audio_play(&_audio);
     [self updateCursor];
     uint8_t *pixels; int32_t width,height,stride;
+    start=[self now];
     [self check:pf_engine_frame(_engine,&pixels,&width,&height,&stride)];
     if (![_view acceptPixels:pixels width:width height:height stride:stride])
         [self fail:@"Invalid framebuffer or insufficient memory"];
+    if (_pacing) _frameTime=fmax(_frameTime,([self now]-start)/1e6);
+    [self reportPacing];
+}
+- (void)noteInput:(NSEvent *)e {
+    if (!_pacing || !_focused) return;
+    _events++;
+    _eventDelay=fmax(_eventDelay,(NSProcessInfo.processInfo.systemUptime-e.timestamp)*1000);
+    if (!_inputTimestamp) _inputTimestamp=e.timestamp;
+}
+- (void)frameDrawnFrom:(uint64_t)start {
+    if (!_pacing) return;
+    _draws++;
+    _drawTime=fmax(_drawTime,pf_clock_ns(mach_absolute_time(),start,_timebase.numer,_timebase.denom)/1e6);
+    if (_inputAdvanced && _inputTimestamp) {
+        _inputDraw=fmax(_inputDraw,(NSProcessInfo.processInfo.systemUptime-_inputTimestamp)*1000);
+        _inputTimestamp=0; _inputAdvanced=NO;
+    }
+}
+- (void)reportPacing {
+    if (!_pacing) return;
+    int64_t now=[self now];
+    if (now-_lastReport<1000000000LL) return;
+    fprintf(_pacing,"%.3f,%u,%llu,%u,%u,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f\n",
+        now/1e9,_mode,(unsigned long long)(_lastTicks-_reportTicks),_draws,_events,
+        _stepGap,_advanceTime,_frameTime,_drawTime,_eventDelay,_inputDraw);
+    fflush(_pacing);
+    _lastReport=now; _reportTicks=_lastTicks;
+    _draws=_events=0;
+    _stepGap=_advanceTime=_frameTime=_drawTime=_eventDelay=_inputDraw=0;
 }
 - (void)emit:(PFHostEvent)e a:(int32_t)a b:(int32_t)b {
     switch(e) {
@@ -133,11 +192,13 @@ static void inputEvent(void *context,PFHostEvent event,int32_t a,int32_t b) {
     }
 }
 - (void)key:(NSEvent *)e down:(BOOL)down {
+    [self noteInput:e];
     pf_input_key(&_input,e.keyCode,down,e.isARepeat,
                  (e.modifierFlags & NSEventModifierFlagCommand)!=0,
                  (e.modifierFlags & NSEventModifierFlagOption)!=0);
 }
 - (void)modifiers:(NSEvent *)e {
+    [self noteInput:e];
     pf_macos_modifiers(&_input,e.keyCode,e.modifierFlags);
 }
 - (void)motion:(NSEvent *)e {
@@ -179,6 +240,7 @@ static void inputEvent(void *context,PFHostEvent event,int32_t a,int32_t b) {
         if (result!=PF_OK) NSLog(@"Settings save failed: %d",result); }
     NSLog(@"Audio underruns=%llu dropped frames=%llu",(unsigned long long)atomic_load(&_audio.ring.underruns),
           (unsigned long long)atomic_load(&_audio.ring.dropped));
+    if (_pacing) { fclose(_pacing); _pacing=NULL; }
 }
 @end
 static void menu(PFApp *host) {
@@ -195,6 +257,8 @@ int main(int argc,const char **argv) {
         /* A bounded CI launch checks AppKit startup without interactive import,
            originals or a real audio device; production follows the normal path. */
         BOOL smoke=argc==2 && strcmp(argv[1],"--ui-smoke")==0;
+        pacingPath=getenv("PF_PACING_LOG");
+        if (argc==3 && strcmp(argv[1],"--pacing-log")==0) pacingPath=argv[2];
         NSApplication *app=NSApplication.sharedApplication;
         [app setActivationPolicy:NSApplicationActivationPolicyRegular];
         if (smoke) {

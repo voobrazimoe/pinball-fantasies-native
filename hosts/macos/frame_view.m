@@ -1,5 +1,6 @@
 #import "frame_view.h"
 #import "app.h"
+#import <mach/mach_time.h>
 #include <stdlib.h>
 #include <string.h>
 @implementation PFFrameView {
@@ -36,6 +37,7 @@
     self.needsDisplay=YES; return YES;
 }
 - (void)drawRect:(NSRect)dirty {
+    uint64_t start=mach_absolute_time();
     (void)dirty;
     [[NSColor blackColor] setFill]; NSRectFill(self.bounds);
     if (!_bytes) return;
@@ -57,6 +59,7 @@
         CGContextRestoreGState(ctx); CGImageRelease(image);
     }
     CGDataProviderRelease(provider); CGColorSpaceRelease(color);
+    [self.host frameDrawnFrom:start];
 }
 - (void)keyDown:(NSEvent *)e { [self.host key:e down:YES]; }
 - (void)keyUp:(NSEvent *)e { [self.host key:e down:NO]; }

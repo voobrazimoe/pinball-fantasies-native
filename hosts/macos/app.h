@@ -6,4 +6,5 @@
 - (void)motion:(NSEvent *)event;
 - (void)button:(BOOL)down;
 - (void)updateCursor;
+- (void)frameDrawnFrom:(uint64_t)start;
 @end

@@ -54,4 +54,14 @@ else
     echo "UNVERIFIED: $target executables cross-built on $(uname -m); run logic/native/ABI tests on the target Mac"
 fi
 python3 tools/check_macos_bundle.py "$app"
+cat > "$release/RunWithTiming.command" <<'SH'
+#!/bin/bash
+set -euo pipefail
+cd "$(dirname "$0")"
+report="$HOME/Desktop/PinballFantasies-timing.csv"
+echo "Recording host timing to: $report"
+exec './Pinball Fantasies.app/Contents/MacOS/pinballfantasies' --pacing-log "$report"
+SH
+chmod +x "$release/RunWithTiming.command"
 ditto -c -k --sequesterRsrc --keepParent "$app" "$release/PinballFantasies-$target.zip"
+zip -q -j "$release/PinballFantasies-$target.zip" "$release/RunWithTiming.command"
