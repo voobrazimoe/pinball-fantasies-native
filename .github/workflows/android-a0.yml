@@ -1,0 +1,95 @@
+name: Android A0
+on:
+  push:
+    branches: [android-host]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  ANDROID_NDK_VERSION: 28.2.13676358
+  ANDROID_API: '27'
+  ANDROID_16K_IMAGE: 'system-images;android-35;google_apis_ps16k;x86_64'
+
+jobs:
+  native-engine:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.1'
+          cache: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Install pinned Android NDK
+        shell: bash
+        run: |
+          SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          test -x "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null
+          "$SDKMANAGER" "ndk;${ANDROID_NDK_VERSION}" platform-tools
+          echo "ANDROID_NDK_HOME=${ANDROID_HOME}/ndk/${ANDROID_NDK_VERSION}" >> "$GITHUB_ENV"
+          echo "${ANDROID_HOME}/platform-tools" >> "$GITHUB_PATH"
+      - name: Build both Android ABIs and require 16 KB ELF alignment
+        env:
+          PF_ANDROID_API: ${{ env.ANDROID_API }}
+        run: sh ./tools/build_android_engine.sh all
+      - name: Preserve A0 binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-a0-native
+          if-no-files-found: error
+          path: |
+            bin/android/arm64-v8a/libpfengine.so
+            bin/android/arm64-v8a/pfengine-smoke
+            bin/android/x86_64/libpfengine.so
+            bin/android/x86_64/pfengine-smoke
+
+  emulator-16k:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.1'
+          cache: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Install NDK and 16 KB emulator image
+        shell: bash
+        run: |
+          SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          test -x "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null
+          "$SDKMANAGER" "ndk;${ANDROID_NDK_VERSION}" platform-tools emulator "${ANDROID_16K_IMAGE}"
+          echo "ANDROID_NDK_HOME=${ANDROID_HOME}/ndk/${ANDROID_NDK_VERSION}" >> "$GITHUB_ENV"
+          echo "${ANDROID_HOME}/platform-tools" >> "$GITHUB_PATH"
+          echo "${ANDROID_HOME}/emulator" >> "$GITHUB_PATH"
+      - name: Build x86_64 A0 binaries
+        env:
+          PF_ANDROID_API: ${{ env.ANDROID_API }}
+        run: sh ./tools/build_android_engine.sh x86_64
+      - name: Start 16 KB Android emulator
+        shell: bash
+        run: |
+          AVDMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/avdmanager"
+          echo no | "$AVDMANAGER" create avd --force --name pf16k --package "${ANDROID_16K_IMAGE}" --device pixel_6
+          if [ -e /dev/kvm ]; then sudo chown "$USER" /dev/kvm; fi
+          nohup "${ANDROID_HOME}/emulator/emulator" -avd pf16k -no-window -no-audio -no-snapshot -no-boot-anim -gpu swiftshader_indirect >"${RUNNER_TEMP}/emulator.log" 2>&1 &
+          timeout 180 adb wait-for-device
+          timeout 240 bash -c 'until [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d "\r")" = 1 ]; do sleep 2; done'
+          test "$(adb shell getconf PAGE_SIZE | tr -d '\r')" = 16384
+      - name: Load Go engine on a real 16 KB Android runtime
+        run: sh ./tools/run_android_abi_smoke.sh x86_64 16384
+      - if: always()
+        name: Emulator diagnostics
+        shell: bash
+        run: |
+          adb shell getprop ro.build.version.release || true
+          adb shell getconf PAGE_SIZE || true
+          tail -200 "${RUNNER_TEMP}/emulator.log" || true
