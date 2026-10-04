@@ -2,6 +2,25 @@
 
 ## 2026-10-04 input and latency follow-up
 
+The owner's first Intel timing report (from the earlier build without the
+`frames` counter) showed playing-mode timer gaps up to 35.321 ms, event delivery
+up to 32.070 ms and event-to-draw completion up to 59.162 ms. In those playing
+intervals engine work stayed below 0.7 ms and drawing below 1 ms. This points to
+host scheduling/delivery delays rather than expensive source updates; screen
+scanout latency is not measured by that log.
+
+The next host revision replaces the tolerant AppKit timer with a strict
+zero-leeway main-queue dispatch timer, requests foreground latency-critical
+scheduling, and services already-due source work and drawing from keyboard event
+handlers. It never advances a future source task. Inactive windows stop the timer
+and end the activity; a reentry guard protects serialized engine work. Local
+live checks cover fullscreen/restoration, minimize/focus pause, fresh input after
+explicit resume and clean shutdown. Typical steady timer gaps in the development
+run are about 8.4 ms. Native asset-free tests and source/engine/frontend regressions
+pass. Intel retesting remains required; local measurements do not prove its lag
+resolved. Bundle metadata and timing headers now identify revision/architecture,
+and packages also have revision-specific filenames to avoid mixing test builds.
+
 The owner confirmed left/right Shift, Control and Option on an Intel MacBook's
 built-in keyboard. Command remains reserved for native shortcuts. Parsec input
 on the development Mac was observed to omit modifier side identity in both

@@ -45,7 +45,9 @@ beside the app, then play with the built-in or attached keyboard. This writes
 raster/draw/event counts and maximum timer gap, engine advance, frame copy, drawing,
 event-queue delay and event-to-draw time. Event-to-draw waits for a source tick
 after receipt; it measures AppKit drawing completion, not physical screen scanout
-or remote video latency. Normal launches do not open a log. The equivalent CLI
+or remote video latency. The log includes the build revision and timer policy;
+the zip is also saved with its revision in the filename to distinguish test builds.
+Normal launches do not open a log. The equivalent CLI
 option is `--pacing-log /path/to/report.csv`; `PF_PACING_LOG` also works.
 
 The script selects Apple's compiler/SDK through `xcrun`, passes the SDK to cgo,
@@ -97,13 +99,17 @@ The original 640×240 selector is presented as 640×480, matching desktop policy
 other framebuffers preserve their source aspect. No Metal, SDL or gameplay
 renderer is introduced.
 
-A non-spinning 120 Hz AppKit timer in common run-loop modes supplies
+A non-spinning 120 Hz strict, zero-leeway dispatch timer on the main queue supplies
 `mach_absolute_time()` converted by `mach_timebase_info` to monotonic nanoseconds.
 Integer conversion uses 128-bit arithmetic to avoid overflow. The Go Runner
 owns 60/71 Hz scheduling and drains every due task. The host retrieves a new
 frame only after a source tick advances; intervening 120 Hz polls do not rebuild
 and copy identical rasters. Expose and resize events draw the view's retained
-pixels. Presentation can skip frames without dropping source ticks. Resize and AppKit fullscreen do not change source
+pixels. Keyboard event handlers also service already-due source ticks immediately
+and display any newly prepared frame, without advancing future source ticks.
+A foreground latency activity requests precise scheduling and ends on focus loss,
+minimize/sleep or termination; the dispatch timer is stopped while inactive.
+Presentation can skip frames without dropping source ticks. Resize and AppKit fullscreen do not change source
 time or physical monitor modes. Option-Return and View → Toggle Full Screen
 (Command-F) invoke native fullscreen, with a pending-command guard and native
 restoration callbacks.

@@ -23,12 +23,13 @@ static void inputEvent(void *context,PFHostEvent event,int32_t a,int32_t b) {
 @implementation PFApp {
     NSWindow *_window;
     PFFrameView *_view;
-    NSTimer *_timer;
+    dispatch_source_t _timer;
+    id _latencyActivity;
     uint64_t _engine, _epoch;
     mach_timebase_info_data_t _timebase;
     PFInput _input;
     PFAudio _audio;
-    BOOL _focused, _mouseActive, _cursorHidden, _failed, _sleeping;
+    BOOL _focused, _mouseActive, _cursorHidden, _failed, _sleeping, _stepping;
     id _sleepObserver, _wakeObserver;
     FILE *_pacing;
     int64_t _lastStep, _lastReport;
@@ -59,6 +60,9 @@ static void inputEvent(void *context,PFHostEvent event,int32_t a,int32_t b) {
         if (!_pacing) NSLog(@"Could not open timing log: %s",pacingPath);
         else {
             fprintf(_pacing,"# Pinball macOS host timing; milliseconds; maxima per interval; input_draw includes event queue and waits for a source tick\n");
+            fprintf(_pacing,"# build=%s arch=%s timer=strict-dispatch input_service=immediate\n",
+                [[NSBundle.mainBundle objectForInfoDictionaryKey:@"PFHostBuild"] UTF8String] ?: "unknown",
+                [[NSBundle.mainBundle objectForInfoDictionaryKey:@"PFHostArchitecture"] UTF8String] ?: "unknown");
             fprintf(_pacing,"seconds,mode,ticks,frames,draws,events,step_gap_ms,advance_ms,frame_copy_ms,draw_ms,event_queue_ms,input_draw_ms\n");
             fflush(_pacing);
         }
@@ -99,8 +103,13 @@ static void inputEvent(void *context,PFHostEvent event,int32_t a,int32_t b) {
         queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *n) {
             (void)n; [weakSelf sleeping:NO];
         }];
-    _timer=[NSTimer timerWithTimeInterval:1.0/120 target:self selector:@selector(step) userInfo:nil repeats:YES];
-    _timer.tolerance=.001; [NSRunLoop.mainRunLoop addTimer:_timer forMode:NSRunLoopCommonModes];
+    /* The engine remains serialized on main. Strict, zero-leeway wakes avoid
+       the additional timer coalescing observed on the Intel host. */
+    _timer=dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER,0,DISPATCH_TIMER_STRICT,dispatch_get_main_queue());
+    dispatch_source_set_event_handler(_timer,^{ [weakSelf step]; });
+    dispatch_source_set_timer(_timer,_focused?dispatch_time(DISPATCH_TIME_NOW,0):DISPATCH_TIME_FOREVER,
+        NSEC_PER_SEC/120,0);
+    dispatch_resume(_timer);
     [self step];
 }
 - (void)sleeping:(BOOL)sleeping { _sleeping=sleeping; [self syncFocus]; }
@@ -114,54 +123,65 @@ static void inputEvent(void *context,PFHostEvent event,int32_t a,int32_t b) {
     if (!_engine || next==_focused) return;
     _focused=next;
     if (next) {
+        _latencyActivity=[NSProcessInfo.processInfo beginActivityWithOptions:
+            NSActivityUserInitiatedAllowingIdleSystemSleep|NSActivityLatencyCritical
+            reason:@"Responsive pinball input and audio"];
         [self check:pf_engine_resume(_engine,[self now])]; pf_macos_focus(&_input,true,NSEvent.modifierFlags);
         _lastStep=0;
     } else {
         [self check:pf_engine_suspend(_engine)]; pf_macos_focus(&_input,false,NSEvent.modifierFlags);
         pf_audio_pause(&_audio); _mouseActive=NO;
         _inputTimestamp=0; _inputAdvanced=NO;
+        if (_latencyActivity) [NSProcessInfo.processInfo endActivity:_latencyActivity];
+        _latencyActivity=nil;
     }
+    if (_timer) dispatch_source_set_timer(_timer,next?dispatch_time(DISPATCH_TIME_NOW,0):DISPATCH_TIME_FOREVER,
+        NSEC_PER_SEC/120,0);
     [self updateCursor];
 }
 - (void)step {
-    if (!_engine || _failed) return;
-    [self syncFocus];
-    if (!_focused) return;
-    int64_t start=[self now];
-    if (_pacing && _lastStep) _stepGap=fmax(_stepGap,(start-_lastStep)/1e6);
-    _lastStep=start;
-    uint64_t dropped=atomic_load(&_audio.ring.dropped);
-    [self check:pf_engine_advance(_engine,[self now],pf_audio_enqueue,&_audio)];
-    if (_pacing) _advanceTime=fmax(_advanceTime,([self now]-start)/1e6);
-    if (atomic_load(&_audio.ring.dropped)!=dropped) {
-        pf_audio_pause(&_audio);
-        NSLog(@"Audio queue overrun: discarded stale PCM, source advancement preserved");
-    }
-    uint64_t ticks; uint32_t mode,table,flags;
-    [self check:pf_engine_state(_engine,&ticks,&mode,&table,&flags)];
-    _mode=mode;
-    if (ticks!=_lastTicks && _inputTimestamp) _inputAdvanced=YES;
-    _lastTicks=ticks;
-    (void)ticks; (void)table;
-    if (flags&2) { [NSApp terminate:nil]; return; }
-    _mouseActive=(flags&4)!=0;
-    if (mode==PF_MODE_PAUSED || mode==PF_MODE_QUIT_QUESTION) pf_audio_pause(&_audio);
-    else pf_audio_play(&_audio);
-    [self updateCursor];
-    /* Poll at 120 Hz for timely input/source service, but rasterize only new
-       source state. Rebuilding identical Go frames on intervening polls wastes
-       main-thread time that AppKit needs for keyboard dispatch and drawing.
-       Expose/resize draws use the view's retained copy without an engine call. */
-    if (!_haveFrame || ticks!=_frameTicks) {
-        uint8_t *pixels; int32_t width,height,stride;
-        start=[self now];
-        [self check:pf_engine_frame(_engine,&pixels,&width,&height,&stride)];
-        if (![_view acceptPixels:pixels width:width height:height stride:stride])
-            [self fail:@"Invalid framebuffer or insufficient memory"];
-        _frameTicks=ticks; _haveFrame=YES; _frames++;
-        if (_pacing) _frameTime=fmax(_frameTime,([self now]-start)/1e6);
-    }
-    [self reportPacing];
+    if (_stepping) return;
+    _stepping=YES;
+    @try {
+        if (!_engine || _failed) return;
+        [self syncFocus];
+        if (!_focused) return;
+        int64_t start=[self now];
+        if (_pacing && _lastStep) _stepGap=fmax(_stepGap,(start-_lastStep)/1e6);
+        _lastStep=start;
+        uint64_t dropped=atomic_load(&_audio.ring.dropped);
+        [self check:pf_engine_advance(_engine,[self now],pf_audio_enqueue,&_audio)];
+        if (_pacing) _advanceTime=fmax(_advanceTime,([self now]-start)/1e6);
+        if (atomic_load(&_audio.ring.dropped)!=dropped) {
+            pf_audio_pause(&_audio);
+            NSLog(@"Audio queue overrun: discarded stale PCM, source advancement preserved");
+        }
+        uint64_t ticks; uint32_t mode,table,flags;
+        [self check:pf_engine_state(_engine,&ticks,&mode,&table,&flags)];
+        _mode=mode;
+        if (ticks!=_lastTicks && _inputTimestamp) _inputAdvanced=YES;
+        _lastTicks=ticks;
+        (void)ticks; (void)table;
+        if (flags&2) { [NSApp terminate:nil]; return; }
+        _mouseActive=(flags&4)!=0;
+        if (mode==PF_MODE_PAUSED || mode==PF_MODE_QUIT_QUESTION) pf_audio_pause(&_audio);
+        else pf_audio_play(&_audio);
+        [self updateCursor];
+        /* Poll at 120 Hz for timely input/source service, but rasterize only new
+           source state. Rebuilding identical Go frames on intervening polls wastes
+           main-thread time that AppKit needs for keyboard dispatch and drawing.
+           Expose/resize draws use the view's retained copy without an engine call. */
+        if (!_haveFrame || ticks!=_frameTicks) {
+            uint8_t *pixels; int32_t width,height,stride;
+            start=[self now];
+            [self check:pf_engine_frame(_engine,&pixels,&width,&height,&stride)];
+            if (![_view acceptPixels:pixels width:width height:height stride:stride])
+                [self fail:@"Invalid framebuffer or insufficient memory"];
+            _frameTicks=ticks; _haveFrame=YES; _frames++;
+            if (_pacing) _frameTime=fmax(_frameTime,([self now]-start)/1e6);
+        }
+        [self reportPacing];
+    } @finally { _stepping=NO; }
 }
 - (void)noteInput:(NSEvent *)e {
     if (!_pacing || !_focused) return;
@@ -205,10 +225,14 @@ static void inputEvent(void *context,PFHostEvent event,int32_t a,int32_t b) {
     pf_input_key(&_input,e.keyCode,down,e.isARepeat,
                  (e.modifierFlags & NSEventModifierFlagCommand)!=0,
                  (e.modifierFlags & NSEventModifierFlagOption)!=0);
+    /* Consume already-due source work using the newly submitted input instead
+       of waiting for another timer wake. Never advance a future source tick. */
+    [self step]; [_view displayIfNeeded];
 }
 - (void)modifiers:(NSEvent *)e {
     [self noteInput:e];
     pf_macos_modifiers(&_input,e.keyCode,e.modifierFlags);
+    [self step]; [_view displayIfNeeded];
 }
 - (void)motion:(NSEvent *)e {
     [self updateCursor];
@@ -239,7 +263,11 @@ static void inputEvent(void *context,PFHostEvent event,int32_t a,int32_t b) {
 - (void)applicationDidResignActive:(NSNotification *)n { (void)n; [self syncFocus]; }
 - (BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication *)app { (void)app; return YES; }
 - (void)applicationWillTerminate:(NSNotification *)n {
-    (void)n; [_timer invalidate];
+    (void)n;
+    if (_timer) dispatch_source_cancel(_timer);
+    _timer=nil;
+    if (_latencyActivity) [NSProcessInfo.processInfo endActivity:_latencyActivity];
+    _latencyActivity=nil;
     _focused=NO; _mouseActive=NO; [self updateCursor];
     NSNotificationCenter *workspace=NSWorkspace.sharedWorkspace.notificationCenter;
     if (_sleepObserver) [workspace removeObserver:_sleepObserver];
