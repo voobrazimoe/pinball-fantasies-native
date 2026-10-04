@@ -10,6 +10,7 @@ typedef struct {
     bool running;
     AudioObjectPropertyListenerBlock listener;
 } PFAudio;
+OSStatus pf_audio_render(void *,AudioUnitRenderActionFlags *,const AudioTimeStamp *,UInt32,UInt32,AudioBufferList *);
 void pf_audio_init(PFAudio *);
 bool pf_audio_open(PFAudio *);
 void pf_audio_play(PFAudio *);

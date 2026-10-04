@@ -6,6 +6,21 @@
 #import <IOKit/hidsystem/IOLLEvent.h>
 #include <assert.h>
 #include <stdio.h>
+static void audioTests(void) {
+    PFAudio audio={0}; pf_audio_init(&audio);
+    int16_t input[4]={123,-456,789,-1024}, output[8];
+    memset(output,0x7f,sizeof(output));
+    pf_audio_enqueue(&audio,(const uint8_t *)input,sizeof(input));
+    AudioBufferList buffers={0}; buffers.mNumberBuffers=1;
+    buffers.mBuffers[0]=(AudioBuffer){2,sizeof(output),output};
+    assert(pf_audio_render(&audio,NULL,NULL,0,4,&buffers)==noErr);
+    assert(!memcmp(output,input,sizeof(input)));
+    assert(output[4]==0 && output[7]==0 && pf_ring_available(&audio.ring)==0);
+    assert(atomic_load(&audio.ring.underruns)==1);
+    pf_audio_enqueue(&audio,(const uint8_t *)input,sizeof(input));
+    pf_audio_pause(&audio); assert(pf_ring_available(&audio.ring)==0);
+    puts("PASS actual AudioUnit render callback: queued S16 stereo, silence and stopped flush (no device required)");
+}
 static void modifierTests(void) {
     PFInput input; pf_input_init(&input,NULL,NULL); pf_input_focus(&input,true);
     pf_macos_modifiers(&input,NX_DEVICELALTKEYMASK);
@@ -189,7 +204,7 @@ static void journey(NSString *data) {
 }
 int main(int argc,const char **argv) {
     @autoreleasepool {
-        abiTests(); modifierTests(); storageTests(); frameTests();
+        abiTests(); modifierTests(); audioTests(); storageTests(); frameTests();
         if (argc==2) journey([NSString stringWithUTF8String:argv[1]]);
         else puts("UNVERIFIED original-backed four-table macOS journey: external originals not supplied");
     }

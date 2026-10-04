@@ -3,7 +3,7 @@
 #include <time.h>
 static const AudioObjectPropertyAddress route={kAudioHardwarePropertyDefaultOutputDevice,
     kAudioObjectPropertyScopeGlobal,kAudioObjectPropertyElementMain};
-static OSStatus render(void *ctx,AudioUnitRenderActionFlags *flags,const AudioTimeStamp *time,
+OSStatus pf_audio_render(void *ctx,AudioUnitRenderActionFlags *flags,const AudioTimeStamp *time,
                        UInt32 bus,UInt32 frames,AudioBufferList *buffers) {
     (void)flags; (void)time; (void)bus;
     PFAudio *a=ctx;
@@ -37,7 +37,7 @@ bool pf_audio_open(PFAudio *a) {
     format.mChannelsPerFrame=2; format.mBitsPerChannel=16;
     a->error=AudioUnitSetProperty(a->unit,kAudioUnitProperty_StreamFormat,kAudioUnitScope_Input,0,&format,sizeof(format));
     if (!a->error) {
-        AURenderCallbackStruct callback={render,a};
+        AURenderCallbackStruct callback={pf_audio_render,a};
         a->error=AudioUnitSetProperty(a->unit,kAudioUnitProperty_SetRenderCallback,kAudioUnitScope_Input,0,&callback,sizeof(callback));
     }
     if (!a->error) a->error=AudioUnitInitialize(a->unit);
