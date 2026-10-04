@@ -2,6 +2,53 @@
 
 Android support is being added as a native host around the existing Go engine and stable C ABI 1. The Android host must not duplicate table rules, presentation programs, tracker progression, settings/high-score encodings, source cadence or gameplay semantics.
 
+## Development status (2026-10-04)
+
+Development is on `android-host`, based on desktop `main` at `a848e43`.
+This is an asset-free platform prototype, not a playable Android release.
+
+- A0 passed [hosted CI at `8ac4030`](https://github.com/voobrazimoe/pinball-fantasies-native/actions/runs/37189211052):
+  ARM64/x86_64 Go shared libraries, 16 KB LOAD alignment, and ABI/missing-data
+  smoke on the x86_64 16 KB runtime.
+- A1 GameActivity, immersive UI, nearest GLES2 synthetic 320x609 texture,
+  letterboxing and orientation handling are implemented. The debug APK builds
+  for both ABIs and passes native ELF/ZIP alignment checks.
+- The initial A1 runtime run failed in the API 35 ps16k image's `system_server`,
+  with a SIGSEGV in precompiled `services.odex` at
+  `AppIdSettingMap.getSetting`. The CI guest now restarts ART in `-Xint` mode
+  before installation. Native rendering still executes normally; this smoke
+  cannot certify Java performance or a normal compiled Android runtime.
+- The host stops rendering while the Activity is paused. The runtime smoke
+  requires new log evidence for portrait → landscape → portrait, the same
+  process/native host across rotation and background/resume, a presented frame
+  after resume, and a fresh EGL frame after process restart.
+- A2–A7 are outstanding. There is no SAF import, packaged engine integration,
+  real game framebuffer, touch/keyboard controls, Oboe audio, engine lifecycle
+  or audio focus handling, original-backed Android parity, physical-device
+  acceptance, or signed release APK/AAB yet.
+
+Run the shell build and smoke with an installed SDK/NDK/JDK, Gradle 9.6.0 and
+an already booted emulator:
+
+```sh
+gradle -p hosts/android :app:assembleDebug
+sh tools/run_android_host_smoke.sh
+python3 tools/test_check_android_elf.py
+```
+
+The last command tests the alignment checker without an Android SDK. The smoke
+changes emulator orientation settings and restarts the test app; use a dedicated
+test device. CI preserves a successfully built debug APK even if runtime checks
+fail. It contains synthetic pixels only.
+
+The next implementation milestone is A2: package the unchanged ABI 1 engine,
+copy only the 11 required PRG/MOD files plus optional CFG through SAF to a private
+staging directory, validate via the shared loader with disposable state, then
+adopt the validated directory without damaging the previous installation.
+Keep commercial inputs under `noBackupFilesDir` and player state under
+`filesDir`; never pass a `content://` URI to Go. Import rejection/cancellation
+must leave the existing Data and State untouched.
+
 ## Fixed platform decisions
 
 - `minSdk 27`, `compileSdk 36`, `targetSdk 36`.

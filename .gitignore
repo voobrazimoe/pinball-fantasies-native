@@ -46,3 +46,11 @@ bin/
 
 /.public-preflight-originals/
 /.private-cleanup/
+
+# Android local SDK configuration and generated build output.
+/hosts/android/local.properties
+/hosts/android/.gradle/
+/hosts/android/.kotlin/
+/hosts/android/app/.cxx/
+/hosts/android/app/build/
+/.android-avd/

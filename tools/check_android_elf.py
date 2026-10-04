@@ -28,6 +28,8 @@ def parse_load_alignments(text: str) -> list[int]:
         match = re.search(r"\s(0x[0-9a-fA-F]+)\s*$", line)
         if match:
             alignments.append(int(match.group(1), 16))
+            continue
+        raise ValueError(f"cannot parse ELF LOAD alignment: {line.strip()}")
     return alignments
 
 
@@ -45,11 +47,14 @@ def main() -> int:
         raise SystemExit(f"missing library: {args.library}")
 
     output = run_tool(args.objdump, "-p", str(args.library))
-    alignments = parse_load_alignments(output)
+    try:
+        alignments = parse_load_alignments(output)
+    except ValueError as error:
+        raise SystemExit(str(error)) from error
     if not alignments:
         raise SystemExit("no ELF LOAD segments found")
 
-    if any(value < MIN_PAGE_ALIGN for value in alignments):
+    if any(value < MIN_PAGE_ALIGN or value & (value - 1) for value in alignments):
         values = ", ".join(str(value) for value in alignments)
         raise SystemExit(f"16 KB alignment check failed: LOAD alignments are {values}")
 
