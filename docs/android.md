@@ -46,7 +46,7 @@ This is an asset-free platform prototype, not a playable Android release.
   and persistent engine creation. Successful original-backed Android import/bootstrap
   and physical-device acceptance remain unverified for A6. A3 implementation is described below; A4–A7 remain outstanding.
 
-- A3 implementation passed [hosted Android CI at `382a03d`](https://github.com/voobrazimoe/pinball-fantasies-native/actions/runs/37205273569):
+- A3 implementation passed [hosted Android CI at `806d4de`](https://github.com/voobrazimoe/pinball-fantasies-native/actions/runs/37206531433):
   both-ABI APK/exports/16 KB checks, payload scan, A2 import transactions, A3
   controls/frame/native-session tests, real MotionEvent instrumentation and
   no-data rotation/lifecycle/keyboard/Back smoke. Required boundary regressions
@@ -311,7 +311,9 @@ checks, packaged ABI exports, payload scan, all ELF/ZIP 16 KB checks and A1
 rotation/background/resume smoke. Smoke locks rotation through WindowManager rather than relying on a settings
 write that emulator startup can race, issues hardware/menu/Back and touch input
 in the no-data shell, and requires the same host to survive. Timeout diagnostics
-include rotation policy and focused Activity/window state.
+include rotation policy and focused Activity/window state. Smoke waits for
+`A3_INPUT_STATE resumed=1 focused=1` before rotation/inputs and after resume
+or restart, so disabled early callbacks cannot count as input acceptance.
 
 Asset-free Go regressions exercise the actual Engine → Runtime → four-table
 render/composition path using invented zero indexed pixels, verify 320×609 and

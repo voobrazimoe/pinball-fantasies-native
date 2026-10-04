@@ -80,6 +80,7 @@ begin_phase
 timeout 30 adb shell am start -W -n "$COMPONENT"
 wait_for A1_FRAME_PRESENTED
 wait_for A2_SHELL_NO_DATA
+wait_for 'A3_INPUT_STATE resumed=1 focused=1'
 wait_for 'A1_VIEWPORT.*orientation=portrait'
 test "$(grep -c A1_HOST_STARTED "$scratch/log")" -eq 1
 initial_pid=$(timeout 10 adb shell pidof "$PACKAGE" | tr -d '\r')
@@ -102,6 +103,7 @@ begin_phase
 timeout 30 adb shell am start -W -n "$COMPONENT"
 wait_for A1_ACTIVITY_RESUMED
 wait_for A1_ACTIVE_FRAME
+wait_for 'A3_INPUT_STATE resumed=1 focused=1'
 require_same_host
 
 # A3 no-data inputs/Back must keep the same legal native shell alive.
@@ -118,5 +120,6 @@ begin_phase
 timeout 30 adb shell am start -W -n "$COMPONENT"
 wait_for A1_FRAME_PRESENTED
 wait_for A2_SHELL_NO_DATA
+wait_for 'A3_INPUT_STATE resumed=1 focused=1'
 test "$(grep -c A1_HOST_STARTED "$scratch/log")" -eq 1
 echo 'OK: Android A3 no-data inputs/Back and A1 frame, rotation, background/resume and fresh process'
