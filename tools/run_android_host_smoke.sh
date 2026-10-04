@@ -7,11 +7,31 @@ APK=${1:-hosts/android/app/build/outputs/apk/debug/app-debug.apk}
 PACKAGE=io.github.voobrazimoe.pinballfantasies
 COMPONENT="$PACKAGE/.PinballActivity"
 scratch=$(mktemp -d)
-trap 'rm -rf "$scratch"' EXIT HUP INT TERM
+collector=''
+cleanup() {
+    if [ -n "$collector" ]; then
+        kill "$collector" 2>/dev/null || true
+        wait "$collector" 2>/dev/null || true
+    fi
+    rm -rf "$scratch"
+}
+trap cleanup EXIT HUP INT TERM
+
+begin_phase() {
+    if [ -n "$collector" ]; then
+        kill "$collector" 2>/dev/null || true
+        wait "$collector" 2>/dev/null || true
+    fi
+    timeout 10 adb logcat -c
+    # Stream from before the transition, so framework startup chatter cannot
+    # evict short-lived native/JNI failures before the next polling snapshot.
+    adb logcat -v brief -s PinballFantasies:I AndroidRuntime:E GameActivity:V DEBUG:F '*:S' \
+        > "$scratch/log" 2>&1 &
+    collector=$!
+}
 
 snapshot() {
-    timeout 10 adb logcat -d -s PinballFantasies:I '*:S' > "$scratch/log"
-    if grep -q 'A1_.*ERROR' "$scratch/log"; then
+    if grep -Eq 'A1_.*ERROR|FATAL EXCEPTION|UnsatisfiedLinkError|Fatal signal' "$scratch/log"; then
         cat "$scratch/log" >&2
         exit 1
     fi
@@ -51,7 +71,7 @@ timeout 10 adb shell settings put system accelerometer_rotation 0
 timeout 10 adb shell settings put system user_rotation 0
 timeout 10 adb shell input keyevent KEYCODE_WAKEUP
 timeout 10 adb shell wm dismiss-keyguard
-timeout 10 adb logcat -c
+begin_phase
 timeout 30 adb shell am start -W -n "$COMPONENT"
 wait_for A1_FRAME_PRESENTED
 wait_for 'A1_VIEWPORT.*orientation=portrait'
@@ -59,20 +79,20 @@ test "$(grep -c A1_HOST_STARTED "$scratch/log")" -eq 1
 initial_pid=$(timeout 10 adb shell pidof "$PACKAGE" | tr -d '\r')
 test -n "$initial_pid"
 
-timeout 10 adb logcat -c
+begin_phase
 timeout 10 adb shell settings put system user_rotation 1
 wait_for 'A1_VIEWPORT.*orientation=landscape'
 require_same_host
 
-timeout 10 adb logcat -c
+begin_phase
 timeout 10 adb shell settings put system user_rotation 0
 wait_for 'A1_VIEWPORT.*orientation=portrait'
 require_same_host
 
-timeout 10 adb logcat -c
+begin_phase
 timeout 10 adb shell input keyevent KEYCODE_HOME
 wait_for A1_ACTIVITY_PAUSED
-timeout 10 adb logcat -c
+begin_phase
 timeout 30 adb shell am start -W -n "$COMPONENT"
 wait_for A1_ACTIVITY_RESUMED
 wait_for A1_ACTIVE_FRAME
@@ -80,7 +100,7 @@ require_same_host
 
 # A process restart creates fresh EGL resources and presents again.
 timeout 10 adb shell am force-stop "$PACKAGE"
-timeout 10 adb logcat -c
+begin_phase
 timeout 30 adb shell am start -W -n "$COMPONENT"
 wait_for A1_FRAME_PRESENTED
 test "$(grep -c A1_HOST_STARTED "$scratch/log")" -eq 1
