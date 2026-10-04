@@ -73,6 +73,18 @@ int main() {
     assert(androidEngineFrame(true,pixels,w,h));
     JNI_METHOD(nativeAudio)(nullptr,nullptr,token,false,true);
     androidAudioBuffer().render(audio,1); assert(audio[0]==0 && suspends==sourceSuspends);
+    JNI_METHOD(nativeActive)(nullptr,nullptr,token,false,true);
+    JNI_METHOD(nativeAudio)(nullptr,nullptr,token,false,false);
+    JNI_METHOD(nativeAudio)(nullptr,nullptr,token,true,false); // gain before resume
+    assert(!(androidAudioBuffer().current()&1));
+    JNI_METHOD(nativeActive)(nullptr,nullptr,token,true,true);
+    assert(androidAudioBuffer().current()&1);
+    JNI_METHOD(nativeActive)(nullptr,nullptr,token,false,true);
+    JNI_METHOD(nativeAudio)(nullptr,nullptr,token,false,false);
+    JNI_METHOD(nativeActive)(nullptr,nullptr,token,true,true); // resume before gain
+    assert(!(androidAudioBuffer().current()&1));
+    JNI_METHOD(nativeAudio)(nullptr,nullptr,token,true,false);
+    assert(androidAudioBuffer().current()&1);
     std::thread focusEvents([&] { for(int i=0;i<1000;i++)
         JNI_METHOD(nativeAudio)(nullptr,nullptr,token,i%2,i%3==0); });
     std::thread render([&] { std::vector<uint8_t> out; int fw=0,fh=0;

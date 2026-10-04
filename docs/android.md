@@ -558,7 +558,7 @@ Debug-only `AudioTestActivity` shares the production Android focus/device adapte
 but uses an isolated synthetic PCM controller with no engine/assets. Instrumentation
 requires a real foreground AudioManager grant, injects transient/permanent/gain
 notifications into that adapter, checks silence/fresh callback consumption,
-background/resume and deferred route reopen. Its Java Activity/manifest and native
+background/resume, deferred route reopen and the registered becoming-noisy receiver. Its Java Activity/manifest and native
 JNI hooks are excluded from release builds; no production intent extra enables them.
 All A1–A4 packaged ABI, controls, framebuffer, rotation, quiet-launch, background and
 16 KiB checks remain. Host-only changes do not trigger A0 or desktop/macOS matrices.

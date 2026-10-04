@@ -76,8 +76,9 @@ public:
     }
 };
 class PcmBuffer {
-    // Low bit = active, upper bits = generation. Requests serialized with PCM
-    // production by the A3 mutex. No stream operation or wait on that path.
+    // Low bit = eligible, upper bits = generation. Session publications serialize
+    // with PCM through A3; control/error invalidation uses the same atomic epoch.
+    // No stream operation or wait occurs on the producer/publication path.
     std::atomic<uint64_t> state{0};
 public:
     PcmRing<> ring;
