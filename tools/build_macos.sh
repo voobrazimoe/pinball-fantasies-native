@@ -23,8 +23,8 @@ cp LICENSE "$app/Contents/Resources/LICENSE.txt"
 common=(-arch arm64 -isysroot "$sdk" -mmacosx-version-min=13.0 -Wall -Wextra -Werror -O2)
 objc=(-fobjc-arc -fblocks -framework AppKit -framework AudioToolbox -framework CoreAudio -framework IOKit -framework Security -framework CoreFoundation -framework CoreGraphics)
 "$CC" "${common[@]}" -std=c11 -pthread hosts/macos/host_logic.c hosts/macos/logic_tests.c -o bin/macos/logic-tests
-"$CC" "${common[@]}" "${objc[@]}" hosts/macos/main.m hosts/macos/frame_view.m hosts/macos/storage.m hosts/macos/audio_host.m hosts/macos/host_logic.c bin/macos/libpfengine.a -o "$app/Contents/MacOS/pinballfantasies"
-"$CC" "${common[@]}" "${objc[@]}" hosts/macos/native_tests.m hosts/macos/frame_view.m hosts/macos/storage.m hosts/macos/audio_host.m hosts/macos/host_logic.c bin/macos/libpfengine.a -o bin/macos/native-tests
+"$CC" "${common[@]}" "${objc[@]}" hosts/macos/main.m hosts/macos/frame_view.m hosts/macos/storage.m hosts/macos/audio_host.m hosts/macos/native_input.m hosts/macos/host_logic.c bin/macos/libpfengine.a -o "$app/Contents/MacOS/pinballfantasies"
+"$CC" "${common[@]}" "${objc[@]}" hosts/macos/native_tests.m hosts/macos/frame_view.m hosts/macos/storage.m hosts/macos/audio_host.m hosts/macos/native_input.m hosts/macos/host_logic.c bin/macos/libpfengine.a -o bin/macos/native-tests
 codesign --force --sign - "$app"
 codesign --verify --strict "$app"
 file "$app/Contents/MacOS/pinballfantasies"

@@ -1,8 +1,34 @@
 #import "frame_view.h"
 #import "storage.h"
 #import "audio_host.h"
+#import "native_input.h"
+#import <mach/mach_time.h>
+#import <IOKit/hidsystem/IOLLEvent.h>
 #include <assert.h>
 #include <stdio.h>
+static void modifierTests(void) {
+    PFInput input; pf_input_init(&input,NULL,NULL); pf_input_focus(&input,true);
+    pf_macos_modifiers(&input,NX_DEVICELALTKEYMASK);
+    assert(input.held[PF_LEFT] && !input.held[PF_RIGHT]);
+    pf_macos_modifiers(&input,NX_DEVICELALTKEYMASK|NX_DEVICERALTKEYMASK);
+    assert(input.held[PF_LEFT] && input.held[PF_RIGHT]);
+    pf_macos_modifiers(&input,NX_DEVICERALTKEYMASK|NX_DEVICERCTLKEYMASK);
+    assert(!input.held[PF_LEFT] && input.held[PF_RIGHT]);
+    pf_macos_modifiers(&input,NX_DEVICERCTLKEYMASK|NX_DEVICELSHIFTKEYMASK);
+    assert(input.held[PF_LEFT] && input.held[PF_RIGHT]);
+    pf_macos_modifiers(&input,0); assert(!input.held[PF_LEFT] && !input.held[PF_RIGHT]);
+    pf_macos_modifiers(&input,NX_DEVICELCTLKEYMASK|NX_DEVICERSHIFTKEYMASK);
+    pf_input_focus(&input,false); assert(!input.held[PF_LEFT] && !input.held[PF_RIGHT]);
+    pf_input_focus(&input,true); assert(!input.held[PF_LEFT] && !input.held[PF_RIGHT]);
+    mach_timebase_info_data_t scale; assert(mach_timebase_info(&scale)==KERN_SUCCESS);
+    uint64_t epoch=mach_absolute_time(); assert(pf_clock_ns(epoch,epoch,scale.numer,scale.denom)==0);
+    int64_t previous=0;
+    for (unsigned i=0;i<1000;i++) {
+        int64_t now=pf_clock_ns(mach_absolute_time(),epoch,scale.numer,scale.denom);
+        assert(now>=previous); previous=now;
+    }
+    puts("PASS Apple device-side modifier masks, focus reset and actual monotonic clock");
+}
 static BOOL acceptTestFiles(NSString *data,NSError **error) {
     (void)error;
     for (NSString *name in pf_required_assets()) {
@@ -61,6 +87,11 @@ static void frameTests(void) {
         else if (p[0]==0 && p[1]==0 && p[2]==0) black++;
     }
     assert(red==4 && green==4 && blue==4 && white==4 && black==16);
+    /* Top source row remains at the top; green stays to the right of red. */
+    unsigned char *top=bitmap.bitmapData+2*4;
+    unsigned char *bottom=bitmap.bitmapData+3*32+2*4;
+    assert(top[0]==255 && top[1]==0 && top[2]==0);
+    assert(bottom[0]==0 && bottom[1]==0 && bottom[2]==255);
     puts("PASS native bitmap copy, aspect, black bars, exact nearest-neighbour colours");
 }
 static void abiTests(void) {
@@ -121,7 +152,7 @@ static void journey(NSString *data) {
 }
 int main(int argc,const char **argv) {
     @autoreleasepool {
-        abiTests(); storageTests(); frameTests();
+        abiTests(); modifierTests(); storageTests(); frameTests();
         if (argc==2) journey([NSString stringWithUTF8String:argv[1]]);
         else puts("UNVERIFIED original-backed four-table macOS journey: external originals not supplied");
     }

@@ -1,7 +1,7 @@
 #import "app.h"
 #import "frame_view.h"
 #import <mach/mach_time.h>
-#import <IOKit/hidsystem/IOLLEvent.h>
+#import "native_input.h"
 #include <stdio.h>
 /* OS helpers are separate modules; gameplay stays behind abi.h. */
 #import "audio_host.h"
@@ -9,6 +9,8 @@
 @interface PFApp ()
 - (void)emit:(PFHostEvent)event a:(int32_t)a b:(int32_t)b;
 - (void)syncFocus;
+- (void)sleeping:(BOOL)sleeping;
+- (void)deviceChanged;
 - (void)step;
 - (void)toggleFullscreen:(id)sender;
 @end
@@ -131,13 +133,7 @@ static void inputEvent(void *context,PFHostEvent event,int32_t a,int32_t b) {
                  (e.modifierFlags & NSEventModifierFlagOption)!=0);
 }
 - (void)modifiers:(NSEvent *)e {
-    /* AppKit modifiers use flagsChanged, not ordinary keyDown/keyUp. Device-side
-       masks preserve both sides even when one member of a pair is released. */
-    const NSUInteger masks[6]={NX_DEVICELSHIFTKEYMASK,NX_DEVICERSHIFTKEYMASK,
-        NX_DEVICELCTLKEYMASK,NX_DEVICERCTLKEYMASK,NX_DEVICELALTKEYMASK,NX_DEVICERALTKEYMASK};
-    bool sides[6];
-    for (unsigned i=0;i<6;i++) sides[i]=(e.modifierFlags & masks[i])!=0;
-    pf_input_modifiers(&_input,sides);
+    pf_macos_modifiers(&_input,e.modifierFlags);
 }
 - (void)motion:(NSEvent *)e {
     [self updateCursor];
