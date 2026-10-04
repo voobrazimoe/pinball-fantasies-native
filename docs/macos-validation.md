@@ -84,3 +84,14 @@ the release based on the reported gameplay checks; this record does not claim
 exhaustive testing of every audio route, display topology or sleep duration.
 
 [Build and usage documentation](macos.md).
+
+## Local personal macOS packages
+
+The local personal builder validates the supplied installation, copies only the
+11 required PRG/MOD files and optional PINBALL.CFG into Resources/Data, re-signs
+both architectures and writes ignored local ZIP packages. Production first-run
+storage automatically imports bundled originals using the same validated,
+staged import path as manual import. Existing valid Data and State are preserved.
+Original-backed native tests PASS for automatic first import, relaunch with an
+existing import, unchanged bundled originals and all 32 gameplay journeys.
+Public bundle allowlist/source checks remain unchanged; CI never packages data.

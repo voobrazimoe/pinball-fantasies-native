@@ -334,6 +334,32 @@ static void journey(NSString *data) {
     }
 }
 
+static void bundledStorageTests(NSString *originals) {
+    NSFileManager *fm=NSFileManager.defaultManager;
+    NSString *root=[NSTemporaryDirectory() stringByAppendingPathComponent:NSUUID.UUID.UUIDString];
+    NSString *resources=[root stringByAppendingPathComponent:@"Resources"];
+    NSString *bundled=[resources stringByAppendingPathComponent:@"Data"];
+    NSString *base=[root stringByAppendingPathComponent:@"Support"];
+    assert([fm createDirectoryAtPath:bundled withIntermediateDirectories:YES attributes:nil error:NULL]);
+    for (NSString *name in pf_required_assets())
+        assert([fm copyItemAtPath:[originals stringByAppendingPathComponent:name]
+            toPath:[bundled stringByAppendingPathComponent:name] error:NULL]);
+    NSString *data=nil,*state=nil; NSError *error=nil;
+    assert(pf_storage_prepare_at(base,resources,&data,&state,&error));
+    assert([data isEqualToString:[[base stringByAppendingPathComponent:@"PinballFantasies"] stringByAppendingPathComponent:@"Data"]]);
+    assert([fm fileExistsAtPath:state] && pf_validate_assets(data,&error));
+    NSString *marker=[data stringByAppendingPathComponent:@"preserved"];
+    assert([@"existing import" writeToFile:marker atomically:YES encoding:NSUTF8StringEncoding error:NULL]);
+    assert(pf_storage_prepare_at(base,resources,&data,&state,&error));
+    assert([fm fileExistsAtPath:marker]); /* relaunch preserves existing valid import */
+    for (NSString *name in pf_required_assets()) {
+        assert([[NSData dataWithContentsOfFile:[bundled stringByAppendingPathComponent:name]]
+            isEqualToData:[NSData dataWithContentsOfFile:[originals stringByAppendingPathComponent:name]]]);
+    }
+    assert([fm removeItemAtPath:root error:NULL]);
+    puts("PASS personal bundle first launch, existing import preservation and read-only bundled originals");
+}
+
 static void compatibilityImportTests(NSString *originals) {
     NSFileManager *fm=NSFileManager.defaultManager;
     NSString *root=[NSTemporaryDirectory() stringByAppendingPathComponent:NSUUID.UUID.UUIDString];
@@ -370,7 +396,7 @@ static void compatibilityImportTests(NSString *originals) {
 int main(int argc,const char **argv) {
     @autoreleasepool {
         abiTests(); modifierTests(); audioTests(); storageTests(); frameTests();
-        if (argc==2) { NSString *originals=[NSString stringWithUTF8String:argv[1]]; compatibilityImportTests(originals); journey(originals); }
+        if (argc==2) { NSString *originals=[NSString stringWithUTF8String:argv[1]]; compatibilityImportTests(originals); bundledStorageTests(originals); journey(originals); }
         else puts("UNVERIFIED original-backed four-table macOS journey: external originals not supplied");
     }
     return 0;

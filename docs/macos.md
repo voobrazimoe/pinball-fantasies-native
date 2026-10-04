@@ -89,6 +89,21 @@ captures explicitly skip. Those skips **do not satisfy** the original-backed
 macOS conformance gate. Asset-free native C archive and loaded C shared-library tests check ABI version, missing-data errors
 and every invalid-handle export; they do not claim successful gameplay replay.
 
+## Local personal packages
+
+```sh
+python3 tools/build_personal_macos.py /absolute/path/to/originals
+```
+
+Builds both architectures by default; `--arch arm64` or `--arch x86_64` selects
+one. Packages are written under `release/personal/macos-arm64/` and
+`release/personal/macos-x86_64/`. They include the validated original game files
+in the app's Resources/Data directory and import them into Application Support
+on first launch without a file-selection dialog. Existing valid imports and
+saved state are preserved. Originals remain read-only; scores/settings are
+written outside the app. Personal payloads and archives stay in Git-ignored
+local directories and are not uploaded by CI.
+
 ## Window, time and input
 
 Core Animation presents an immutable copied RGBA8 CGImage in a child layer with

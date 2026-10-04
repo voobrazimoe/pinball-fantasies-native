@@ -70,12 +70,19 @@ BOOL pf_storage_prepare(NSString **data,NSString **state,NSError **error) {
     NSURL *base=[fm URLForDirectory:NSApplicationSupportDirectory inDomain:NSUserDomainMask
                     appropriateForURL:nil create:YES error:error];
     if (!base) return NO;
-    NSString *root=pf_support_path(base.path);
+    return pf_storage_prepare_at(base.path,NSBundle.mainBundle.resourcePath,data,state,error);
+}
+BOOL pf_storage_prepare_at(NSString *base,NSString *resources,NSString **data,NSString **state,NSError **error) {
+    NSFileManager *fm=NSFileManager.defaultManager;
+    NSString *root=pf_support_path(base);
     if (![fm createDirectoryAtPath:root withIntermediateDirectories:YES attributes:@{NSFilePosixPermissions:@0700} error:error]) return NO;
     *state=[root stringByAppendingPathComponent:@"State"];
     *data=[root stringByAppendingPathComponent:@"Data"];
     if (![fm createDirectoryAtPath:*state withIntermediateDirectories:YES attributes:@{NSFilePosixPermissions:@0700} error:error]) return NO;
     if ([fm fileExistsAtPath:*data] && pf_validate_assets(*data,NULL)) return YES;
+    NSString *bundled=[resources stringByAppendingPathComponent:@"Data"];
+    if ([fm fileExistsAtPath:bundled])
+        return pf_import_assets(bundled,*data,pf_validate_assets,error);
     while (YES) {
         NSAlert *explanation=[NSAlert new]; explanation.messageText=@"Original game files are required";
         explanation.informativeText=@"Select the folder containing your original DOS Pinball Fantasies INTRO.PRG, INTRO.MOD, MOD2.MOD and TABLE1–4 PRG/MOD files. Validated files will be copied to Application Support. Game data is not included.";
