@@ -265,6 +265,10 @@ public final class PinballActivity extends GameActivity {
         resumed=false; syncInputs(); super.onPause();
     }
     @Override public boolean dispatchKeyEvent(android.view.KeyEvent event) {
+        // Consume only the make that dismisses our transient UI. Its matching
+        // up has no Controls owner, so it cannot leak an Escape into the engine.
+        if (menu!=null && event.getKeyCode()==android.view.KeyEvent.KEYCODE_BACK &&
+                event.getAction()==android.view.KeyEvent.ACTION_DOWN && menu.dismiss()) return true;
         if (controls!=null && (event.getAction()==android.view.KeyEvent.ACTION_DOWN ||
                 event.getAction()==android.view.KeyEvent.ACTION_UP) &&
                 controls.key(event.getKeyCode(),event.getAction()==android.view.KeyEvent.ACTION_DOWN,
