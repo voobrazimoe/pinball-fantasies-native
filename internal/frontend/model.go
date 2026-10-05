@@ -274,7 +274,8 @@ func (m *Model) attract() {
 	}
 }
 
-// ALFA_KEYS from linked TABLE1.PRG at 1d396: letters and Space as '*'.
+// ALFA_KEYS matches all four pinned DOS PRGs: A-Z and Space as '*'.
+// Top-row numeric scans 2..11 are zero/rejected; see docs/dos-initials-audit.md.
 func Initial(k Key) byte {
 	const keys = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00QWERTYUIOP\x00\x00\x00\x00ASDFGHJKL\x00\x00\x00\x00\x00ZXCVBNM\x00\x00\x00\x00\x00\x00*"
 	if int(k) < len(keys) {

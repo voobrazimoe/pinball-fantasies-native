@@ -298,6 +298,11 @@ framework-free mapper drives the sheets and gameplay overlay idempotently.
 | PAUSED | Resume / Exit table (Enter / Escape) |
 | QUIT_QUESTION | Yes / No (Y / N) |
 | INITIALS | Temporary QWERTY letters using existing DOS makes |
+
+The [four-table DOS initials audit](dos-initials-audit.md) confirms that top-row
+digits are rejected in all pinned PRGs, including original routine execution.
+Initials remain A–Z and Space as `*`; no numeric row is added. Touch controls
+(including selector cards and the menu icon) do not take hardware keyboard focus.
 | GAME_END / ENTRY_WAIT / QUIT | No contextual controls |
 
 The accepted semantic architecture is preserved. This A6 polish adds only host

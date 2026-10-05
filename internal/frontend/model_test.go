@@ -2,6 +2,7 @@ package frontend
 
 import (
 	"bytes"
+	"fmt"
 	"image"
 	"os"
 	"path/filepath"
@@ -309,17 +310,52 @@ func TestPersistenceSeedsWithoutChangingAssets(t *testing.T) {
 	}
 }
 func TestKeyTableAgainstOriginal(t *testing.T) {
-	testinputs.Require(t, "../../TABLE1.PRG")
-	data, e := os.ReadFile("../../TABLE1.PRG")
-	if e != nil {
-		t.Fatal(e)
+	for table, offset := range []int{0x1d396, 0x1c5cb, 0x1ba70, 0x1a2f4} {
+		path := fmt.Sprintf("../../TABLE%d.PRG", table+1)
+		t.Run(fmt.Sprint(table+1), func(t *testing.T) {
+			testinputs.Require(t, path)
+			data, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for scan := 0; scan < 128; scan++ {
+				if got := Initial(Key(scan)); got != data[offset+scan] {
+					t.Fatalf("scan %d %q != %q", scan, got, data[offset+scan])
+				}
+			}
+		})
 	}
-	for i := 0; i < 128; i++ {
-		if got := Initial(Key(i)); got != data[0x1d396+i] {
-			t.Fatalf("scan %d %q != %q", i, got, data[0x1d396+i])
+}
+
+// All four pinned DOS PRGs reject the normal top-row numeric makes.
+func TestInitialsRejectDOSDigits(t *testing.T) {
+	m, store, _ := setup(t)
+	m.Mode = Initials
+	for scan := Key(2); scan <= 11; scan++ {
+		key(t, m, scan)
+		if Initial(scan) != 0 || m.Entered != 0 || store.writes != 0 || m.Mode != Initials {
+			t.Fatalf("numeric scan %d changed initials", scan)
+		}
+	}
+	for _, sequence := range []struct {
+		keys []Key
+		want [3]byte
+	}{
+		{[]Key{30, 2, 48}, [3]byte{'A', 'B', 0}},
+		{[]Key{8, 22, 25}, [3]byte{'U', 'P', 0}},
+		{[]Key{19, 3, 32}, [3]byte{'R', 'D', 0}},
+	} {
+		m, store, _ := setup(t)
+		m.Mode = Initials
+		for _, scan := range sequence.keys {
+			key(t, m, scan)
+		}
+		if m.Entry != sequence.want || m.Entered != 2 || m.Mode != Initials || store.writes != 0 {
+			t.Fatalf("mixed input: entry=%q entered=%d mode=%v writes=%d", m.Entry, m.Entered, m.Mode, store.writes)
 		}
 	}
 }
+
 func TestNativeSessionSuspension(t *testing.T) {
 	testinputs.Require(t, "../../INTRO.PRG", "../../INTRO.MOD", "../../MOD2.MOD", "../../TABLE1.PRG", "../../TABLE1.MOD", "../../TABLE2.PRG", "../../TABLE2.MOD", "../../TABLE3.PRG", "../../TABLE3.MOD", "../../TABLE4.PRG", "../../TABLE4.MOD", "../../PINBALL.CFG")
 	r, e := Load("../..", nil)
