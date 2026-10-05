@@ -143,8 +143,9 @@ JNI sends absolute normal filesystem paths as standard UTF-8 byte arrays, with a
 native guard against URIs, relative paths and embedded NULs. C++ links the existing
 `cmd/pfengine` shared library, checks `pf_engine_abi_version() == PF_ABI_VERSION == 1`,
 and calls `pf_engine_create(candidate, disposableState, CLOCK_MONOTONIC ns, error,
-1024)`. A zero handle rejects the candidate. The bounded shared-loader error is
-logged and shown in a Toast. A successful validation handle is destroyed before
+1024)`. A zero handle rejects the candidate. Detailed shared-loader errors remain in the internal exception and are logged
+only with PF_DIAGNOSTICS enabled. Ordinary Toasts show concise messages with an
+allowlisted failing filename, without Java class names or parser arrays. A successful validation handle is destroyed before
 validation State is deleted. There is no Android PRG/MOD parser.
 
 After validation, the worker closes the old persistent engine, renames `Data`
@@ -768,3 +769,27 @@ audio-focus handling. A6 remains original-backed Android parity, practical touch
 charging/layout acceptance, normal compiled ART, hardware keyboards and physical
 devices. A7 remains signed APK/AAB packaging and release payload scanning.
 A6/A7 and a main merge require owner approval. No physical-device audio acceptance is claimed.
+
+
+## A6 final import review (2026-10-05)
+
+The owner reports successful physical gameplay, touch controls, keyboard
+attach/detach, audio/lifecycle and Choreographer smoothness at `f35f27d`.
+A separately clean, public APK imported and ran PINBALLF through real SAF;
+this is physical evidence for the A2 transaction path. The alternate
+21STCENT/FANTASY rejection is a shared layout boundary, detailed in
+[runtime-compatibility-audit.md](runtime-compatibility-audit.md), not a SAF fault.
+No second profile is registered: a consumed Party Land jingle priority differs.
+
+Public no-data startup now shows an ordinary Android black first-run shell,
+title/explanation and **Import DOS folder**. The native empty framebuffer is also
+black; the A1 checkerboard is removed. The game menu/touch layer are hidden until
+an engine exists. Import disables its button with **Importing…**; cancellation or
+failure restores it, and successful bootstrap hides the shell and exposes normal
+engine UI (subject to the existing hardware-keyboard policy). Import remains
+available only in the no-data shell. A2 staging, validation, adoption/rollback and
+persistent State semantics are unchanged. Detailed errors are diagnostic-only.
+
+The final acceptance evidence and remaining device/CI checks are recorded in
+[android-a6-acceptance.md](android-a6-acceptance.md). A7 and main integration remain
+outside this branch task.

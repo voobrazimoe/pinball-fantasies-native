@@ -14,6 +14,25 @@ public final class ImportInstrumentation extends Instrumentation {
     private static native boolean nativeAudioSmoke();
     @Override public void onCreate(Bundle arguments) { super.onCreate(arguments); start(); }
     static void check(boolean value) { if (!value) throw new AssertionError(); }
+    private void testFirstRunShell() {
+        runOnMainSync(() -> {
+            android.view.View menu = new android.view.View(getTargetContext());
+            android.view.View touch = new android.view.View(getTargetContext());
+            FirstRunShell shell = new FirstRunShell(getTargetContext(), () -> {});
+            shell.present(false,false,false,menu,touch);
+            check(shell.getVisibility()==android.view.View.VISIBLE && shell.button.isEnabled());
+            check(menu.getVisibility()==android.view.View.GONE && touch.getVisibility()==android.view.View.GONE);
+            shell.present(false,true,false,menu,touch);
+            check(!shell.button.isEnabled() && shell.button.getText().toString().equals("Importing…"));
+            shell.present(false,false,false,menu,touch);
+            check(shell.button.isEnabled() && shell.button.getText().toString().equals("Import DOS folder"));
+            shell.present(true,false,false,menu,touch);
+            check(shell.getVisibility()==android.view.View.GONE && menu.getVisibility()==android.view.View.VISIBLE
+                    && touch.getVisibility()==android.view.View.VISIBLE);
+            shell.present(true,false,true,menu,touch);
+            check(touch.getVisibility()==android.view.View.GONE);
+        });
+    }
     private void testOverlay() {
         runOnMainSync(() -> {
             List<String> events=new ArrayList<>();
@@ -256,6 +275,7 @@ public final class ImportInstrumentation extends Instrumentation {
             // No-data JNI calls must remain harmless across focus/pause/stale sessions.
             PinballActivity.nativeActive(session,true,true);
             for (int kind=0;kind<5;kind++) PinballActivity.nativeInput(session,kind,0,1);
+            testFirstRunShell();
             testOverlay();
             check(nativeAudioSmoke());
             testFocus();

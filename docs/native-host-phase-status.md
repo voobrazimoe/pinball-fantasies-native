@@ -1,6 +1,6 @@
 # Native host phase validation status
 
-## Current status (2026-10-04)
+## Current status (2026-10-05)
 
 The native macOS ARM64/x86_64 host is implemented and accepted by the owner.
 Original-backed replay/native journeys, clean packages and physical Mac gameplay
@@ -8,12 +8,16 @@ checks are recorded in [macOS validation](macos-validation.md); see
 [macOS build and usage](macos.md). PR #1 was merged into `main` at `97c9777`;
 public desktop packages were published as `v0.1.2`.
 
-Android development is separate on `android-host`. A0 native engine builds and
-the 16 KB ABI runtime smoke passed hosted CI. A1 has an asset-free GameActivity
-and EGL/GLES synthetic renderer; JNI startup and orientation/lifecycle smoke
-passed hosted CI at `c72f018` on a 16 KB emulator with interpreted ART.
-A playable Android host and physical-device acceptance
-remain outstanding. See [Android development status and remaining milestones](android.md).
+Android development remains on `android-host`. A0–A5 hosted checks passed; the
+owner reports physical gameplay/touch, keyboard attach/detach, audio/lifecycle,
+Choreographer smoothness and clean-public PINBALLF SAF import success at
+`f35f27d`. The final A6 import review replaces the synthetic first-run screen,
+sanitizes ordinary import errors, and independently audits a second possessed
+installation. That installation remains unsupported: INTRO/TABLE1/TABLE2 records
+move, and Party Land S_EMPTY has a different consumed jingle priority. No
+validation bypass/profile weakening or gameplay fork is added. Detailed evidence,
+remaining individual device checks and the final UX confirmation boundary are in
+[Android A6 acceptance](android-a6-acceptance.md). A7 and main merge are not started.
 
 ## Historical foundation report (2026-10-03)
 

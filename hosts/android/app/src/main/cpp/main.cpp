@@ -103,46 +103,10 @@ GLuint createProgram() {
     return 0U;
 }
 
-std::vector<std::uint8_t> makeSyntheticFrame() {
+std::vector<std::uint8_t> makeEmptyFrame() {
     std::vector<std::uint8_t> pixels(
-            static_cast<std::size_t>(kFrameWidth) * static_cast<std::size_t>(kFrameHeight) * 4U);
-
-    for (int y = 0; y < kFrameHeight; ++y) {
-        for (int x = 0; x < kFrameWidth; ++x) {
-            const bool checker = (((x / 16) + (y / 16)) & 1) != 0;
-            const bool border = x < 3 || x >= kFrameWidth - 3 || y < 3 || y >= kFrameHeight - 3;
-            const bool center = x >= (kFrameWidth / 2) - 1 && x <= (kFrameWidth / 2) + 1;
-            const bool marker = (y % 64) < 2;
-
-            std::uint8_t red = checker ? 22U : 38U;
-            std::uint8_t green = checker ? 54U : 76U;
-            std::uint8_t blue = checker ? 78U : 104U;
-            if (marker) {
-                red = 70U;
-                green = 132U;
-                blue = 164U;
-            }
-            if (center) {
-                red = 214U;
-                green = 180U;
-                blue = 72U;
-            }
-            if (border) {
-                red = 238U;
-                green = 238U;
-                blue = 238U;
-            }
-
-            const std::size_t offset =
-                    (static_cast<std::size_t>(y) * static_cast<std::size_t>(kFrameWidth) +
-                     static_cast<std::size_t>(x)) *
-                    4U;
-            pixels[offset + 0U] = red;
-            pixels[offset + 1U] = green;
-            pixels[offset + 2U] = blue;
-            pixels[offset + 3U] = 255U;
-        }
-    }
+            static_cast<std::size_t>(kFrameWidth) * static_cast<std::size_t>(kFrameHeight) * 4U, 0U);
+    for (std::size_t at = 3; at < pixels.size(); at += 4) pixels[at] = 255U;
     return pixels;
 }
 
@@ -239,7 +203,7 @@ public:
             detach();
             return false;
         }
-        const std::vector<std::uint8_t> pixels = makeSyntheticFrame();
+        const std::vector<std::uint8_t> pixels = makeEmptyFrame();
         frameWidth_ = textureWidth_ = kFrameWidth;
         frameHeight_ = textureHeight_ = kFrameHeight;
         glBindTexture(GL_TEXTURE_2D, texture_);

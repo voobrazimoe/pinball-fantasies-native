@@ -31,7 +31,7 @@ std::string path(JNIEnv* env, jbyteArray bytes) {
     return result;
 }
 jstring error(JNIEnv* env, const char* message) {
-    __android_log_print(ANDROID_LOG_ERROR, "PinballFantasies", "A2_ENGINE_REJECTED %s", message);
+    PF_LOGI("A2_ENGINE_REJECTED %s", message);
     // Shared loader errors are bounded; byte[] -> String below preserves standard UTF-8.
     jclass stringClass = env->FindClass("java/lang/String");
     jmethodID constructor = env->GetMethodID(stringClass, "<init>", "([BLjava/lang/String;)V");

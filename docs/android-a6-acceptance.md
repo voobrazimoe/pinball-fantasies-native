@@ -1,6 +1,8 @@
 # A6 physical Android acceptance record
 
-**Preparation only. A6 is NOT TESTED and is not complete.** A0–A5 are accepted.
+**Core physical A6: owner-reported PASS at `f35f27d` (2026-10-05).** A0–A5 are accepted.
+The checklist below remains a per-device template; unreported individual checks
+are NOT TESTED. The final import UI still needs owner confirmation on-device.
 Hosted, asset-free CI and emulator results cannot certify this phase. A7 signing,
 release publication and merging to `main` are outside this work.
 
@@ -283,7 +285,9 @@ latency and memory trend; no new profiler or timing compensation is involved.
 
 ## Completion decision
 
-**Overall A6: NOT TESTED.** Do not change this to PASS until actual physical
+**Extended checklist: NOT TESTED where no specific result was supplied.** Do not
+interpret the owner-reported core PASS as certification of every route below.
+Full checklist PASS requires actual physical
 testing with legitimate originals demonstrates normal compiled ART, successful
 real SAF/bootstrap, four playable tables, working controls, both orientations
 without reset, built-in Oboe audio, safe pause/resume/rotation/process relaunch,
@@ -297,3 +301,40 @@ For a discovered bug, reproduce narrowly, add an asset-free regression where
 feasible, fix only that bug without changing source/gameplay semantics, rerun
 applicable A1–A5 CI, and put meaningful fixes in clear separate commits.
 This preparation does not authorize A7 or a merge to `main`.
+
+
+## Final A6 import acceptance report (2026-10-05)
+
+| Evidence | Result and scope |
+| --- | --- |
+| Physical gameplay/touch | Owner-reported PASS at f35f27d; no new per-table hardware trace supplied. |
+| External keyboard attach/detach | Owner-reported PASS. |
+| Audio/lifecycle | Owner-reported PASS for exercised behavior; wired/Bluetooth/USB routes remain NOT TESTED unless separately recorded. |
+| Physical smoothness | Owner-reported PASS after Choreographer pacing fix. |
+| Clean public PINBALLF SAF import | Owner-reported PASS: imported and ran. Establishes real A2/SAF success. |
+| Alternate installation | Unsupported; INTRO/TABLE1/TABLE2 offsets differ, and Party Land S_EMPTY priority changes. Modules and TABLE3/4 validate independently. No second profile; alternate four-table gameplay NOT TESTED. |
+| First-run cleanup | Implemented black native background and Android shell, hidden no-data game controls, busy/restore/success states. New instrumentation covers these transitions; new on-device visual confirmation pending. |
+| Import diagnostics | Concise allowlisted filename messages; parser details only in explicitly enabled logs/internal errors. |
+| Transaction safety | Existing staging/disposable validation/rename/rollback/State behavior retained; rejection-preservation regression includes unsupported-layout failure. |
+
+The source audit is [runtime-compatibility-audit.md](runtime-compatibility-audit.md).
+No commercial inputs or whole-file hashes are published. PINBALLF remains the
+canonical runtime and strict oracle input. No A7 or main merge is performed.
+
+Local final validation: canonical PINBALLF independent validation passes all 11
+inputs; targeted datalayout/frontend regressions and the engine's four-table
+SOFT/OFF direct-Runner conformance pass. Alternate independent validation and
+module-equivalence/S_EMPTY regressions pass with expected rejection. Java import
+transactions/error sanitizer, A3 geometry/controls/native-session/pacing, A4 audio
+and A5 policy tests pass. Both engine ABIs build with 16 KB LOAD alignment, and
+public debug APK plus instrumentation APK build. New first-run instrumentation
+is pending hosted execution; no connected device was available locally.
+
+A broad original-backed `go test ./...` in an isolated private checkout was also
+attempted. It is not a passing gate: historical private art/trajectory/presentation
+reference captures are absent, and the macOS desktop platform has existing
+undefined host symbols in this invocation. These do not invalidate the passing
+targeted runtime/engine tests, but the full historical oracle suite is unverified.
+Hosted CI results should be checked against the pushed code commit. Public
+packaging/source scans remain asset-free; private reports stay under ignored
+`.cache/edition-audit`. The production canonical profiles were not regenerated.

@@ -1,6 +1,7 @@
 package frontend
 
 import (
+	"fmt"
 	"image"
 	"os"
 	"path/filepath"
@@ -64,7 +65,7 @@ func LoadConfigured(dataDir string, store Store, configStore *settings.Store) (*
 	}
 	tableMod, e := audio.Decode(b)
 	if e != nil {
-		return nil, e
+		return nil, fmt.Errorf("TABLE1.MOD: %w", e)
 	}
 	b, e = read("INTRO.MOD")
 	if e != nil {
@@ -72,7 +73,7 @@ func LoadConfigured(dataDir string, store Store, configStore *settings.Store) (*
 	}
 	intro, e := audio.DecodeIntro(b)
 	if e != nil {
-		return nil, e
+		return nil, fmt.Errorf("INTRO.MOD: %w", e)
 	}
 	b, e = read("MOD2.MOD")
 	if e != nil {
@@ -80,7 +81,7 @@ func LoadConfigured(dataDir string, store Store, configStore *settings.Store) (*
 	}
 	menu, e := audio.DecodeMenu(b)
 	if e != nil {
-		return nil, e
+		return nil, fmt.Errorf("MOD2.MOD: %w", e)
 	}
 	config := settings.Defaults()
 	var err error
@@ -121,7 +122,7 @@ func LoadConfigured(dataDir string, store Store, configStore *settings.Store) (*
 	}
 	speedMod, e := audio.DecodeSpeedDevils(b)
 	if e != nil {
-		return nil, e
+		return nil, fmt.Errorf("TABLE2.MOD: %w", e)
 	}
 	model.Factories[1] = func(top tablelogic.Decimal) (Session, error) {
 		g := speeddevils.New(speedTable, speedData)
@@ -145,7 +146,7 @@ func LoadConfigured(dataDir string, store Store, configStore *settings.Store) (*
 	}
 	showMod, e := audio.DecodeGameshow(b)
 	if e != nil {
-		return nil, e
+		return nil, fmt.Errorf("TABLE3.MOD: %w", e)
 	}
 	model.Factories[2] = func(top tablelogic.Decimal) (Session, error) {
 		g := gameshow.New(showTable, showData)
@@ -169,7 +170,7 @@ func LoadConfigured(dataDir string, store Store, configStore *settings.Store) (*
 	}
 	stonesMod, e := audio.DecodeStones(b)
 	if e != nil {
-		return nil, e
+		return nil, fmt.Errorf("TABLE4.MOD: %w", e)
 	}
 	model.Factories[3] = func(top tablelogic.Decimal) (Session, error) {
 		g := stones.New(stonesTable, stonesData)

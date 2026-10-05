@@ -12,7 +12,7 @@ public final class DataImportTest {
         throw new AssertionError("Expected rejection");
     }
     static final class Engine implements DataImport.Engine {
-        boolean reject, rejectExisting; int validations, boots, stops;
+        boolean reject, rejectExisting; String rejection = "bounded shared-loader failure"; int validations, boots, stops;
         File liveState;
         public void validate(File data, File state) throws IOException {
             validations++;
@@ -20,7 +20,7 @@ public final class DataImportTest {
             check(state.getName().startsWith("State.validation-"));
             check(data.getName().startsWith("Data.staging-") || data.getName().equals("Data"));
             Files.write(new File(state, "validation-only").toPath(), new byte[]{1});
-            if (reject || (rejectExisting && data.getName().equals("Data"))) throw new IOException("bounded shared-loader failure");
+            if (reject || (rejectExisting && data.getName().equals("Data"))) throw new IOException(rejection);
         }
         public void stop() { stops++; }
         public void bootstrap(File data, File state) { boots++; check(state.equals(liveState)); }
@@ -65,7 +65,7 @@ public final class DataImportTest {
             rejects(() -> importer.install(ambiguous)); preserved(importer.data(), state);
             Source denied = new Source(); denied.unreadable = true;
             rejects(() -> importer.install(denied)); preserved(importer.data(), state);
-            engine.reject = true; Source rejected = new Source();
+            engine.reject = true; engine.rejection = "INTRO.PRG: unsupported data layout"; Source rejected = new Source();
             rejects(() -> importer.install(rejected)); preserved(importer.data(), state);
             check(rejected.opened == 12 && rejected.closed == 12); check(engine.stops == 0);
             engine.reject = false;

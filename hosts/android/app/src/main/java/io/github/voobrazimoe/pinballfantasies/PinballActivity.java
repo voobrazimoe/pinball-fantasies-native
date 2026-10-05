@@ -6,7 +6,6 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.provider.DocumentsContract;
 import android.util.Log;
-import android.view.Gravity;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.Toast;
@@ -36,6 +35,8 @@ public final class PinballActivity extends GameActivity {
     private DataImport importer;
     private long session;
     private Button importButton;
+    private FirstRunShell firstRun;
+    private boolean importBusy = true, keyboardPresent;
     private volatile boolean closed;
     private boolean resumed, focused;
     private Controls controls;
@@ -48,6 +49,7 @@ public final class PinballActivity extends GameActivity {
     private final Runnable refreshUi=new Runnable() {
         public void run() {
             if (closed) return;
+            updateImportUi();
             nativeViewport(viewport);
             overlay.viewport(viewport);
             menu.viewport(viewport);
@@ -83,22 +85,30 @@ public final class PinballActivity extends GameActivity {
         if (failure != null) throw new IOException(failure);
         if (operation == 2) runOnUiThread(() -> { if (!closed) audio.eligible(false); });
     }
+    private void updateImportUi() {
+        if (firstRun == null) return;
+        boolean loaded = nativeHasEngine(session);
+        firstRun.present(loaded, importBusy, keyboardPresent, menu, overlay);
+        controls.enabled = resumed && focused && loaded;
+    }
     private void status(String event, String message) {
-        if (event.endsWith("REJECTED")) Log.e("PinballFantasies", event + " " + message);
-        else diagnostic(event + " " + message);
+        diagnostic(event + " " + message);
         runOnUiThread(() -> {
             if (!closed) {
+                importBusy = false;
                 syncAudio();
-                importButton.setEnabled(true);
-                if (event.equals("A2_DATA_READY") || event.equals("A2_IMPORT_FINISHED"))
-                    importButton.setVisibility(android.view.View.GONE);
-                Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+                updateImportUi();
+                if (event.endsWith("REJECTED"))
+                    Toast.makeText(this, ImportMessages.failure(message), Toast.LENGTH_LONG).show();
+                else if (event.equals("A2_IMPORT_CANCELLED"))
+                    Toast.makeText(this, "Import cancelled", Toast.LENGTH_SHORT).show();
             }
         });
     }
     private void requestImport() {
         if (!importButton.isEnabled()) return;
-        importButton.setEnabled(false);
+        importBusy = true;
+        updateImportUi();
         diagnostic("A2_IMPORT_REQUESTED");
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
@@ -190,7 +200,8 @@ public final class PinballActivity extends GameActivity {
         controls.gameplay=false;
         keyboard=new HardwareKeyboard(this,present->{
             menu.keyboardMode(present);
-            overlay.setVisibility(present ? android.view.View.GONE : android.view.View.VISIBLE);
+            keyboardPresent = present;
+            updateImportUi();
         });
         uiHandler.post(refreshUi);
         // Keep framebuffer edge-to-edge. Only interactive UI uses these insets.
@@ -201,11 +212,8 @@ public final class PinballActivity extends GameActivity {
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(interaction,(v,insets)->{
             safe[0]=ControlMenu.interactiveInsets(insets);
             menu.safeInsets(safe[0].left,safe[0].top,safe[0].right,safe[0].bottom);
-            if (importButton!=null) {
-                FrameLayout.LayoutParams lp=(FrameLayout.LayoutParams)importButton.getLayoutParams();
-                lp.setMargins(safe[0].left,safe[0].top,safe[0].right,safe[0].bottom);
-                importButton.setLayoutParams(lp);
-            }
+            if (firstRun!=null) firstRun.setPadding(safe[0].left,safe[0].top,
+                    safe[0].right,safe[0].bottom);
             geometry.run(); return insets;
         });
         addContentView(interaction,new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,
@@ -218,14 +226,10 @@ public final class PinballActivity extends GameActivity {
                     public void stop() throws IOException { engineCall(2, null, null); }
                     public void bootstrap(File data, File state) throws IOException { engineCall(1, data, state); }
                 });
-        importButton = new Button(this);
-        importButton.setText("Import DOS folder");
-        importButton.setEnabled(false);
-        importButton.setOnClickListener(view -> requestImport());
-        FrameLayout.LayoutParams layout = new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT,
-                Gravity.CENTER);
-        interaction.addView(importButton, layout);
+        firstRun = new FirstRunShell(this, this::requestImport);
+        importButton = firstRun.button;
+        interaction.addView(firstRun,new FrameLayout.LayoutParams(-1,-1));
+        updateImportUi();
         androidx.core.view.ViewCompat.requestApplyInsets(interaction);
         worker.execute(() -> {
             try {
@@ -270,7 +274,7 @@ public final class PinballActivity extends GameActivity {
         // spring/mouse edges are discarded by the engine, not fired on focus loss.
         nativeActive(session,resumed,focused);
         syncAudio();
-        controls.enabled=resumed && focused;
+        controls.enabled=resumed && focused && nativeHasEngine(session);
         if (!controls.enabled) controls.clear();
     }
     @Override protected void onPause() {
