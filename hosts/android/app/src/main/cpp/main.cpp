@@ -1,4 +1,9 @@
 #include "a3_host.h"
+#include "presentation_policy.h"
+#include "presentation_diagnostics.h"
+#include <android/choreographer.h>
+#include <android/api-level.h>
+#include <dlfcn.h>
 #include <EGL/egl.h>
 #include <GLES2/gl2.h>
 #include "diagnostics.h"
@@ -301,11 +306,16 @@ public:
     }
 
     [[nodiscard]] bool active() const {
-        return resumed_ && ready();
+        return resumed_ && focused_ && ready();
     }
 
-    bool draw() {
+    bool draw(int64_t vsync) {
+        const bool diagnostic = pfDiagnosticsEnabled();
+        const int64_t begin = diagnostic ? presentation::monotonicNs() : 0;
+        if (diagnostic) diagnostics_.begin(begin, vsync);
+        else if (diagnostics_.start) diagnostics_ = {};
         if (!ready()) {
+            if (diagnostic) diagnostics_.finish(presentation::monotonicNs(), false, -1);
             return false;
         }
 
@@ -314,10 +324,16 @@ public:
         if (eglQuerySurface(display_, surface_, EGL_WIDTH, &surfaceWidth) != EGL_TRUE ||
             eglQuerySurface(display_, surface_, EGL_HEIGHT, &surfaceHeight) != EGL_TRUE ||
             surfaceWidth <= 0 || surfaceHeight <= 0) {
+            if (diagnostic) diagnostics_.finish(presentation::monotonicNs(), false, -1);
             return false;
         }
 
-        if (androidEngineFrame(a3::portrait(surfaceWidth, surfaceHeight), pixels_, frameWidth_, frameHeight_)) {
+        int64_t sourceTicks = -1;
+        const int64_t engineStart = diagnostic ? presentation::monotonicNs() : 0;
+        const bool hasFrame = androidEngineFrame(a3::portrait(surfaceWidth, surfaceHeight), pixels_, frameWidth_, frameHeight_, diagnostic ? &sourceTicks : nullptr);
+        const int64_t uploadStart = diagnostic ? presentation::monotonicNs() : 0;
+        if (diagnostic) diagnostics_.engine.add(uploadStart-engineStart);
+        if (hasFrame) {
             glBindTexture(GL_TEXTURE_2D, texture_);
             if (textureWidth_ != frameWidth_ || textureHeight_ != frameHeight_) {
                 glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, frameWidth_, frameHeight_, 0,
@@ -328,6 +344,8 @@ public:
                                 GL_RGBA, GL_UNSIGNED_BYTE, pixels_.data());
             }
         }
+        const int64_t drawStart = diagnostic ? presentation::monotonicNs() : 0;
+        if (diagnostic) diagnostics_.upload.add(drawStart-uploadStart);
         const auto viewport = a3::letterbox(surfaceWidth, surfaceHeight, frameWidth_, frameHeight_);
         const int viewportX = viewport.x, viewportY = viewport.y;
         const int viewportWidth = viewport.w, viewportHeight = viewport.h;
@@ -369,7 +387,15 @@ public:
         glDisableVertexAttribArray(static_cast<GLuint>(positionLocation_));
         glDisableVertexAttribArray(static_cast<GLuint>(texCoordLocation_));
 
-        if (eglSwapBuffers(display_, surface_) != EGL_TRUE) {
+        const int64_t swapStart = diagnostic ? presentation::monotonicNs() : 0;
+        if (diagnostic) diagnostics_.draw.add(swapStart-drawStart);
+        const bool swapped = eglSwapBuffers(display_, surface_) == EGL_TRUE;
+        if (diagnostic) {
+            const int64_t end = presentation::monotonicNs();
+            diagnostics_.swap.add(end-swapStart);
+            diagnostics_.finish(end, swapped, sourceTicks);
+        }
+        if (!swapped) {
             LOGE("A1_EGL_ERROR eglSwapBuffers failed: 0x%x", eglGetError());
             return false;
         }
@@ -385,7 +411,43 @@ public:
         return true;
     }
 
+    void initializePacing() {
+        choreographer_ = AChoreographer_getInstance();
+        if (!choreographer_) LOGE("A1_PACING_ERROR no Looper Choreographer");
+        if (android_get_device_api_level() >= 29)
+            post64_ = reinterpret_cast<Post64>(dlsym(RTLD_DEFAULT, "AChoreographer_postFrameCallback64"));
+        LOGI("A6_PACING driver=Choreographer api=%d callback=%s swap_interval=1",
+             android_get_device_api_level(), post64_ ? "64" : "long64");
+    }
+    void setFocused(bool value) { focused_ = value; }
+    void syncPacing() {
+        policy_.setActive(active());
+        if (!active()) diagnostics_ = {};
+        arm();
+    }
+    void stopPacing() { policy_.setActive(false); diagnostics_ = {}; }
+    bool callbackPending() const { return policy_.pending(); }
 private:
+    using Post64 = void (*)(AChoreographer*, void (*)(int64_t, void*), void*);
+    static void callback64(int64_t vsync, void* data) {
+        auto* self = static_cast<Renderer*>(data);
+        if (self->policy_.consume() && self->active()) (void)self->draw(vsync);
+        self->arm();
+    }
+    static void callbackLegacy(long vsync, void* data) {
+        static_assert(sizeof(long)==sizeof(int64_t), "Android public ABIs must be 64-bit");
+        callback64(static_cast<int64_t>(vsync), data);
+    }
+    void arm() {
+        if (!choreographer_ || !policy_.arm()) return;
+        if (post64_) post64_(choreographer_, callback64, this);
+        else AChoreographer_postFrameCallback(choreographer_, callbackLegacy, this);
+    }
+    AChoreographer* choreographer_ = nullptr;
+    Post64 post64_ = nullptr;
+    presentation::Policy policy_;
+    presentation::Diagnostics diagnostics_;
+    bool focused_ = false;
     std::vector<uint8_t> pixels_;
     int frameWidth_ = kFrameWidth, frameHeight_ = kFrameHeight;
     int textureWidth_ = kFrameWidth, textureHeight_ = kFrameHeight;
@@ -412,9 +474,11 @@ void handleAppCommand(android_app* app, int32_t command) {
 
     switch (command) {
         case APP_CMD_GAINED_FOCUS:
+            renderer->setFocused(true);
             LOGI("A3_NATIVE_FOCUS gained");
             break;
         case APP_CMD_LOST_FOCUS:
+            renderer->setFocused(false);
             LOGI("A3_NATIVE_FOCUS lost");
             break;
         case APP_CMD_RESUME:
@@ -424,22 +488,26 @@ void handleAppCommand(android_app* app, int32_t command) {
             renderer->setResumed(false);
             break;
         case APP_CMD_INIT_WINDOW:
+            renderer->stopPacing();
             if (app->window != nullptr) {
                 (void)renderer->attach(app->window);
             }
             break;
         case APP_CMD_TERM_WINDOW:
+            renderer->stopPacing();
             renderer->detach();
             break;
         default:
             break;
     }
+    renderer->syncPacing();
 }
 
 }  // namespace
 
 extern "C" void android_main(struct android_app* app) {
     Renderer renderer;
+    renderer.initializePacing();
     app->userData = &renderer;
     app->onAppCmd = handleAppCommand;
     LOGI("A1_HOST_STARTED");
@@ -447,7 +515,7 @@ extern "C" void android_main(struct android_app* app) {
     while (app->destroyRequested == 0) {
         int events = 0;
         android_poll_source* source = nullptr;
-        const int timeoutMillis = renderer.active() ? 16 : -1;
+        const int timeoutMillis = presentation::Policy::pollTimeoutMillis();
         const int result = ALooper_pollOnce(
                 timeoutMillis, nullptr, &events, reinterpret_cast<void**>(&source));
         if (result >= 0 && source != nullptr) {
@@ -456,11 +524,15 @@ extern "C" void android_main(struct android_app* app) {
         if (app->destroyRequested != 0) {
             break;
         }
-        if (renderer.active()) {
-            (void)renderer.draw();
-        }
     }
 
+    // Native callbacks execute on this Looper. Drain the sole pending callback
+    // with production disabled before destroying its data; no dangling pointer,
+    // no re-arm, and no rendering after destruction/surface termination.
+    renderer.stopPacing();
+    while (renderer.callbackPending()) ALooper_pollOnce(-1, nullptr, nullptr, nullptr);
+    app->userData = nullptr;
+    app->onAppCmd = nullptr;
     renderer.detach();
     LOGI("A1_HOST_STOPPED");
 }

@@ -24,6 +24,7 @@ target_link_libraries(pinball_android PRIVATE
     pfengine
     oboe::oboe
     android
+    dl
     c++
     EGL
     GLESv2

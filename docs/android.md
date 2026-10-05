@@ -202,8 +202,10 @@ The native GameActivity glue thread owns `pf_engine_advance`, `pf_engine_frame`
 and EGL/GLES. Each active display-loop wake supplies `CLOCK_MONOTONIC` nanoseconds
 rather than a tick count or frame delta. The existing Go `source.Runner.Advance`
 executes every due source task at its existing 60/71 Hz cadence, including when
-presentation is slower. EGL swap interval and the host's 16 ms poll timeout only
-pace presentation/wakes. Neither creates an Android simulation clock.
+presentation is slower. Choreographer now drives display presentation; the Looper
+blocks for lifecycle/input events with no fixed frame timer. EGL swap interval
+remains 1. Neither display callbacks nor swap create an Android simulation clock.
+See [A6 presentation pacing investigation](android-presentation.md).
 `pf_engine_advance` now receives A4’s synchronous copy-only PCM sink. The engine
 and tracker progression and monotonic Runner deadlines are unchanged. Device
 callbacks consume host storage independently.

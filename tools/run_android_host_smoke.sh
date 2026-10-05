@@ -83,7 +83,7 @@ timeout 30 adb shell am start -W -n "$COMPONENT"
 sleep 3
 test -n "$(timeout 10 adb shell pidof "$PACKAGE" | tr -d '\r')"
 snapshot
-if grep -Eq 'A[12345]_(HOST|SURFACE|VIEWPORT|FRAME|ACTIVE|ACTIVITY|NATIVE|INPUT|SHELL|DATA|IMPORT|AUDIO|STREAM|FOCUS|ROUTE|DEVICE|BECOMING)' "$scratch/log"; then
+if grep -Eq 'A[123456]_(PACING|PRESENT|HOST|SURFACE|VIEWPORT|FRAME|ACTIVE|ACTIVITY|NATIVE|INPUT|SHELL|DATA|IMPORT|AUDIO|STREAM|FOCUS|ROUTE|DEVICE|BECOMING)' "$scratch/log"; then
     echo 'Routine diagnostics emitted by default launch' >&2
     cat "$scratch/log" >&2
     exit 1
@@ -93,6 +93,8 @@ begin_phase
 timeout 30 adb shell am start -W -n "$COMPONENT" --ez PF_DIAGNOSTICS true
 wait_for A1_FRAME_PRESENTED
 wait_for A2_SHELL_NO_DATA
+wait_for A6_PACING
+wait_for A6_PRESENT_COST_MS
 wait_for 'A3_INPUT_STATE resumed=1 focused=1'
 wait_for 'A1_VIEWPORT.*orientation=portrait'
 test "$(grep -c A1_HOST_STARTED "$scratch/log")" -eq 1

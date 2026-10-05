@@ -20,3 +20,8 @@ ${CXX:-c++} -std=c++17 -pthread ${PF_A3_TEST_FLAGS:-} -Wall -Wextra -Werror \
     hosts/android/tests/session_test.cpp -o "$scratch/session-test"
 "$scratch/session-test"
 echo 'PASS: A3 actual native session: engine/input/frame/lifecycle serialization, focus, close and stale token guards'
+
+${CXX:-c++} -std=c++17 -Wall -Wextra -Werror -Ihosts/android/tests/stubs -Ihosts/android/app/src/main/cpp hosts/android/tests/presentation_test.cpp -o "$scratch/presentation-test"
+"$scratch/presentation-test"
+python3 tools/test_android_presentation.py
+echo 'PASS: display callback eligibility, stale epochs, blocking Looper and diagnostics'

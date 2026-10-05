@@ -7,6 +7,7 @@ a4::PcmBuffer& androidAudioBuffer() { static a4::PcmBuffer buffer; return buffer
 namespace {
 std::atomic<int> entered{0}, calls{0}, suspends{0}, resumes{0}, destroys{0};
 bool suspended=false;
+uint64_t sourceTicks=12;
 struct Call {
     Call() { assert(entered.fetch_add(1)==0); ++calls; std::this_thread::yield(); }
     ~Call() { assert(entered.fetch_sub(1)==1); }
@@ -24,11 +25,12 @@ int32_t pf_engine_key(uint64_t,uint8_t) { Call c; assert(!suspended); return PF_
 int32_t pf_engine_release(uint64_t) { Call c; assert(!suspended); return PF_OK; }
 int32_t pf_engine_plunger_delta(uint64_t,int32_t) { Call c; assert(!suspended); return PF_OK; }
 int32_t pf_engine_plunger_target(uint64_t,int32_t) { Call c; assert(!suspended); return PF_OK; }
-int32_t pf_engine_state(uint64_t,uint64_t* tick,uint32_t* mode,uint32_t* table,uint32_t* flags) { Call c; *tick=12; *mode=PF_MODE_PLAYING; *table=2; *flags=4; return PF_OK; }
+int32_t pf_engine_state(uint64_t,uint64_t* tick,uint32_t* mode,uint32_t* table,uint32_t* flags) { Call c; *tick=sourceTicks; *mode=PF_MODE_PLAYING; *table=2; *flags=4; return PF_OK; }
 int32_t pf_engine_plunger_fire(uint64_t) { Call c; assert(!suspended); return PF_OK; }
 int32_t pf_engine_set_presentation(uint64_t,int32_t) { Call c; return PF_OK; }
 int32_t pf_engine_advance(uint64_t,int64_t ns,pf_pcm_sink sink,void* context) {
     Call c; assert(ns>0 && !suspended && sink==a4::PcmBuffer::sink);
+    sourceTicks+=2;
     uint8_t borrowed[]={12,0,244,255};
     sink(context,borrowed,sizeof(borrowed));
     std::memset(borrowed,99,sizeof(borrowed)); return PF_OK;
@@ -58,13 +60,15 @@ int main() {
     std::vector<uint8_t> pixels; int w=0,h=0;
     assert(androidEngineFrame(true,pixels,w,h) && w==1 && h==2 && pixels[4]==5);
     assert(pixels.data()!=framePixels);
+    int64_t advanced=-1;
+    assert(androidEngineFrame(true,pixels,w,h,&advanced) && advanced==2);
     int16_t audio[2]; const auto abiCalls=calls.load();
     androidAudioBuffer().render(audio,1);
     assert(audio[0]==12 && audio[1]==-12 && calls==abiCalls);
     assert(androidEngineFrame(true,pixels,w,h));
     JNI_METHOD(nativeActive)(nullptr,nullptr,token,true,false);
     const auto before=calls.load();
-    assert(!androidEngineFrame(false,pixels,w,h));
+    assert(!androidEngineFrame(false,pixels,w,h,&advanced) && advanced==-1);
     JNI_METHOD(nativeInput)(nullptr,nullptr,token,0,0,1);
     assert(calls==before && suspends==1);
     JNI_METHOD(nativeActive)(nullptr,nullptr,token,true,true);

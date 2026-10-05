@@ -113,13 +113,19 @@ extern "C" JNIEXPORT void JNICALL JNI_METHOD(nativeInput)(JNIEnv*, jclass, jlong
  case 5: pf_engine_plunger_target(persistent, a); break;
  }
 }
-bool androidEngineFrame(bool portrait, std::vector<uint8_t>& pixels, int& width, int& height) {
+bool androidEngineFrame(bool portrait, std::vector<uint8_t>& pixels, int& width, int& height, int64_t* advancedTicks) {
  std::lock_guard<std::mutex> guard(lock);
+ if (advancedTicks) *advancedTicks = -1;
  if (!opened || !persistent || !active()) return false;
+ uint64_t before=0, after=0; uint32_t mode=0, table=0, flags=0;
+ const bool measured = advancedTicks &&
+     pf_engine_state(persistent,&before,&mode,&table,&flags)==PF_OK;
  // Sink only copies borrowed PCM. Runner owns every due 60/71 Hz source tick;
  // queue depth/device callbacks never influence this monotonic deadline.
  if (pf_engine_set_presentation(persistent, portrait ? 1 : 0) != PF_OK ||
      pf_engine_advance(persistent, now(), a4::PcmBuffer::sink, &androidAudioBuffer()) != PF_OK) return false;
+ if (measured && pf_engine_state(persistent,&after,&mode,&table,&flags)==PF_OK && after>=before)
+     *advancedTicks = static_cast<int64_t>(after-before);
  uint8_t* borrowed = nullptr;
  int32_t w = 0, h = 0, stride = 0;
  if (pf_engine_frame(persistent, &borrowed, &w, &h, &stride) != PF_OK ||
