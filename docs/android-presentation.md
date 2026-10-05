@@ -89,3 +89,36 @@ ADB inventory is empty and no emulator is installed; there are no local runtime
 pacing or physical audio measurements. Hosted emulator checks can establish
 callback/lifecycle integration but cannot certify phone smoothness, compiled-ART
 performance, listening, hardware routes or input latency.
+
+## Hosted result for implementation `de3d22e` (2026-10-05)
+
+[Android host CI](https://github.com/voobrazimoe/pinball-fantasies-native/actions/runs/37281345240)
+passed, including ThreadSanitizer, packaged instrumentation, quiet default launch,
+Choreographer diagnostic window, rotation, background/resume and process restart.
+A0, asset-free source and macOS host workflows also passed for that implementation.
+The API 35 ps16k emulator selected `callback=64`, retaining `swap_interval=1`.
+
+Representative no-data synthetic shell windows from that run:
+
+| Wall seconds | Callbacks / swaps | Callback Hz / submitted FPS | Draw-start interval min / avg / max ms | Swap CPU avg / max ms |
+| --- | --- | --- | --- | --- |
+| 3.065 | 30 / 30 | 9.79 / 9.79 | 32.415 / 103.625 / 404.576 | 82.291 / 334.102 |
+| 3.020 | 50 / 50 | 16.56 / 16.56 | 34.955 / 61.120 / 112.387 | 41.731 / 97.723 |
+| 3.055 | 48 / 48 | 15.71 / 15.71 | 25.408 / 63.702 / 124.904 | 47.723 / 111.161 |
+
+Observed Choreographer timestamp intervals in these windows had a 33.333 ms minimum
+and 60.544–103.448 ms averages; missed callbacks make this unsuitable for claiming
+the emulator's physical refresh rate. A later fresh-process startup window recorded
+6.21 FPS with 128.383 ms average swap CPU time. This slow hosted compositor cannot
+establish physical smoothness. Every attempted draw in these windows swapped
+successfully; swap/backpressure was the largest measured CPU stage. This does not
+isolate an additional factor-of-two cadence reduction caused by swap interval 1,
+so the policy remains 1 pending phone measurements.
+
+All these windows had `tick_samples=0` and `upload=0.000/0.000`: the synthetic
+texture is initialized at attachment and no real engine framebuffer is uploaded.
+Consequently neither original-backed source ticks/presentation nor gameplay upload
+cost was measured. Texture upload materiality remains unknown and it is unchanged.
+No-data audio counters were zero (no PCM/streams); they are not evidence of physical
+gameplay underrun freedom. Host audio/focus/route regressions and packaged synthetic
+audio instrumentation passed; real-phone audio and flipper latency remain retests.
