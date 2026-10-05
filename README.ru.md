@@ -2,19 +2,20 @@
 
 [English](README.md) | **Русский**
 
-Первый публичный beta-релиз нативной реконструкции DOS-версии **Pinball Fantasies** для современных Windows, Linux и macOS.
+Первый публичный beta-релиз нативной реконструкции DOS-версии **Pinball Fantasies** для современных Windows, Linux, macOS и Android.
 
 > **Важно:** публичные сборки не содержат коммерческих файлов Pinball Fantasies. Для запуска нужна собственная легально полученная DOS-версия игры.
 
 ## Быстрый старт
 
-Скачайте опубликованный [prerelease v0.1.2](https://github.com/voobrazimoe/pinball-fantasies-native/releases/tag/v0.1.2) для своей платформы:
+Скачайте опубликованный [prerelease v0.1.3](https://github.com/voobrazimoe/pinball-fantasies-native/releases/tag/v0.1.3) для своей платформы:
 
-- [Windows x86_64: pinballfantasies.exe](https://github.com/voobrazimoe/pinball-fantasies-native/releases/download/v0.1.2/pinballfantasies.exe)
-- [Linux x86_64: PinballFantasies-x86_64.AppImage](https://github.com/voobrazimoe/pinball-fantasies-native/releases/download/v0.1.2/PinballFantasies-x86_64.AppImage)
-- [macOS Apple Silicon ARM64: PinballFantasies-arm64.zip](https://github.com/voobrazimoe/pinball-fantasies-native/releases/download/v0.1.2/PinballFantasies-arm64.zip)
-- [macOS Intel x86_64: PinballFantasies-x86_64.zip](https://github.com/voobrazimoe/pinball-fantasies-native/releases/download/v0.1.2/PinballFantasies-x86_64.zip)
-- [Контрольные суммы SHA256](https://github.com/voobrazimoe/pinball-fantasies-native/releases/download/v0.1.2/SHA256SUMS.txt)
+- [Windows x86_64: pinballfantasies.exe](https://github.com/voobrazimoe/pinball-fantasies-native/releases/download/v0.1.3/pinballfantasies.exe)
+- [Linux x86_64: PinballFantasies-x86_64.AppImage](https://github.com/voobrazimoe/pinball-fantasies-native/releases/download/v0.1.3/PinballFantasies-x86_64.AppImage)
+- [macOS Apple Silicon ARM64: PinballFantasies-arm64.zip](https://github.com/voobrazimoe/pinball-fantasies-native/releases/download/v0.1.3/PinballFantasies-arm64.zip)
+- [macOS Intel x86_64: PinballFantasies-x86_64.zip](https://github.com/voobrazimoe/pinball-fantasies-native/releases/download/v0.1.3/PinballFantasies-x86_64.zip)
+- [Android ARM64 + x86_64: PinballFantasies-android.apk](https://github.com/voobrazimoe/pinball-fantasies-native/releases/download/v0.1.3/PinballFantasies-android.apk)
+- [Контрольные суммы SHA256](https://github.com/voobrazimoe/pinball-fantasies-native/releases/download/v0.1.3/SHA256SUMS.txt)
 
 Для macOS 13 и новее скачайте ZIP для своего Mac, распакуйте его и запустите приложение. Выберите каталог оригинальной DOS-игры через нативный диалог импорта; файлы проверяются и копируются в Application Support. Публичные Mac-сборки имеют ad-hoc подпись и не прошли нотариализацию. Подробнее — в [инструкции по сборке и использованию macOS-версии](docs/macos.md).
 
@@ -29,11 +30,9 @@ chmod +x PinballFantasies-x86_64.AppImage
 ./PinballFantasies-x86_64.AppImage -data-dir "/path/to/Pinball Fantasies"
 ```
 
-## Android: кандидат v0.1.3
+## Быстрый старт на Android
 
-Android входит в **кандидат релиза v0.1.3**, ожидающий проверки пакетов владельцем
-и публикации. Опубликованные ссылки выше пока ведут на v0.1.2.
-Используйте публичный `PinballFantasies-android.apk` из набора кандидата:
+Скачайте публичный `PinballFantasies-android.apk` из prerelease v0.1.3 по ссылке выше:
 
 1. Установите APK и откройте Pinball Fantasies (Android 8.1 или новее).
 2. Нажмите **Import DOS folder** и выберите папку с поддерживаемыми оригинальными DOS-файлами из списка ниже.
