@@ -313,7 +313,7 @@ This preparation does not authorize A7 or a merge to `main`.
 | Physical smoothness | Owner-reported PASS after Choreographer pacing fix. |
 | Clean public PINBALLF SAF import | Owner-reported PASS: imported and ran. Establishes real A2/SAF success. |
 | Alternate installation | Unsupported; INTRO/TABLE1/TABLE2 offsets differ, and Party Land S_EMPTY priority changes. Modules and TABLE3/4 validate independently. No second profile; alternate four-table gameplay NOT TESTED. |
-| First-run cleanup | Implemented black native background and Android shell, hidden no-data game controls, busy/restore/success states. New instrumentation covers these transitions; new on-device visual confirmation pending. |
+| First-run cleanup | Implemented black native background and Android shell, hidden no-data game controls, busy/restore/success states. New instrumentation passed on the hosted emulator; new on-device visual confirmation pending. |
 | Import diagnostics | Concise allowlisted filename messages; parser details only in explicitly enabled logs/internal errors. |
 | Transaction safety | Existing staging/disposable validation/rename/rollback/State behavior retained; rejection-preservation regression includes unsupported-layout failure. |
 
@@ -328,7 +328,8 @@ module-equivalence/S_EMPTY regressions pass with expected rejection. Java import
 transactions/error sanitizer, A3 geometry/controls/native-session/pacing, A4 audio
 and A5 policy tests pass. Both engine ABIs build with 16 KB LOAD alignment, and
 public debug APK plus instrumentation APK build. New first-run instrumentation
-is pending hosted execution; no connected device was available locally.
+was not executed locally because no device was connected; it subsequently passed
+in hosted CI, as recorded below.
 
 A broad original-backed `go test ./...` in an isolated private checkout was also
 attempted. It is not a passing gate: historical private art/trajectory/presentation
@@ -338,3 +339,15 @@ targeted runtime/engine tests, but the full historical oracle suite is unverifie
 Hosted CI results should be checked against the pushed code commit. Public
 packaging/source scans remain asset-free; private reports stay under ignored
 `.cache/edition-audit`. The production canonical profiles were not regenerated.
+
+
+Final hosted validation of code commit `6da2c26a889e218fb78ee739e84c3f5b6ce5904e`:
+
+- [Android host PASS](https://github.com/voobrazimoe/pinball-fantasies-native/actions/runs/37345038851): shared regressions, import/error tests, both-ABI APK/asset/alignment checks, packaged JNI instrumentation including first-run shell transitions, Oboe/input checks and no-data rendering/rotation/lifecycle smoke.
+- [Android A0 PASS](https://github.com/voobrazimoe/pinball-fantasies-native/actions/runs/37345038832).
+- [Asset-free source PASS](https://github.com/voobrazimoe/pinball-fantasies-native/actions/runs/37345038919).
+- [macOS native hosts PASS](https://github.com/voobrazimoe/pinball-fantasies-native/actions/runs/37345038902).
+
+The Android emulator uses the existing API 35 ps16k interpreted-ART workaround;
+these checks do not add physical gameplay/audio-route certification. The final
+report-only follow-up commit changes this evidence document, not tested code.
