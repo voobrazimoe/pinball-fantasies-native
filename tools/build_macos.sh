@@ -27,6 +27,7 @@ build_revision=$(git rev-parse --short HEAD)
 if ! git diff --quiet HEAD -- hosts/macos tools/build_macos.sh; then build_revision="$build_revision-dirty"; fi
 /usr/libexec/PlistBuddy -c "Add :PFHostBuild string $build_revision" "$app/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Add :PFHostArchitecture string $target" "$app/Contents/Info.plist"
+cp art/app-icon/pf-icon.icns "$app/Contents/Resources/pf-icon.icns"
 cp LICENSE "$app/Contents/Resources/LICENSE.txt"
 cp "$(./tools/go.sh env GOROOT)/LICENSE" "$app/Contents/Resources/Go-LICENSE.txt"
 ./tools/go.sh env GOVERSION > "$app/Contents/Resources/Go-version.txt"

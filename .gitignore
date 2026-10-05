@@ -57,3 +57,7 @@ bin/
 /.android-avd/
 
 /hosts/android/app/.personal-assets/
+
+# Independently authored application icon exports are public source assets.
+!/art/app-icon/**/*.png
+!/hosts/android/app/src/main/res/mipmap-*/*.png

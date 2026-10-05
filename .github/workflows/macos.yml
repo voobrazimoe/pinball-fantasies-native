@@ -55,6 +55,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
+      - name: Check cross-platform PF icon exports
+        run: python3 tools/check_app_icons.py
       - name: Shared Go engine tests (desktop Go CLI is Linux/Windows only)
         shell: bash
         run: |

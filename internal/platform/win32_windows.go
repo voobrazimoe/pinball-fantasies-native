@@ -114,7 +114,8 @@ func openHost(first *image.RGBA) (_ *hostWindow, err error) {
 	if cursor == 0 {
 		return nil, apiError("LoadCursorW", e)
 	}
-	cls := windowClass{Size: uint32(unsafe.Sizeof(windowClass{})), Proc: windowCallback, Instance: instance, Cursor: cursor, Name: name}
+	icon, _, _ := up("LoadIconW").Call(instance, 1)
+	cls := windowClass{Icon: icon, SmallIcon: icon, Size: uint32(unsafe.Sizeof(windowClass{})), Proc: windowCallback, Instance: instance, Cursor: cursor, Name: name}
 	if v, _, e := up("RegisterClassExW").Call(uintptr(unsafe.Pointer(&cls))); v == 0 {
 		return nil, apiError("RegisterClassExW", e)
 	}

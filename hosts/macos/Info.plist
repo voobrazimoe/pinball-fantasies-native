@@ -5,6 +5,7 @@
 <key>CFBundleDisplayName</key><string>Pinball Fantasies</string>
 <key>CFBundleIdentifier</key><string>io.github.voobrazimoe.pinball-fantasies</string>
 <key>CFBundleExecutable</key><string>pinballfantasies</string>
+<key>CFBundleIconFile</key><string>pf-icon.icns</string>
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>CFBundleVersion</key><string>1</string>
 <key>CFBundleShortVersionString</key><string>0.1</string>

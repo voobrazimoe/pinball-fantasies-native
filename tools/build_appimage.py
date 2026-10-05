@@ -192,8 +192,19 @@ Icon=pinballfantasies
 Categories=Game;ArcadeGame;
 Terminal=false
 ''')
-# A simple original geometric packaging icon, containing no original game art.
-(appdir/'pinballfantasies.svg').write_text('''<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128"><rect width="128" height="128" rx="24" fill="#152839"/><circle cx="64" cy="43" r="20" fill="#e5edf4"/><path d="M22 102L53 85M106 102L75 85" stroke="#edaf47" stroke-width="14" stroke-linecap="round"/></svg>''')
+# One clean-room PF identity in AppDir, .DirIcon and the desktop hierarchy.
+shutil.copy2(root/'art/app-icon/png/256/pinballfantasies.png', appdir/'pinballfantasies.png')
+(appdir/'.DirIcon').symlink_to('pinballfantasies.png')
+for size in (16, 24, 32, 48, 64, 128, 256, 512):
+    destination = appdir/f'usr/share/icons/hicolor/{size}x{size}/apps'
+    destination.mkdir(parents=True)
+    shutil.copy2(root/f'art/app-icon/png/{size}/pinballfantasies.png', destination/'pinballfantasies.png')
+scalable = appdir/'usr/share/icons/hicolor/scalable/apps'
+scalable.mkdir(parents=True)
+shutil.copy2(root/'art/app-icon/pf-icon-master.svg', scalable/'pinballfantasies.svg')
+applications = appdir/'usr/share/applications'
+applications.mkdir(parents=True)
+shutil.copy2(appdir/'pinballfantasies.desktop', applications/'pinballfantasies.desktop')
 # Git checkouts and audited exports can have different local umasks. Normalize
 # staging permissions so those host permission bits never change release bytes.
 for staged in [appdir, *appdir.rglob('*')]:
