@@ -21,7 +21,7 @@ public final class ImportInstrumentation extends Instrumentation {
             Controls c=new Controls((kind,a,b)->events.add(kind+":"+a+":"+b),
                     (ms,release)->releases.add(release)); c.enabled=true; c.plungerAvailable=true;
             ControlOverlay view=new ControlOverlay(getTargetContext(),c); view.layout(0,0,1000,1000);
-            view.viewport(new int[]{0,0,1000,1000,1000,1000});
+            view.viewport(new int[]{0,0,1000,1000,1000,1000,320,609});
             motion(view,MotionEvent.ACTION_DOWN,new int[]{17},new float[]{c.layout.left.cx()},new float[]{c.layout.left.cy()});
             motion(view,MotionEvent.ACTION_POINTER_DOWN | (1<<8),new int[]{17,91},new float[]{c.layout.left.cx(),c.layout.right.cx()},new float[]{c.layout.left.cy(),c.layout.right.cy()});
             check(c.held[0] && c.held[1]);
@@ -68,8 +68,13 @@ public final class ImportInstrumentation extends Instrumentation {
             menu.safeInsets(safe.left,safe.top,safe.right,safe.bottom);
             overlay.safeArea(safe.left,safe.top,safe.right,safe.bottom);
             menu.snapshot(SemanticUi.PLAYING,1,4); measure(root,shape[0],shape[1]);
+            int[] viewport={shape[2],safe.top,shape[0]-safe.left-safe.right,shape[1]-safe.top-safe.bottom,
+                    shape[0],shape[1],320,shape[0]<shape[1]?609:240};
+            menu.viewport(viewport); overlay.viewport(viewport); measure(root,shape[0],shape[1]);
+            check(menu.menu.getTop()>=safe.top+viewport[3]*33f/viewport[7]);
             check(menu.sheet.getVisibility()==android.view.View.GONE);
             check(c.layout.safe.top==safe.top && c.labelX(Controls.RIGHT)==c.layout.right.cx());
+            check(!menu.menu.isFocusable());
             check(menu.menu.getTop()>=safe.top && menu.menu.getBottom()<=shape[1]-safe.bottom);
             check(menu.menu.getLeft()>=safe.left && menu.menu.getRight()<=shape[0]-safe.right);
             menu.menu.performClick(); measure(root,shape[0],shape[1]);
@@ -87,7 +92,9 @@ public final class ImportInstrumentation extends Instrumentation {
             menu.snapshot(SemanticUi.SELECTOR,0,0); measure(root,shape[0],shape[1]);
             check(findButton(menu.sheet,"Party Land")!=null && findButton(menu.sheet,"Options")!=null);
             check(!hasScroll(menu.sheet));
+            check(menu.sheet.getTop()>safe.top+viewport[3]*.35f);
             android.widget.Button first=findButton(menu.sheet,"Party Land");
+            for(String label:SemanticUi.TABLES) check(!findButton(menu.sheet,label).isFocusable());
             for(String label:SemanticUi.TABLES) {
                 android.widget.Button cell=findButton(menu.sheet,label);
                 check(cell.getWidth()==first.getWidth() && cell.getHeight()==first.getHeight());
@@ -96,10 +103,29 @@ public final class ImportInstrumentation extends Instrumentation {
             for(int mode:new int[]{SemanticUi.ATTRACT,SemanticUi.OPTIONS,SemanticUi.PAUSED,SemanticUi.QUESTION}) {
                 menu.snapshot(mode,1,0); measure(root,shape[0],shape[1]);
                 check(!hasScroll(menu.sheet));
+                check(menu.sheet.getTop()>safe.top+viewport[3]*.35f);
                 check(menu.sheet.getTop()>=safe.top && menu.sheet.getBottom()<=shape[1]-safe.bottom);
             }
             menu.snapshot(SemanticUi.INITIALS,1,0); measure(root,shape[0],shape[1]);
-            check(findButton(menu.sheet,"A")!=null);
+            check(findButton(menu.sheet,"A")!=null && findButton(menu.sheet,"1")==null);
+            check(HardwareKeyboard.qualifies(true,false,android.view.InputDevice.KEYBOARD_TYPE_ALPHABETIC,
+                    android.view.InputDevice.SOURCE_KEYBOARD));
+            check(!HardwareKeyboard.qualifies(true,true,android.view.InputDevice.KEYBOARD_TYPE_ALPHABETIC,
+                    android.view.InputDevice.SOURCE_KEYBOARD));
+            check(!HardwareKeyboard.qualifies(true,false,android.view.InputDevice.KEYBOARD_TYPE_NONE,
+                    android.view.InputDevice.SOURCE_GAMEPAD));
+            check(!HardwareKeyboard.qualifies(false,false,android.view.InputDevice.KEYBOARD_TYPE_ALPHABETIC,
+                    android.view.InputDevice.SOURCE_KEYBOARD));
+            for(int mode:new int[]{SemanticUi.SELECTOR,SemanticUi.SELECTOR_TEXT,SemanticUi.ATTRACT,
+                    SemanticUi.OPTIONS,SemanticUi.PAUSED,SemanticUi.QUESTION,SemanticUi.PLAYING,SemanticUi.INITIALS}) {
+                menu.snapshot(mode,1,4); menu.keyboardMode(true); measure(root,shape[0],shape[1]);
+                check(menu.getVisibility()==android.view.View.GONE && c.panel==null && c.menu==null);
+                c.key(29,true,0); check(c.keys[29]); c.key(29,false,0);
+                menu.keyboardMode(false); measure(root,shape[0],shape[1]);
+                check(menu.getVisibility()==android.view.View.VISIBLE && menu.state.mode==mode);
+                if(mode==SemanticUi.INITIALS) check(findButton(menu.sheet,"Q")!=null && findButton(menu.sheet,"1")==null);
+                if(mode==SemanticUi.PLAYING) check(c.gameplay && !c.keyboardMode);
+            }
             menu.menu.performClick(); measure(root,shape[0],shape[1]); check(!hasScroll(menu.sheet));
             check(menu.dismiss()); measure(root,shape[0],shape[1]);
             menu.snapshot(SemanticUi.ENTRY_WAIT,1,0); measure(root,shape[0],shape[1]);

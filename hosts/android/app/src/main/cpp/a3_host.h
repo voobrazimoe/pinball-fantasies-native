@@ -30,4 +30,4 @@ inline bool copyFrame(const uint8_t* p, int w, int h, int stride, std::vector<ui
 bool androidEngineFrame(bool portrait, std::vector<uint8_t>& pixels, int& width, int& height);
 
 // Renderer publishes the exact GL viewport, with surface dimensions.
-void androidPublishViewport(int x,int y,int w,int h,int sw,int sh);
+void androidPublishViewport(int x,int y,int w,int h,int sw,int sh,int fw,int fh);

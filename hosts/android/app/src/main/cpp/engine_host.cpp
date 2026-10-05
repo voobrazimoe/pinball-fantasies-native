@@ -159,14 +159,14 @@ extern "C" JNIEXPORT void JNICALL JNI_METHOD(nativeDetach)(JNIEnv*, jclass, jlon
 
 namespace {
 std::mutex viewportLock;
-std::array<jint,6> renderedViewport{};
+std::array<jint,8> renderedViewport{};
 }
-void androidPublishViewport(int x,int y,int w,int h,int sw,int sh) {
+void androidPublishViewport(int x,int y,int w,int h,int sw,int sh,int fw,int fh) {
  std::lock_guard<std::mutex> guard(viewportLock);
- renderedViewport={x,sh-y-h,w,h,sw,sh}; // GLES bottom origin -> Android top origin
+ renderedViewport={x,sh-y-h,w,h,sw,sh,fw,fh}; // GLES bottom origin -> Android top origin
 }
 extern "C" JNIEXPORT void JNICALL JNI_METHOD(nativeViewport)(JNIEnv* env,jclass,jintArray bounds) {
- if (!bounds || env->GetArrayLength(bounds)!=6) return;
+ if (!bounds || env->GetArrayLength(bounds)!=8) return;
  std::lock_guard<std::mutex> guard(viewportLock);
- env->SetIntArrayRegion(bounds,0,6,renderedViewport.data());
+ env->SetIntArrayRegion(bounds,0,8,renderedViewport.data());
 }

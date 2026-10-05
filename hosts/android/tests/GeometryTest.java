@@ -16,6 +16,20 @@ public final class GeometryTest {
             check(g.frame.right==Math.min(vp.right,g.safe.right));
             check(!g.nudge.overlaps(g.leftGuard) && !g.nudge.overlaps(g.rightGuard));
             check(!g.nudge.overlaps(g.plunger));
+            int[] snapshot={(int)v[2],(int)v[3],(int)v[4],(int)v[5],(int)w,(int)h,320,w<h?609:240};
+            InteractionGeometry.Rect actual=InteractionGeometry.viewport(snapshot,w,h);
+            check(actual.left==vp.left && actual.bottom==vp.bottom);
+            InteractionGeometry.Rect menu=InteractionGeometry.mobileMenu(g.safe,actual,snapshot[7],d);
+            check(menu.top>=actual.top+actual.height()*33/snapshot[7]);
+            check(menu.left>=g.safe.left && menu.right<=g.safe.right && menu.bottom<=g.safe.bottom);
+            check(menu.width()==48*d && menu.right<=actual.right);
+            // Selector, Options, Players/Play all preserve upper original content.
+            for(float panelHeight:new float[]{(w>h?152:224)*d,120*d,120*d}) {
+                float y=InteractionGeometry.lowerTop(g.safe,actual,panelHeight,d);
+                check(y>=g.safe.top && y+panelHeight<=g.safe.bottom);
+                check(y+panelHeight>=Math.min(g.safe.bottom-8*d,actual.bottom));
+                check(y>actual.top+actual.height()*.35f);
+            }
             for(boolean selector:new boolean[]{true,false}) {
                 InteractionGeometry.Panel p=new InteractionGeometry.Panel(w,h,24,48,36,48,d,selector,selector?5:4);
                 check(p.fits(g.safe)); check(p.bounds.width()<=(selector && w>h?600:360)*d);
@@ -25,12 +39,16 @@ public final class GeometryTest {
                 }
                 if(!selector) {
                     int y=p.topWithin(g.safe.top,Math.min(g.leftGuard.top,g.rightGuard.top));
-                    InteractionGeometry.Rect menu=new InteractionGeometry.Rect(p.bounds.left,y,p.bounds.right,y+p.bounds.height());
-                    check(!menu.overlaps(g.leftGuard) && !menu.overlaps(g.rightGuard));
+                    InteractionGeometry.Rect utility=new InteractionGeometry.Rect(p.bounds.left,y,p.bounds.right,y+p.bounds.height());
+                    check(!utility.overlaps(g.leftGuard) && !utility.overlaps(g.rightGuard));
                 }
                 if(w<h && selector) check(p.cells[4].left==p.cells[0].left && p.cells[4].right==p.cells[0].right);
             }
         }
+        // A full bottom letterbox puts all contextual content outside the frame.
+        InteractionGeometry.Rect safe=new InteractionGeometry.Rect(12,24,988,1876);
+        InteractionGeometry.Rect frame=new InteractionGeometry.Rect(0,200,1000,1400);
+        check(InteractionGeometry.lowerTop(safe,frame,224,1)==1400);
         System.out.println("PASS: responsive equal selector cells, capped panels, safe bounds, native viewport and guarded touch rectangles");
     }
 }

@@ -11,10 +11,10 @@ final class ControlOverlay extends View {
     private final Controls controls;
     SemanticUi state;
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final int[] viewport=new int[6];
+    private final int[] viewport=new int[8];
     void viewport(int[] bounds) {
         if(java.util.Arrays.equals(viewport,bounds)) return;
-        System.arraycopy(bounds,0,viewport,0,6); updateGeometry();
+        System.arraycopy(bounds,0,viewport,0,8); updateGeometry();
     }
     private int safeLeft, safeTop, safeRight, safeBottom;
     ControlOverlay(Context context, Controls controls) {
@@ -33,12 +33,7 @@ final class ControlOverlay extends View {
         invalidate();
     }
     private InteractionGeometry.Rect frameBounds() {
-        // Snapshot is top-origin surface pixels. Ignore stale orientation during surface recreation.
-        if(viewport[4]<=0 || viewport[5]<=0 || (viewport[4]>viewport[5])!=(getWidth()>getHeight()))
-            return new InteractionGeometry.Rect(0,0,0,0);
-        float sx=(float)getWidth()/viewport[4],sy=(float)getHeight()/viewport[5];
-        return new InteractionGeometry.Rect(viewport[0]*sx,viewport[1]*sy,
-                (viewport[0]+viewport[2])*sx,(viewport[1]+viewport[3])*sy);
+        return InteractionGeometry.viewport(viewport,getWidth(),getHeight());
     }
     @Override protected void onSizeChanged(int w,int h,int oldw,int oldh) {
         if (oldw>0 && oldh>0) controls.cancel();
@@ -66,6 +61,7 @@ final class ControlOverlay extends View {
         }
     }
     @Override public boolean onTouchEvent(MotionEvent event) {
+        if (controls.keyboardMode) return false;
         if (!controls.gameplay) {
             if (state!=null && state.mode==SemanticUi.STARTUP && event.getActionMasked()==MotionEvent.ACTION_UP)
                 controls.tap(57);

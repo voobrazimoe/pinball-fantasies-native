@@ -31,6 +31,25 @@ final class InteractionGeometry {
         plunger=new Rect(frame.right-corridorWidth,frame.top,frame.right,neutralBottom);
         nudge=new Rect(frame.left+gap,frame.top+gap,plunger.left-gap,neutralBottom);
     }
+    // Renderer coordinates remain authoritative; no Java aspect-ratio policy.
+    static Rect viewport(int[] v,float w,float h) {
+        if(v[4]<=0 || v[5]<=0 || (v[4]>v[5])!=(w>h)) return new Rect(0,0,0,0);
+        float sx=w/v[4],sy=h/v[5];
+        return new Rect(v[0]*sx,v[1]*sy,(v[0]+v[2])*sx,(v[1]+v[3])*sy);
+    }
+    static float lowerTop(Rect safe,Rect frame,float height,float d) {
+        // Use bottom letterbox when it can hold the panel; otherwise straddle
+        // the framebuffer bottom with a small gap. Never centre over the table.
+        float end=frame.height()>0 ? Math.min(safe.bottom,frame.bottom+height+8*d) : safe.bottom;
+        return Math.max(safe.top,end-height-8*d);
+    }
+    static Rect mobileMenu(Rect safe,Rect frame,int sourceHeight,float d) {
+        float size=Math.min(48*d,Math.min(safe.width(),safe.height()));
+        float matrixBottom=frame.top+frame.height()*33/Math.max(33,sourceHeight);
+        float x=Math.max(safe.left,Math.min(frame.right-size-4*d,safe.right-size));
+        float y=Math.max(safe.top,Math.min(matrixBottom+4*d,safe.bottom-size));
+        return new Rect(x,y,x+size,y+size);
+    }
     static final class Panel {
         final Rect bounds; final Rect[] cells;
         final int columns,rows;

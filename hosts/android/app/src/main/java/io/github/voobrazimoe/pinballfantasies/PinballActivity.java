@@ -41,7 +41,8 @@ public final class PinballActivity extends GameActivity {
     private Controls controls;
     private ControlMenu menu;
     private ControlOverlay overlay;
-    private final int[] viewport=new int[6];
+    private HardwareKeyboard keyboard;
+    private final int[] viewport=new int[8];
     static native void nativeViewport(int[] bounds);
     private final android.os.Handler uiHandler=new android.os.Handler(android.os.Looper.getMainLooper());
     private final Runnable refreshUi=new Runnable() {
@@ -49,6 +50,7 @@ public final class PinballActivity extends GameActivity {
             if (closed) return;
             nativeViewport(viewport);
             overlay.viewport(viewport);
+            menu.viewport(viewport);
             long state=nativeState(session);
             menu.snapshot(state<0 ? -1 : (int)(state&255),
                     state<0 ? 0 : (int)((state>>8)&255), state<0 ? 0 : (int)((state>>16)&255));
@@ -147,6 +149,7 @@ public final class PinballActivity extends GameActivity {
     }
     @Override
     protected void onDestroy() {
+        if (keyboard != null) keyboard.close();
         if (audio != null) audio.close();
         closed = true;
         worker.shutdownNow();
@@ -185,6 +188,10 @@ public final class PinballActivity extends GameActivity {
                 FrameLayout.LayoutParams.MATCH_PARENT));
         overlay.state=menu.state;
         controls.gameplay=false;
+        keyboard=new HardwareKeyboard(this,present->{
+            menu.keyboardMode(present);
+            overlay.setVisibility(present ? android.view.View.GONE : android.view.View.VISIBLE);
+        });
         uiHandler.post(refreshUi);
         // Keep framebuffer edge-to-edge. Only interactive UI uses these insets.
         final androidx.core.graphics.Insets[] safe = {androidx.core.graphics.Insets.NONE};
@@ -268,6 +275,10 @@ public final class PinballActivity extends GameActivity {
     }
     @Override protected void onPause() {
         resumed=false; syncInputs(); super.onPause();
+    }
+    @Override public void onConfigurationChanged(android.content.res.Configuration configuration) {
+        super.onConfigurationChanged(configuration);
+        if(keyboard!=null) keyboard.refresh();
     }
     @Override public boolean dispatchKeyEvent(android.view.KeyEvent event) {
         // Consume only the make that dismisses our transient UI. Its matching

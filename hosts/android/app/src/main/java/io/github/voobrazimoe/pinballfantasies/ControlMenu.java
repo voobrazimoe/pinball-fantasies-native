@@ -26,10 +26,22 @@ final class ControlMenu extends FrameLayout {
         sheet.setBackgroundColor(0xdd111111); sheet.setOnTouchListener((v,e)->false);
         addView(sheet,new FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT,LayoutParams.WRAP_CONTENT,Gravity.BOTTOM));
         menu=new Button(context); menu.setText("⋮"); menu.setContentDescription("Mobile menu");
-        menu.setMinWidth(0); menu.setMinimumWidth(0); menu.setPadding(0,0,0,0); menu.setAlpha(.65f);
+        menu.setFocusable(false); menu.setMinWidth(0); menu.setMinimumWidth(0); menu.setPadding(0,0,0,0); menu.setAlpha(.65f);
         addView(menu,new FrameLayout.LayoutParams(dp(44),dp(44),Gravity.TOP|Gravity.RIGHT));
         menu.setOnClickListener(v->{controls.cancel(); opened=!opened; advanced=false; rebuild();});
         setClipChildren(true); rebuild();
+    }
+    private final int[] viewport=new int[8];
+    void viewport(int[] bounds) {
+        if(java.util.Arrays.equals(viewport,bounds)) return;
+        System.arraycopy(bounds,0,viewport,0,8); place();
+    }
+    void keyboardMode(boolean present) {
+        if(controls.keyboardMode==present) return;
+        controls.keyboardMode(present);
+        opened=advanced=false;
+        setVisibility(present ? GONE : VISIBLE);
+        rebuild();
     }
     private int dp(int value) { return Math.round(value*getResources().getDisplayMetrics().density); }
     boolean dismiss() {
@@ -133,6 +145,8 @@ final class ControlMenu extends FrameLayout {
         safeLeft=left; safeTop=top; safeRight=right; safeBottom=bottom; place();
     }
     private void normalize(Button b) {
+        // Touch sheets must not take hardware keyboard/D-pad focus from the game.
+        b.setFocusable(false);
         b.setMinWidth(0); b.setMinimumWidth(0); b.setMinHeight(0); b.setMinimumHeight(0);
         b.setPadding(dp(4),0,dp(4),0); b.setMaxLines(2); b.setSingleLine(false);
         b.setGravity(Gravity.CENTER); b.setAllCaps(false); b.setTextColor(0xff111111);
@@ -166,12 +180,23 @@ final class ControlMenu extends FrameLayout {
         int end=getHeight()-safeBottom;
         if(controls.gameplay && !scrollable && controls.layout!=null)
             end=Math.round(Math.min(controls.layout.leftGuard.top,controls.layout.rightGuard.top));
-        int y=scrollable ? safeTop+Math.max(0,(end-safeTop-height)/2) : grid.topWithin(safeTop,end);
+        InteractionGeometry.Rect safe=new InteractionGeometry.Rect(safeLeft,safeTop,getWidth()-safeRight,end);
+        InteractionGeometry.Rect frame=InteractionGeometry.viewport(viewport,getWidth(),getHeight());
+        boolean contextual=!opened && !advanced && (state.mode==SemanticUi.SELECTOR || state.mode==SemanticUi.SELECTOR_TEXT
+                || state.mode==SemanticUi.ATTRACT || state.mode==SemanticUi.OPTIONS || state.mode==SemanticUi.PAUSED
+                || state.mode==SemanticUi.QUESTION);
+        int y=contextual ? Math.round(InteractionGeometry.lowerTop(safe,frame,height,d)) : scrollable ? safeTop+Math.max(0,(end-safeTop-height)/2) : grid.topWithin(safeTop,end);
         panel.setMargins(x,y,0,0); sheet.setLayoutParams(panel);
-        controls.panel=sheet.getVisibility()==VISIBLE ? new InteractionGeometry.Rect(x,y,x+panel.width,y+height) : null;
+        controls.panel=!controls.keyboardMode && sheet.getVisibility()==VISIBLE ? new InteractionGeometry.Rect(x,y,x+panel.width,y+height) : null;
         FrameLayout.LayoutParams icon=(FrameLayout.LayoutParams)menu.getLayoutParams();
-        icon.gravity=Gravity.TOP|Gravity.RIGHT; icon.setMargins(0,safeTop,safeRight,0); menu.setLayoutParams(icon);
-        controls.menu=new InteractionGeometry.Rect(getWidth()-safeRight-dp(44),safeTop,getWidth()-safeRight,safeTop+dp(44));
+        InteractionGeometry.Rect iconBounds=InteractionGeometry.mobileMenu(
+                new InteractionGeometry.Rect(safeLeft,safeTop,getWidth()-safeRight,getHeight()-safeBottom),frame,viewport[7],d);
+        icon.gravity=Gravity.TOP|Gravity.LEFT;
+        icon.width=Math.round(iconBounds.width()); icon.height=Math.round(iconBounds.height());
+        icon.setMargins(Math.round(iconBounds.left),Math.round(iconBounds.top),0,0); menu.setLayoutParams(icon);
+        boolean visible=!controls.keyboardMode && frame.width()>0 && frame.height()>0;
+        menu.setVisibility(visible ? VISIBLE : GONE);
+        controls.menu=visible ? iconBounds : null;
     }
     @Override protected void onSizeChanged(int w,int h,int ow,int oh) { place(); }
 }

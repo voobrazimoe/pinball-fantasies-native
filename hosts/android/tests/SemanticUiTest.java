@@ -32,6 +32,18 @@ public final class SemanticUiTest {
         String letters="ABCDEFGHIJKLMNOPQRSTUVWXYZ";
         int[] codes={30,48,46,32,18,33,34,35,23,36,37,38,50,49,24,25,16,19,31,20,22,47,17,45,21,44};
         for(int i=0;i<26;i++) check(ui.code(letters.substring(i,i+1))==codes[i]);
+        check(ui.code("1")==-1 && ui.code("0")==-1);
+        List<String> events=new ArrayList<>();
+        Controls keyboard=new Controls((k,a,b)->events.add(k+":"+a+":"+b),(ms,r)->{});
+        keyboard.enabled=true;
+        keyboard.key(59,true,0); check(keyboard.held[0]);
+        keyboard.keyboardMode(true);
+        check(keyboard.keyboardMode && !keyboard.held[0]);
+        events.clear(); keyboard.key(29,true,0); // A still reaches the DOS make path.
+        check(events.contains("1:30:0"));
+        keyboard.key(60,true,0); check(keyboard.held[1]);
+        keyboard.keyboardMode(false); check(!keyboard.keyboardMode && !keyboard.held[1]);
+        check(events.contains("0:1:0"));
         System.out.println("PASS: A6 authoritative mode mapping, semantic makes, exact Play count and initials");
     }
 }

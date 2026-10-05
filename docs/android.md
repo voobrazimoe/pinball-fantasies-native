@@ -311,23 +311,54 @@ started, and `main` is not merged.
 
 Portrait selector uses two equal 64 dp table rows, two columns, followed by
 Options in the left cell of row three. All five cells have identical dimensions,
-two centered text lines, 8 dp gaps and 8 dp inner margins. The centered panel is
+two centered text lines, 8 dp gaps and 8 dp inner margins. The panel is
 at most 360 dp wide and leaves at least 12 dp outside each safe edge. Landscape
 uses three columns then Stones 'N Bones / Options, at most 600 dp wide, with the
 same 64 dp cells. Neither selector scrolls. Ordinary contextual panels use 48 dp
-rows and a 360 dp maximum width in both orientations, centered inside safe bounds.
+rows and a 360 dp maximum width in both orientations.
 The playing utility menu (Close / Pause, Music / Advanced keyboard) sits above
 flipper guard areas. Only advanced/initials keyboards may use ScrollView. Hidden
-panels are GONE and clear their touch exclusion rectangle. The 44 dp menu uses
-the safe top right. System bars, cutouts and gesture insets are respected.
+panels are GONE and clear their touch exclusion rectangle. The menu has a 48 dp accessible touch target; its viewport-relative placement is described below. System bars, cutouts and gesture insets are respected.
+
+The placement pass anchors SELECTOR / SELECTOR_TEXT, ATTRACT, OPTIONS, PAUSED
+and QUIT_QUESTION panels at the bottom of the rendered framebuffer. With enough
+bottom letterbox space, the panel starts immediately below the frame; otherwise
+it straddles that edge or ends 8 dp above the safe bottom. Top, bottom, cutout and
+gesture bounds clamp the result. Selector equal-cell geometry is unchanged;
+Options and Players/Play retain compact two-row panels, leaving original content
+and settings values visible above. Placement uses the renderer snapshot and
+never computes another aspect ratio in Java.
+
+The mobile menu's top is `viewport.top + viewport.height * 33 / source.height`
+plus a 4 dp gap, at the framebuffer's right edge with a 4 dp margin, clamped to
+safe interactive bounds. Portrait full table therefore uses 33/609; landscape
+uses the current rendered source height. The touch target is 48 dp even though
+the visible icon is small. The icon stays hidden until a valid viewport exists.
+
+`HardwareKeyboard` enumerates InputManager devices initially and on device
+add/change/remove, and rescans after Configuration changes. Only external,
+non-virtual, alphabetic devices with SOURCE_KEYBOARD qualify; an IME, touchscreen,
+built-in keyboard or gamepad alone does not switch modes. Keyboard mode hides
+the whole semantic/menu layer and overlay, including initials, L/R, Pull and
+Nudge. Hardware dispatch and existing DOS mappings remain authoritative.
+Switching releases touch gestures and held hardware actions without calling
+native lifecycle, source-clock, engine creation or audio APIs. Detach restores
+the current native mode, including contextual QWERTY during INITIALS, without
+restarting the game. All semantic buttons remain non-focusable.
+
+Local deterministic host geometry, input/keyboard parity, native-session and
+frontend tests pass; public and instrumentation APKs compile. Instrumentation
+covers panel bounds in both orientations, matrix clearance, keyboard policy and
+current-mode attach/detach including initials. Physical acceptance of this
+placement remains pending another owner test; A7 is not started.
 
 Normal utility menus contain no Data or Import command in any engine mode. The
 central first-run/no-data Import DOS folder button remains the only import UX.
 Menu → Advanced keyboard preserves the existing DOS keys. Panels remain Views
 in the same Activity; focus/audio/cadence ownership is unchanged.
 
-The renderer publishes its exact `a3::letterbox()` viewport and surface size
-under a separate host-only mutex. JNI `nativeViewport(int[6])` returns a coherent
+The renderer publishes its exact `a3::letterbox()` viewport, surface size and rendered source dimensions
+under a separate host-only mutex. JNI `nativeViewport(int[8])` returns a coherent
 snapshot, converting GLES bottom-origin y to Android top-origin y. The UI's
 100 ms refresh maps surface pixels to overlay pixels; it does not recalculate
 aspect ratio. Stale-orientation snapshots disable playfield gestures until the

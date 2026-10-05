@@ -14,7 +14,7 @@ final class Controls {
     final Sink sink;
     final Map<Integer, Pointer> pointers = new HashMap<>();
     final boolean[] keys = new boolean[256], held = new boolean[4];
-    boolean enabled;
+    boolean enabled, keyboardMode;
     boolean gameplay=true, plungerAvailable;
     static final int LEFT=0, RIGHT=1, PLUNGER=4, NUDGE=3, NONE=-1, PENDING=5;
     Runnable changed = () -> {};
@@ -60,7 +60,7 @@ final class Controls {
         return false;
     }
     void down(int id, float x, float y, long time) {
-        if (!enabled || !gameplay || pointers.containsKey(id)) return;
+        if (!enabled || keyboardMode || !gameplay || pointers.containsKey(id)) return;
         int region=hit(x,y);
         if (region==NONE) return;
         // Starts during another spring owner's gesture cannot become taps/pulls.
@@ -114,6 +114,14 @@ final class Controls {
         // Cancel resets the touch target without scheduling a release.
         if (plunger) sink.send(5,0,0);
         actions(); changed.run();
+    }
+    void keyboardMode(boolean present) {
+        if(keyboardMode==present) return;
+        cancel();
+        java.util.Arrays.fill(keys,false);
+        actions(); // Release hardware holds on detach, without suspending source time.
+        keyboardMode=present;
+        changed.run();
     }
     void clear() {
         pointers.clear();
