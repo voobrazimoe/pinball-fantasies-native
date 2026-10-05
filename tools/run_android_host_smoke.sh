@@ -25,13 +25,13 @@ begin_phase() {
     timeout 10 adb logcat -c
     # Stream from before the transition, so framework startup chatter cannot
     # evict short-lived native/JNI failures before the next polling snapshot.
-    adb logcat -v brief -s PinballFantasies:I AndroidRuntime:E GameActivity:V DEBUG:F '*:S' \
+    adb logcat -v brief -s PinballFantasies:I AndroidRuntime:E GameActivity:V libc:F DEBUG:F '*:S' \
         > "$scratch/log" 2>&1 &
     collector=$!
 }
 
 snapshot() {
-    if grep -Eq 'A1_.*ERROR|A2_BOOTSTRAP_REJECTED|FATAL EXCEPTION|UnsatisfiedLinkError|Fatal signal' "$scratch/log"; then
+    if ! python3 "$(dirname "$0")/android_smoke_log.py" "$scratch/log" --package "$PACKAGE"; then
         cat "$scratch/log" >&2
         exit 1
     fi

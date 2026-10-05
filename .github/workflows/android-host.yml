@@ -11,6 +11,8 @@ on:
       - 'tools/check_android_elf.py'
       - 'tools/test_check_android_elf.py'
       - 'tools/run_android_host_smoke.sh'
+      - 'tools/android_smoke_log.py'
+      - 'tools/test_android_smoke_log.py'
       - 'tools/test_android_import.sh'
       - 'tools/build_personal_android.py'
       - 'tools/test_build_personal_android.py'
@@ -33,6 +35,8 @@ on:
       - 'tools/check_android_elf.py'
       - 'tools/test_check_android_elf.py'
       - 'tools/run_android_host_smoke.sh'
+      - 'tools/android_smoke_log.py'
+      - 'tools/test_android_smoke_log.py'
       - 'tools/test_android_import.sh'
       - 'tools/build_personal_android.py'
       - 'tools/test_build_personal_android.py'
@@ -99,6 +103,8 @@ jobs:
           echo "${ANDROID_HOME}/emulator" >> "$GITHUB_PATH"
           mkdir -p "$ANDROID_AVD_HOME"
 
+      - name: Attribute smoke failures to the Android host
+        run: python3 tools/test_android_smoke_log.py
       - name: Asset-free personal builder safety tests
         run: python3 tools/test_build_personal_android.py
       - name: Asset-free import transaction tests
