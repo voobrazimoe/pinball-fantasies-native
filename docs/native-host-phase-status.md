@@ -1,5 +1,15 @@
 # Native host phase validation status
 
+## v0.1.3 candidate gate (2026-10-05)
+
+The owner explicitly accepted A6 physical Android testing for this release
+preparation. The icon and public packaging work proceeds on `android-host`.
+The complete RC requires the CI and package checks described in
+[release-v0.1.3.md](release-v0.1.3.md), then a separate owner visual/package smoke.
+Main integration, `v0.1.3` tagging and publication remain unauthorized until
+that RC is explicitly accepted. Earlier entries below retain their original
+validation limits and are historical evidence.
+
 ## Current status (2026-10-05)
 
 The native macOS ARM64/x86_64 host is implemented and accepted by the owner.

@@ -1,8 +1,25 @@
 # Android host
 
-A6 physical-device preparation and the owner-run checklist are in
-[android-a6-acceptance.md](android-a6-acceptance.md). Preparation does not mark
-A6 complete; hosted CI cannot certify original-backed physical acceptance.
+The owner accepted A6 physical-device testing on 2026-10-05. The earlier
+per-device checklist and evidence are in [android-a6-acceptance.md](android-a6-acceptance.md).
+Hosted CI remains separate from physical acceptance.
+
+## Current release preparation (2026-10-05)
+
+The owner has accepted A6 physical Android testing. The current task prepares
+v0.1.3 as the first public Android prerelease candidate, with an original PF
+launcher icon. It does not authorize main integration, a tag or publication.
+Earlier development entries below are retained as historical evidence.
+The final owner RC check covers icon masks, the no-data shell, SAF import,
+gameplay launch, touch and smoothness; it is separate from accepted A6 testing.
+
+Install the staged public APK, open the app and tap **Import DOS folder**.
+Choose the folder containing the supported canonical 11 PRG/MOD files listed in
+the README; `PINBALL.CFG` is optional. Validated copies go to private app storage,
+while the source files remain unchanged. Public APKs contain no commercial data.
+`21STCENT/FANTASY` is not supported. The current candidate is a development-signed
+universal APK (arm64-v8a + x86_64), not the local-only personal APK.
+See [v0.1.3 preparation](release-v0.1.3.md).
 
 Android support is being added as a native host around the existing Go engine and stable C ABI 1. The Android host must not duplicate table rules, presentation programs, tracker progression, settings/high-score encodings, source cadence or gameplay semantics.
 

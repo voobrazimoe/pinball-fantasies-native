@@ -29,6 +29,22 @@ chmod +x PinballFantasies-x86_64.AppImage
 ./PinballFantasies-x86_64.AppImage -data-dir "/path/to/Pinball Fantasies"
 ```
 
+## Android v0.1.3 candidate
+
+Android support is included in the **v0.1.3 release candidate**, pending owner
+package smoke and publication. The published downloads above remain v0.1.2.
+Use the staged public `PinballFantasies-android.apk` supplied with the candidate:
+
+1. Install the APK and open Pinball Fantasies (Android 8.1 or later).
+2. Tap **Import DOS folder** and choose the folder containing the supported original DOS files listed below.
+3. The app validates and copies the 11 required PRG/MOD files and optional `PINBALL.CFG` into private app storage; the supplied originals remain unchanged.
+4. Launch a table using the contextual touch controls, or attach a physical keyboard. Touch panels automatically hide while an external keyboard is active.
+
+Commercial files are not bundled. Only the validated canonical DOS layout is
+supported; `21STCENT/FANTASY` data is not compatible. The universal APK contains
+arm64-v8a and x86_64, is development-signed, and supports 16 KB page-size devices.
+See [Android usage](docs/android.md) and the [candidate preparation record](docs/release-v0.1.3.md).
+
 The supported installation provides these 11 required PRG/MOD runtime files:
 
 ```text

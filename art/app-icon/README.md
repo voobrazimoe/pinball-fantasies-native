@@ -18,7 +18,7 @@ Requires the repository Go toolchain, Python 3 and Node.js. No proprietary GUI:
 ```sh
 python3 -m venv .cache/icon-export/venv
 .cache/icon-export/venv/bin/pip install Pillow==12.3.0
-npm install --prefix .cache/icon-export --no-save sharp@0.34.5
+npm install --prefix .cache/icon-export --no-save sharp@0.35.4
 .cache/icon-export/venv/bin/python tools/export_app_icons.py
 python3 tools/check_app_icons.py
 ```

@@ -36,7 +36,7 @@ class FakeDevice(a6.Device):
         if args[:3] == ("shell", "pm", "path"):
             return "package:/data/app/base.apk"
         if "package" in args:
-            return "versionCode=1 versionName=0.0.0-a4 targetSdk=36 minSdk=27\nsecret provider URI"
+            return "versionCode=3 versionName=0.1.3 targetSdk=36 minSdk=27\nsecret provider URI"
         if "meminfo" in args:
             return "TOTAL PSS: 12345\nNative Heap: 678\nsecret contents of INTRO.PRG"
         if "cpuinfo" in args:

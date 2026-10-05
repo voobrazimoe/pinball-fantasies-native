@@ -127,7 +127,7 @@ jobs:
         run: |
           export ANDROID_NDK_HOME="${ANDROID_HOME}/ndk/${ANDROID_NDK_VERSION}"
           sh tools/build_android_engine.sh all
-      - name: Build A5 debug APK
+      - name: Build public prerelease APK
         id: apk-build
         run: gradle -p hosts/android :app:assembleDebug :app:assembleDebugAndroidTest --stacktrace
 
@@ -244,11 +244,11 @@ jobs:
       - name: Exercise A1 rendering, rotation and lifecycle
         run: sh tools/run_android_host_smoke.sh
 
-      - name: Upload A5 APK
+      - name: Upload public APK
         if: ${{ !cancelled() && steps.apk-build.outcome == 'success' }}
         uses: actions/upload-artifact@v4
         with:
-          name: pinball-fantasies-android-a5-debug
+          name: PinballFantasies-android-public
           if-no-files-found: error
           path: hosts/android/app/build/outputs/apk/debug/app-debug.apk
 
