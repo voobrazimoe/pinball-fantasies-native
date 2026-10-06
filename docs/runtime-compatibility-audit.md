@@ -2,6 +2,12 @@
 
 Runtime compatibility and exact reference identity are separate contracts. Windows, Linux, macOS and Android use the same engine/shared loader. The supported DOS layouts are A (`dos-retail-linked-v1`), B (`dos-powerpack-linked-v1`), C (`dos-deluxe-cd-alt-linked-v1`) and the proved CD/GOG file-set D (`dos-deluxe-cd-linked-v1`). A remains the only pinned canonical oracle. Demos and unidentified layouts remain unsupported/research-only. C is a distinct Deluxe CD-family runtime set, without a chronology claim. See [C validation](runtime-layout-c-validation.md). See [D source-derived semantics and validation](runtime-layout-d-validation.md).
 
+All four supported layouts are full-game installations requiring eleven roles.
+The five-role Party Land 10-minute demo is a separate research target; its
+[DMO0 report and unresolved production gate](runtime-layout-demo-10min-validation.md)
+record the static timer/control evidence. It is not yet a supported demo layout
+or a bundled playable fallback.
+
 ## Before and after, by input
 
 Every PRG previously required the SHA-256 of the entire inventoried executable before decoding fixed offsets. Every MOD also required whole-file SHA-256; frontend hashes additionally selected INTRO's omitted-sample behavior. Those checks protected offset assumptions indirectly, but also rejected changes to executable headers, unused instructions, module titles and PCM bytes that the native decoder does not need to identify its layout.
