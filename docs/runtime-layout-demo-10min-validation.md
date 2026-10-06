@@ -1,17 +1,21 @@
+DMO0 NOT CLOSED. DMO1 NOT STARTED.
+
 # Party Land 10-minute DOS demo: DMO0 research gate
 
-Date: 2026-10-06. Base: `306d11a0c479c7ac5ee6e245f3f72eacbc665abd`.
+Date: 2026-10-06. Production base: `306d11a0c479c7ac5ee6e245f3f72eacbc665abd`.
+This continuation starts from research `2a40c3a55d130fa324dda1ceb2fcea40ba0913e1`.
 
 **DMO0 NOT CLOSED. DMO1 NOT STARTED. Demo remains unsupported.**
 This report records static evidence and the remaining proof obligations; it is
 not a production layout descriptor or a demo support announcement. No DOS code
 was executed, no DOSBox was installed, and no demo was downloaded.
 
-The updated target is a bundled playable fallback after both gates pass, with
-`Play 10-minute demo` / `Import DOS version` on a clean installation. That target
-supersedes the original import-only target. Bundling, package allowlisting and
-startup UI are deferred with DMO1. Nothing in this research changes release
-versions, tags, assets or publication.
+This continuation concerns DMO0 semantic obligations only. Identity, FORM
+inventory, the 1,632-region read map, material/audio equivalence, jingle typing,
+counter threshold and expiry program below retain their prior-pass evidence;
+those audits were not repeated. Exact private identities are verified before
+the new graph analysis. Bundling, package allowlisting and startup UI remain
+deferred with DMO1. Nothing changes release versions, tags, assets or publication.
 
 ## Identity and provenance
 
@@ -83,29 +87,87 @@ future descriptor; no prepared demo PRG was created.
 | `0x35360` | HighLogo | 640 × 200 | 4 | exact, A `0x34d90` |
 | `0x339e0` | HighMono | 640 × 200 | 4 | exact, A `0x33410` |
 
-The three altered FORM bodies were independently decompressed and visually
-inspected in temporary files outside the repository. Each is the corresponding
+In the prior research pass, the three altered FORM bodies were independently
+decompressed and visually inspected outside the repository. Each is the corresponding
 table advertising card with `NOT AVAILABLE` across it; its lower area is blank.
 They are **not demo expiry notices or replacement startup splash screens**.
 Canonical replacement would erase the supplied advertising/nonplayable meaning.
 
-MZ relocation entries point at segment references at file `0x6567`, `0x6569`,
-`0x656b` for these three assets (segments `0x2471`, `0x2951`, `0x2dec`). INTRO's
-selector uses those table references at `0x38907–0x3892e` and
-`0x3894f–0x3897a`. Exact placement/cropping through the full unpack/presentation
-call graph has **not** been proved; FORM dimensions alone do not establish it.
-A future presentation capability must represent advertising cards independently
-of table playability, retaining their supplied pixels.
+MZ relocation entries for the three advertising FORMs are at `0x6567`,
+`0x6569`, `0x656b` (segments `0x2471`, `0x2951`, `0x2dec`). The consumer chain
+below now establishes their presentation; this does not use FORM dimensions as
+a placement assumption.
 
-F1 dispatch is live at `0x389cc–0x389ce`. The comparisons for F2/F3/F4 at
-`0x389d3`, `0x389d5`, `0x389d7` have no corresponding conditional branches to
-their old handlers. Those handlers still exist, but this selector does not
-dispatch to them. Full source table-name strings/unused handlers do not make
-TABLE2–4 playable. F5 remains dispatched at `0x389d9–0x389db`.
+### Advertising consumer proof (BLOCKER 3)
 
-The canonical 240-byte sidebar/options record at `0x3914e` has no demonstrated
-demo equivalent. Demo menu text includes the new 10-minute/F1 wording. A fixed
-240-byte copy based on an approximate shift is prohibited.
+INTRO code base is `0x36e90`; its DS file base is `0xc00`. The unpack loop
+`0x382c7–0x38306` consumes seven source segments and destination rows from
+`0x6551`: 0, 240, 268, 296, 391, 486, 581. The card rows are 296/391/486/581.
+The caller passes width 440 for cards, but unpack routine CS:`0x4810` takes the
+actual 80-byte planar row stride from the display setup and BMHD geometry.
+Thus the 640×200 advertising FORMs are initially unpacked with their own height;
+those overlapping temporary storage rows are not the displayed windows.
+
+`CRUNCH_PICS` at `0x39b7d`, called at `0x38330`, preserves the first 55 bytes
+of row 296 and compacts the following 379 rows: destination `0x5cb7`, source
+`0x5cd0`, copy 55 bytes, skip 25 bytes per row. The four consumed cards therefore
+contain exactly the **left 440 pixels of their first 95 rows**, per plane.
+Rows 95–199 of each advertising FORM do not contribute to the selector card.
+
+The selector's `0x38907–0x3892e` / `0x3894f–0x3897a` selects palettes for a pair,
+then calls the raster presenter at `0x3893a`. Top presenter `0x3944f` uses
+DI=`0x334` (x=160, y=10), SI=`0x5c80`; bottom presenter `0x39471` uses
+DI=`0x2a44` (x=160, y=135), SI=`0x70e9`. Both copy 55 bytes per plane per row.
+The second pair adds BP=`0x28d2` = two compacted cards. Raster packet table
+`0x663b` has 18 packets, covering each row 0–94 exactly once, with an interpacket
+sync between successive packets; pre-display wait is 20 selector syncs. The
+page hold is 540 selector callbacks. This is a packet reveal of fixed windows,
+not scrolling a full 640×200 card.
+
+| Demo FORM | Source crop | Selector destination | Palette |
+| --- | --- | --- | --- |
+| `0x24b10`, Speed Devils | x=0, y=0, 440×95 | first pair, x=160, y=135 | bottom bank 0–15 |
+| `0x29910`, Gameshow | x=0, y=0, 440×95 | second pair, x=160, y=10 | top bank 16–31 |
+| `0x2e2c0`, Stones | x=0, y=0, 440×95 | second pair, x=160, y=135 | bottom bank 0–15 |
+
+Each card's own 16-color CMAP is consumed through CS:`0x1e86`; the pair copies
+48 bytes per card into the current palette buffers. Raster palette switching
+uses CHANGE16PAL. The first pair's top card is the shared Party Land FORM.
+Pair selection controls advertising presentation, not table availability.
+
+F1 dispatch is live at `0x389cc–0x389ce`. F2/F3/F4 comparisons at `0x389d3`,
+`0x389d5`, `0x389d7` have no branches to the retained old table handlers.
+F5 at `0x389d9–0x389db` reaches options. Space/automatic page change advances
+advertising pairs. Old instructions `0x389ec–0x38a19` are not reached by the
+entry/selector direct graph; their stale text-index writes are not consumed
+menu semantics.
+
+### DOS consumed menu source → semantic field
+
+A real demo 240-byte record is at **`0x396d3`**, not canonical `0x3914e` plus an
+approximate shift. It is two independently consumed 120-byte blocks of ten
+12-column rows. Sidebar task `0x398fc` selects CS pointers `0x2843` / `0x28bb`
+and printer `0x39954` consumes those rows at a nine-pixel vertical stride.
+Options entry `0x3b21e` switches the pointer; exit `0x3b4ed` restores it.
+
+| Consumed source | Consumer | Typed presentation field |
+| --- | --- | --- |
+| text list `0x5801` → `0x580d` | SHOWTEXT pointer read `0x3a09a`; 12 bounded, zero-delimited rows, ≤24 columns | welcome title: WELCOME TO / PINBALL FANTASIES; notice: 10 MINUTE DEMO; actions: F1 - PLAY PINBALL, F5 - GAME OPTIONS |
+| same list → `0x5869` | same page printer | acquisition page: PINBALL FANTASIES / IS AVAILABLE NOW / WRITE TO: / 21ST CENTURY / ENTERTAINMENT INC / P.O. BOX 415 / WEBSTER / NEW YORK 14580 |
+| `0x396d3`, first 120 bytes | selector sidebar task/printer | F1 Party Land (two rows), F5 options, Escape quit; other rows blank |
+| `0x3974b`, second 120 bytes | options sidebar task/printer | cursor keys select, Enter or Space toggles, Escape quits; bounded ten-row organization |
+| `0x5b01` | BX load `0x3b24e` → page printer CS:`0x2ca7` | options page title/labels: balls, angle, scrolling, in-game music, resolution, color mode, save and exit; shared value formatter `0x3af32` writes at row+13 |
+| FORM records above | compact/copy/palette consumer | nonplayable table advertising with the supplied NOT AVAILABLE image, independently of menu action labels |
+
+Text list words are `0x4fbd, 0x4c0d, 0x4c69, 0, 0`. SHOWTEXT increments its
+index by two and wraps zero entries to index two: the welcome and acquisition
+pages are reachable from the entry graph. The high-score-page pointer is the
+shared high-score presentation, not another demo notice. Credit text retained
+near `0x58e0` is not in this consumed cycle and is not proposed for the model.
+The binary options dispatcher `0x3ae21–0x3ae76` handles up/down, Enter/Space,
+Escape; ball choice 3/5 remains a displayed option, but the demo continuation
+below does not read that limit. No canonical sidebar bytes are substituted.
+**BLOCKER 3's placement and consumed presentation obligations are closed.**
 
 ## TABLE1 read-map audit
 
@@ -160,7 +222,7 @@ graph review, not a new physics algorithm.
 | demo bonus continuation | pointer at `0x1b533`, handler file `0x73e` | replaces full player/ball progression with demo-only ball-display progression and NEW_BALL_TASK | canonical compiled matrix commands / `partyland/timing.go` `_CHANGE_PLAYER` |
 | expiry program | `0x1ba17`, 42 bytes | new scroll/score/flash/fade/quit program, absent from full common matrix graph | no current decoded demo presentation/control program |
 | unavailable table cards | INTRO offsets above | nonplayable advertising instead of full playable labels | frontend cards / table input availability |
-| INTRO menu text | marker `0x582b`, F1 wording `0x583f` | new text/organization; old sidebar/options region is not an equivalent record | fixed current frontend text model |
+| INTRO menu text | text list `0x5801`, pages `0x580d`/`0x5869`, sidebar `0x396d3` | separately consumed demo text/pages/sidebar organization | typed presentation fields above |
 
 This is the list established in this run, **not a claim of exhaustive semantic
 closure**. Factory Party Land seed data at `0x19dc6` (64 bytes) matches A.
@@ -204,117 +266,436 @@ The launcher's closing message belongs to its zero-table-selection path
 (`0x70f–0x71e`); the timer itself does not directly print it. F1 in the next
 INTRO can load another fresh table process. Relaunch naturally resets the count.
 
-**Remaining timer proof:** the full actual SDR/music/raster callback dispatch
-contract, reentry/skipped callback policy, both resolutions and paused/quit
-transitions have not been reconstructed. The fixed native Runner tick must be
-mapped to the proved counted event before implementing a deterministic limit.
-35998 is a proved calculation threshold; claiming that exactly 600 wall-clock
-seconds or exactly 36000 native ticks reproduces all DOS states would be a guess.
-No native timer was implemented, so there are no native expiry/boundary test results.
+### Counted-event dispatch: local binary proof, unresolved external admission (BLOCKER 2)
 
-## Persistence and the control-graph blocker
+TABLE1 installs the primary callback at `0x6345` using INT 66h AX=11,
+BL=100, ES:DX=CS:`0x4217` (file `0x4517`). The later callback at `0x6361`
+uses AX=12, BL=200, ES:DX=CS:`0x562b` (file `0x592b`), CX=108 in low
+resolution or 174 in high resolution. Both resolutions converge on the same
+counted call site; a rendering cadence or audio callback is not itself a count.
 
-TABLE1 retains a `table1.hi` filename at `0x19dbc`, factory seeds, and file read/
-write routines around `0x66d0` / `0x6706`. The inspected startup and teardown omit
-their calls; scanning the code range found no direct calls to these two routines.
-Historical DEMOVER guards omit INIT_HIGHS/SAVE_HIGHS as well. This supports
-**factory/transient scores without ordinary full-game persistence**, but complete
-indirect reachability and demo score-session paths remain open. A filename or
-unused routine is not proof of persistence. No native demo store was enabled.
-
-The decisive consumed-control blocker is the pointer at **TABLE1 `0x1b533`**:
-its CS value `0x043e` selects file handler **`0x73e`**. This handler preserves
-held bonus, updates two encoded BALLSTEXT display digits, stores player state,
-queues NEW_BALL_TASK and continues the matrix program. It does not execute the
-ordinary full-game `_CHANGE_PLAYER` ball-limit branch. The historical
-`PLAND.ASM` 1640–1648 and 2871–2899 identify this as `_DEMOVER_CHANGE_PLAYER`.
-
-The full native graph instead embeds `_WAITIFMULTI`, `_MATRIXLGT`, clear and
-`_CHANGE_PLAYER`; the latter uses `g.changeBall()` and full Session progression.
-Copying demo bytes to canonical addresses preserves neither the omitted commands
-nor this new transition. A timer-only port could end a demo after three balls
-before its timer or report the wrong ball/score state.
-
-The handler's local operations are known, but their complete downstream meaning
-through `_KOLLA_XXBALL`, shoot-again, saved per-player state, ordinary new-ball
-tasks, display-digit wrap and high-score transitions has **not** been proved for
-this linked demo graph. The existing 1632-entry canonical data read map does not
-include these linked command words as a decoded runtime program. Required next
-proof: recursively decode and review the demo matrix/control graph, identify
-every modified edge and its state consumers, then express the proved differences
-as common typed capabilities/programs. The companion callback cadence and INTRO
-placement/text proofs must close too. These are research obligations, not user
-permission or a missing-device requirement.
-
-## Architecture and bundled target after closure
-
-No capability refactor was made while DMO0 is open. Full A/B/C/D still require
-all 11 roles. Demo input still fails at the shared production boundary.
-
-The pending model is RuntimeProfile → required roles, available tables,
-edition/session/persistence/presentation capabilities → source descriptor →
-common decoded model. Full has tables [1,2,3,4]; demo would have [1] plus optional
-nonplayable advertising cards. Ball/session continuation also needs a proved
-typed capability; availability and time limit alone are insufficient.
-
-The updated RuntimeSource target isolates external installation and bundled
-read-only demo sources. Candidate validation must use one source exclusively;
-external full-game precedence never fills missing roles from the demo. Import
-must retain existing transactional staging/adoption/rollback and explicit
-replacement semantics. Android's bundled path may materialize atomically into
-private internal storage with post-copy hashes/recovery. Demo launch must not
-require SAF or a picker. Desktop resource lookup must survive app relocation.
-
-Future packaging must take the five pinned files from an explicit private input
-outside tracked source, verify them before packaging, include each once, and
-permit **only these exact identities** in public resources. Full A/B/C/D payload,
-unknown PRG/MOD, DOS executables/drivers and archive wrappers remain forbidden.
-State stays in native userdata. No packaging destination, approved-demo scanner,
-clean-install test or external-source-precedence implementation exists yet.
-Existing asset-free package policy was not weakened ahead of that implementation.
-
-## Validation in this task
-
-| Check | Current result |
+| Callback edge / gate | Binary condition and counted-event effect |
 | --- | --- |
-| Five-file research identity; 17 FORM inventory; materials and jingles | PASS through read-only research tool |
-| Shared INTRO/MOD2/TABLE1 Module decoder equivalence | PASS, private Go test |
-| Production demo support | NOT IMPLEMENTED; fail-closed rejection remains |
-| Demo INTRO + full TABLE1; full INTRO + demo TABLE1, A/B/C/D | PASS rejection |
-| Demo PRGs plus full TABLE2–4 | PASS rejection for all four sets |
-| MOD cross-edition rejection | Not a meaningful mismatch: these three decoded roles are equivalent; no new artificial MOD family discriminator |
-| A/B/C/D private mappings and coherent detection | PASS |
-| Existing 1024 four-profile PRG matrix | PASS |
-| C/D seeds, Stones selectors, priorities and shared construction | PASS existing private regression tests |
-| Private fixture absent | Clean SKIP, `PF_10MIN_DEMO_DATA` / `PF_RUNTIME_DATA` |
-| Native demo gameplay/intro/expiry and deterministic smoke | NOT RUN: no supported profile |
-| Timer before/exact/after, pause/reset/relaunch boundary tests | NOT IMPLEMENTED: counted-event mapping remains open |
-| Demo/full imports, replacement, rollback, interrupted extraction | NOT IMPLEMENTED |
-| macOS bundled/imported demo journeys | NOT RUN |
-| Android demo provider/extraction, two ABIs, APK alignment, physical device | NOT RUN |
-| Windows amd64 GUI build | BUILD PASS, PE machine 0x8664; execution NOT RUN on this Mac |
-| Linux amd64 trace build | BUILD PASS, ELF machine 62; SDL GUI build/execution NOT RUN |
-| New distributables / clean-install bundled demo | NOT PRODUCED / NOT RUN |
-| A oracle, captures, reference fixtures | UNCHANGED; no regeneration or allowlist changes |
+| primary callback `0x4517` | increments SYNC before its update guards |
+| `INTERRUPTS_ON` at `0x4536` | disabled update returns without electronics; pause uses this guard |
+| `DEMOMODE` attract branch | branches to `0x6386`, outside ordinary electronics |
+| slowdown gate `0x456a` | exact demo AND mask is zero, so this gate does not drop alternate updates |
+| `LAST_WAS_VB` `0x4571–0x4578` | returns until later callback clears the flag |
+| `INSIDE_BALLHANDLER` `0x457a–0x4588` | overlapping ball handler returns |
+| low/high/scroll rendering branches | converge through ball calculations and DO_PHYSICS call `0x46b8` |
+| `INSIDE_RESTOFVBLANK` `0x46c0` | busy rest-of-update skips electronics; it is set at `0x471b`, cleared at `0x4753` |
+| `0x4720 → 0x4723 → 0x5cd9` | UPDATE_COUNTERS then exactly one DO_ELECTRONICS call on this admitted rest-of-update path |
+| TIME_LEFT `0x472a` | checked after electronics; budget can skip matrix work, not this counter increment |
 
-Regression command used private env variables `PF_RUNTIME_DATA`,
-`PF_POWERPACK_DATA`, `PF_DELUXE_CD_ALT_DATA`, `PF_DELUXE_CD_DATA` and
-`PF_10MIN_DEMO_DATA`, with `go test ./internal/datalayout ./internal/frontend
--run 'TestPrivate|TestPowerPackDescriptor|TestDeluxe' -count=1 -v`.
-There is no variable-role runtime refactor whose acceptance is being claimed.
+At the electronics entry there is no HOLDSTILL, matrix-wait or between-ball
+phase test before increment. When those states reach this entry, they count.
+The local reentry guards prevent a second admitted rest-of-update while the
+first is active, but can cause skipped work. The complete scheduler admission
+contract has not yet been proved across every supplied driver and
+expiry/task interleaving. The drain return itself is now closed locally below. Do not turn this local result into an unconditional
+one-callback/one-native-tick theorem.
 
-The four known baseline assertions named in the request were not rerun in this
-focused research suite; this task makes no claim they are fixed or newly PASS.
-Likewise missing historical/reference captures were not regenerated or silently
-substituted. Their prior failure/unavailability remains outside these focused
-PASS results.
+The new research tool pins and statically decodes all eleven supplied EXEPACK
+SDR containers **in memory only**. This interprets bounded compression blocks;
+it neither runs DOS instructions nor writes an unpacked executable. GUS's entry
+IP is 22; the other ten entries are 6. Registration producers are now derived for all eleven, rather than assumed
+from the two reviewed families:
 
-Changed source is the research tool, private research test, this report and a
-compatibility-document link. All payload/images/disassembly output stayed outside
-tracked source. The four changed files and newly built Windows/Linux binaries
-passed scanning against 1973 distinct nontrivial 4 KiB blocks from private
-A/B/C/D/demo PRG/MOD and DOS support inputs, plus whole-file identity checks.
-This verifies these sources/binaries, not every pre-existing ignored artifact
-in the workspace. No new app bundles/APKs or bundled-demo public packages were
-produced. The local research commit SHA is in the final task response.
-No push, tag or release was performed.
+| SDR | Decoded-module addresses (not packed file offsets) | Established boundary |
+| --- | --- | --- |
+| NOSOUND | callback install `0x6bc`; IRQ entry `0x5bf`; STI `0x5c7`; priority gate `0x66b`; callback `0x687` | raster-calibrated IRQ0 record scheduler; skips records below the active priority |
+| ADLIB | install `0x1a81`; primary callback `0xbdd`; later callback `0xc11`; budget helper `0x1a32` | buffer/interrupt scheduler; callback and budget state differ from NOSOUND |
+
+The INT66 dispatcher is recovered from each module's actual vector installation
+and AL compare/branch chain. API 11/12 entries are followed to ES:DX stores;
+indexed API 12 insertion exposes the record base, nine-record bound and
+nine-byte stride. These are registration/storage proofs, **not** IRQ reachability,
+frequency, callback multiplicity or admission invariance proofs.
+
+| Driver | API 11 entry | API 12 entry | API 12 storage family |
+| --- | --- | --- | --- |
+| ADLIB | `0x1a81` | `0x1ab8` | separate far-pointer field |
+| GUS | `0x7b3` | `0x813` | indexed record insertion |
+| INTERNAL | `0x1a02` | `0x1a39` | separate far-pointer field |
+| NOSOUND | `0x6bc` | `0x71c` | indexed record insertion |
+| PAS16 | `0x1c7a` | `0x1cda` | indexed record insertion |
+| SB16 | `0x1e37` | `0x1e97` | indexed record insertion |
+| SB20 | `0x1e9b` | `0x1efb` | indexed record insertion |
+| SBLASTER | `0x1d55` | `0x1db5` | indexed record insertion |
+| SBPRO | `0x1ed4` | `0x1f34` | indexed record insertion |
+| SM2 | `0x1cd8` | `0x1d38` | indexed record insertion |
+| THING | `0x1a37` | `0x1a6e` | separate far-pointer field |
+
+**Still required:** IRQ source/vector and calibration-to-admission closure,
+primary/later scheduling, priorities, nesting/skips and driver invariance. No
+A/B/C cadence verdict is selected. Historical FANTASIE.ASM supplies labels and
+structure only; its five-minute numeric assumptions were not imported.
+
+**Drain order, binary-confirmed:** `0x46b8` calls DO_PHYSICS `0x5d1f`;
+`0x5d4a` calls LOOSE_BALL `0x515`, then returns at `0x5d4d`. The primary path
+continues through the rest-of-update guard `0x46c0`, UPDATE_COUNTERS `0x4720`
+and DO_ELECTRONICS `0x4723`. Drain itself does not bypass this electronics
+calculation. In particular, the drain sees the old expired flag before that
+update's threshold equality; moving the counter ahead of drain changes semantics.
+
+### Native event mapping and timer contract are not closed
+
+`internal/source/runner.go` advances frontend/application ticks, including states
+outside table electronics. `internal/frontend/model.go` uses 71 Hz in table
+modes and 60 Hz in INTRO. Neither Runner.Ticks nor presentation frames are a
+proved demo counter. `internal/partyland/game.go:244` advances Game.Tick and audio
+before a GameOver return, and has separate BallLost display/task/matrix work
+without Physics.Sync. `beforeTargets` is therefore not a complete counter hook.
+Physics.Sync combines the ball/raster paths with DO_PHYSICS semantics; its
+individual physics substeps are not separate electronics calculations.
+
+A proposed explicit **ElectronicsCalculation** logical event must represent the
+admitted DOS rest-of-update, before area/target/task work, including held-ball,
+wait and between-ball updates that actually reach it. The local DOS order now requires this
+hook **after ball/drain processing and UPDATE_COUNTERS, before areas/targets,
+shift, KEYTASK and tasks**. The current Physics.Sync drain return precedes
+BeforeTargets; the separate Game.BallLost branch also omits that hook. Thus a
+future explicit event must cover these paths, not just add a counter to
+beforeTargets. The existing PF3 comment about bypassing electronics is not a
+proof about this demo binary. No production code was changed. There is **no proved N** for
+`one calculation == N Runner ticks`, and no native implementation is added.
+
+Proved constraints for that eventual contract: increment first, compare exactly
+35998 by equality, pause-disabled update and INTRO do not count, HOLDSTILL alone
+does not suppress the entry, resolution uses the same counted site, a fresh
+TABLE1 process starts at zero, inspected new-ball/new-game resets do not reset
+it. Subsequent expiry updates still increment when admitted; equality alone
+is not a saturation test. The uint16 counter can wrap, and equality can recur
+after 65,536 further admitted calculations if TABLE1 has not returned. Neither
+an eventual-exit bound nor the first-resume callback/LAST_WAS_VB relation has
+been proved; they remain explicit gates. No wall clock, audio IRQ count or presentation count
+is proposed as a substitute. Full pause/reset/expiry admission closure remains
+BLOCKER 2, not an implemented/tested timer contract.
+
+## Continuation graph (BLOCKER 1)
+
+The bounded normal bonus program was linked as a whole using source-derived
+command arities and numeric operands, with one unique candidate per binary.
+Canonical A is `0x1b3cd` (119 words); demo is `0x1b459` (114 words). This is a
+program/consumer proof, not another nearest-offset read-map audit. The demo tail
+is `_KOLLA_XXBALL → _DEMOVER_CHANGE_PLAYER → _CLEAR4 → _WAIT 32000 → 0`.
+Canonical instead inserts `_WAITIFMULTI`, `_MATRIXLGT`, `_CLEAR4`, `_CHANGE_PLAYER`
+after `_KOLLA_XXBALL`. Demo's handler pointer at `0x1b533` is CS:`0x043e`, file
+`0x73e`. It is not `_CHANGE_PLAYER`.
+
+All addresses in this section are TABLE1 file offsets; state names refer to
+DS at file base `0x19db0` unless stated otherwise.
+
+| Edge / source label | Condition / state read | State write / queued work | Canonical relation / observable meaning |
+| --- | --- | --- | --- |
+| `0x73e`, `_DEMOVER_CHANGE_PLAYER` | HOLDBONUSFLAG DS:`0x5b3` true | copy 12 encoded digits TEMPSIFFRORNA `0x34a1` to BONUSSIFFRORNA `0x3495` | keeps the saved bonus snapshot; not a recomputation |
+| `0x756–0x77a`, same handler | reads two BALLSTEXT digits `0x2389/0x238a` | increment ones; carry resets ones to glyph zero; tens becomes 1 unless already 1, when it becomes 2 | demo display progression rather than Session ball count |
+| `0x77f`, VARS_2_P_STRUC `0x1178` | current PLAYER `0x3819`, stride `0x74` | save current player record; PLAYER unchanged | no ordinary player rotation here |
+| `0x782–0x785` | same continuation | queue NEW_BALL_TASK CS:`0x0bbb` / file `0xebb` through DOADDTASK `0x5e80` | proceeds to another ball, then HU_ next matrix node |
+| `_KOLLA_XXBALL` `0xd75` | XXBALLE DS:`0xcd` zero | continue to demo handler | ordinary demo bonus tail ignores earned shoot-again branch |
+| same, XXBALLE nonzero `0xd84` | saved player state, light 51 (`0x36c3`) | light set: LET_HIM_SHOOT_AGAIN `0xe3a`, decrement XBALLS `0xce`, select SHOOT_AGAIN program `0x17a2`; otherwise test/rotate PLAYER versus PLAYERS and select match continuation | retained match machinery; global reachability is still open |
+| retained `_CHANGE_PLAYER`, file `0xdb9` | PLAYER/PLAYERS, ordinary BALLS `0x34db`, NO_OF_BALLS `0x34dc` | ordinary branch `0xdf4` increments BALLS; `0xe51` selects OUT_OF_BALLS `0x17ba` | absent from normal demo bonus program; no pointer to this handler in the reviewed DS extent |
+| unscored drain, LOOSE_BALL | SCORECHANGED false | PARTY_ON/S_SPRING; PARTY_ON_TASK1 wait 30 → NEW_BALL | same-ball free plunge; bypasses digit increment |
+| scored drain `0x5d2 → 0x622` | expired flag `0x34cf` true | effect/program reference SI=`0x6f1` | additional demo expiry replay guard before ordinary bonus |
+| attract start `0x64cf–0x650d` | selected F1–F8 start key | PLAYERS `0x3815`; new-game reset; NEW_BALL | real input path accepts player counts; multiplayer is not disproved by demo title |
+
+**Ball progression proved on the normal demo continuation:** a fresh display
+starts with BALL 1, advances through 9, 10–19, 20–29, then returns to 10 and
+cycles 10–29. This is a two-glyph counter, not a 3-ball Session. The handler
+neither increments ordinary BALLS nor rotates PLAYER. New-game reset changes
+the ones glyph to 1; the inspected code does not reset the tens glyph there.
+Unscored drain can replay the same displayed ball. The retained start-key path
+accepts up to eight player counts, but normal demo continuation stays on the
+current player: selection and canonical rotation must not be conflated.
+
+**Bonus:** `_FLORPA` at `0x629` snapshots twelve encoded bonus digits before its
+countdown/score transfer. Held bonus restoration uses that snapshot, which may
+be an earlier snapshot if the current path skipped `_FLORPA`; it is not safe to
+replace it with an unconditional current-bonus copy. Ordinary countdown clears
+bonus as it transfers the multiplied/cyclone/happy/mega total to score. The
+player save/load pair `0x1178` / `0x104c` carries score, bonus, skill data,
+cyclone data and 17 persistent progression lights. Happy/Mega declared record
+fields are not saved by these routines; XBALLS is not a saved player field.
+RESET_TABLE clears held-bonus flag and restores multiplier 1, then loads the
+saved current-player state. Closure still requires the zero-bonus/held snapshot
+paths and all match/high-score/cheat roots to be reviewed together.
+
+**Shoot-again:** the normal demo handler does not test light 51 or consume
+XBALLS. The retained XXBALLE match branch does. An unscored drain also preserves
+the displayed ball without consuming this normal continuation. A claim that
+all shoot-again code is unreachable would exceed the present evidence.
+
+### NEW_BALL_TASK: proved local consumer sequence
+
+DOADDTASK inserts the task pointer in a free slot of the 50-entry task list.
+DO_TASKS `0x5e9f` visits all slots and CALL `[BX]` at `0x5eab`. Task `0xebb`
+uses WAITSYNCS 30: helper `0x5ac7` compares before increment, so from a zero
+wait slot its body is reached on visit 31, not visit 30. It calls NEW_BALL
+`0xece` and resets tasks/waits through WHEN_NEW_BALL_RESET `0x3abc`.
+
+NEW_BALL clears LOOSING/BALL_DOWN, sets I_UTSKJUT, resets transient table
+state and loads the current player record. It sets HOLDSTILL and initial ball
+position (282,530), zero velocity. Active-game NEW_BALL_PART_TWO `0xf7d` queues
+SOUNDNEWBALL (wait 50), SETBALL (wait 80), SOUNDBRICKUPP (wait 5); it enables
+flippers and clears tilt state. SETBALL body `0x1003` places the ball at
+(297,530), velocity (10,0), and clears HOLDSTILL at `0x103d`. Shared reset clears
+mode/lamp transient state while retaining the saved progression/score fields.
+This establishes the local task → preparation → active-ball sequence, not the
+unproved global reachability of every matrix entry into it.
+
+The normal branch bypasses the canonical 3/5-ball limit. **Whether any other
+reachable demo graph path can reach canonical OUT_OF_BALLS before the timer
+is not yet proved.** Remaining domains include XXBALLE/match, high-score
+transitions, cheat roots, state-feasible matrix/task/effect roots. Their bounded producer closure is
+described below; it does not prove that every retained branch can occur. `_BEATEN_MATRIX`
+`0x57a6` locally compares current score with the seed, sets its beaten flag and
+selects the shared celebration program; it does not locally write a .HI file.
+That is not a proof of the entire high-score lifecycle.
+
+### Additional consumed difference: expiry/task interleaving
+
+DO_ELECTRONICS invokes expiry at `0x5cfd` but then continues area/target/shift,
+KEYTASK and DO_TASKS (`0x5d16`) processing. It does not clear pending tasks at
+expiry. A pending NEW_BALL_TASK can call reset `0x3abc`: unless PARTYFLASH is
+true (`0x3afe`) or VISAKEYS is true (`0x3b10`), reset installs SHOWPLAYERSTS at
+`0x3b3a–0x3b3d`, replacing the expiry matrix program. DO_MATRIX `0x4801–0x482c`
+kills flashing and dispatches the new program unconditionally; there is no
+priority guard that preserves expiry. A pending SETBALL can clear HOLDSTILL
+at `0x103d` without checking expired. The scored-drain expired guard and the
+unscored-drain branch also differ in their position relative to this flag.
+
+These local replacement/release edges are proved. Exact reachable combinations
+at equality 35998, other competing effects and the resulting eventual QUIT
+must still be closed. A future model must not silently invent an atomic,
+uninterruptible expiry transition. This is a concrete remaining BLOCKER 1/2
+obligation and an addition to the consumed-difference audit.
+
+## Persistence reachability (BLOCKER 4 remains open)
+
+Read entry is **`0x66d2`**, after the preceding routine's RET at `0x66d1`;
+write entry is `0x6706`, after RET at `0x6705`. Their reviewed bodies occupy
+`[0x66d2,0x6706)` and `[0x6706,0x673d)`. Filename `table1.hi` remains at
+`0x19dbc`; factory seeds remain equal A. No seed re-audit was needed.
+
+Main CS ends at `0xaed0`, derived from the MZ load base and the relocated
+CODE2 segment pointer at `0x56aa`; this corrects the earlier `0xafd0` bound.
+The real MZ entry is `0x329f`, not the previous mid-startup root `0x32ad`.
+A conservative raw E8/E9 rel16 scan of main CS `[0x300,0xaed0)` still finds no
+incoming direct transfer into either body. Entry pointers CS:`0x63d2` / `0x6406`
+occur in neither this CS extent nor DS `[0x19db0,0x29db0)`. Neither body appears
+in the new direct-or-derived-candidate CFG. Historical DEMOVER guards omit
+INIT_HIGHS/SAVE_HIGHS, corroborating that result.
+
+The stronger negative theorem is **not proved**: the twelve TABLE1 UNKNOWN
+sites below, INTRO far domains, CODE2 glyph callbacks and driver/launcher
+lifecycle remain unclosed. Candidate non-reachability cannot exclude another
+segment, computed pointer or aliased control-object write. The tool deliberately
+retains `UNKNOWN` for both bodies even though the candidate CFG reaches neither.
+**Persistence verdict: neither Variant A nor Variant B proved.** No native
+load/save capability can be selected yet.
+
+## Bounded target-domain resolver: current fixed point
+
+[audit_10min_demo_domains.py](../tools/audit_10min_demo_domains.py) starts at the
+real MZ entry and the previously proved primary/later callback registrations.
+It follows direct conditional edges conservatively, slices register reaching
+definitions, uses bounded save/restore summaries for direct callees, derives
+callback-field writers and table grammars, adds candidate targets and repeats.
+Unsupported definitions and writer/lifecycle assumptions remain explicit UNKNOWN.
+This is a bounded overapproximation, not a general x86 executor or a proof of
+state-feasible gameplay. The CLI exits **2** with unresolved domains; `--allow-open`
+only permits exporting partial metadata and does not change the verdict.
+
+[audit_10min_demo_programs.py](../tools/audit_10min_demo_programs.py) derives
+58 command identities from the pinned historical declarations and linked typed
+bonus stream. Structural label candidates are used to infer command identity,
+never as an independent reachability root: numeric source drift and ambiguous
+labels must not erase binary operands. Actual matrix/effect API consumers
+supply roots; branch operand words supply successors.
+
+Current fixed point: **seven rounds, 677 code roots, 14,197 instructions,
+30 TABLE1 indirect sites**. Eighteen sites have bounded candidate target domains;
+**twelve remain UNKNOWN**. This is a TABLE1 transfer-site count only: INTRO,
+SDR admission and state/lifecycle obligations remain separately open, so a
+global unresolved-domain count has not been established.
+
+| Derived domain | Reproducible result | Remaining limitation |
+| --- | --- | --- |
+| matrix/control commands | 75 program bodies; zero unknown program heads/bodies; predecessors and branch operands exported | feasible state predicates, cursor/control writer aliases and eventual exits |
+| effects | 40 API consumer/source records; every SI producer bounded | cross-effect ordering/state feasibility |
+| cheat CALL BX `0x38fb` | 13 word-plus-dollar-string records, sentinel-derived bound | entry/lifetime effects must be included in global state proof |
+| spring `0x4726` | targets `0x6182`, `0x61df` | downstream global state proof |
+| DOTRUT `0x47c4` | 23 candidate field targets | writer alias/lifecycle proof |
+| glyph CALL DX `0x7263`, `0x729a` | each masks byte index to 256 entries; 255 distinct code targets per table | external CODE2 glyph domain remains separate |
+| task selector | 128 possible byte indexes; all lookup outputs and task words derived | all task-list writers not closed |
+| area consumers | four / sixteen rectangle handlers derived | indexed writes/DS aliases not excluded |
+
+Exact UNKNOWN TABLE1 sites:
+
+| Sites | Unresolved domain |
+| --- | --- |
+| `0x66a`, `0xae9`, `0x5640`, `0x5673`, `0x574d` | far CODE2 pointer/segment domain, including its internal dispatch |
+| `0x3a01`, `0x3d13` | far external callback/API binding |
+| `0x47a7`, `0x5d0c` | PRINTTASK/KEYTASK initial-zero exclusion and initialization/admission lifecycle |
+| `0x5eab` | indexed task-list writer domain |
+| `0x6095`, `0x6151` | area index/DS-alias completeness |
+
+**New consumed presentation difference:** real SHOWPLAYERSTS root `0x1b88e`
+prints PLAYERSTEXT at position **336**, versus canonical declaration **340**.
+FIRST_NO_OF_PLAYERSTS `0x1b89e` also uses 336. Both have consumer predecessors;
+a similarly shaped retained source-label candidate at `0x1e2b3` using 340 is
+not substituted for them. Future duration presentation needs an explicit
+position field. This does not alter the closed INTRO card/menu results.
+
+**Cheat gate:** `0x3947` tests DEMOMODE; `0x394c` branches past the cheat caller
+when not in attract mode. CALL `0x3954` reaches the parser only through that
+attract branch. Active-game commands instead cover tilt/music/pause; the demo
+omits the retained active chute quit/start-player route. The thirteen retained
+cheat targets include EARTHQUAKE (tilt disable), SNAIL (shift bit), EXTRA*BALLS
+(binary NO_OF_BALLS value **5**) and FAIR*PLAY (reset to 3 and clear those flags),
+plus presentation changes. They do not locally write timer/expired, PLAYER,
+ordinary BALLS or XXBALLE. This is not a claim that their complete session
+lifetime or every indirect entry has been closed.
+
+XXBALLE direct candidate writers are initialization `0x331` (zero) and match
+handler `0xd62` (FF). Establishing the zero invariant for reachable active demo
+flow, rather than just listing those writers, remains necessary. Match,
+high-score entry, zero-bonus/held snapshot lifetime, all exits and eventual
+expiry behavior therefore remain open even though program syntax is decoded.
+
+The parsed expiry body has QUIT at `0x1ba3b`, handler `0x3cdb`; its predecessors
+are the threshold call `0x5cfd` and scored-drain replay `0x625`. The quit-question
+program `0x1e2c3` has predecessor `0x34b2` and `_WAIT_YN` at `0x1e2cf` with
+operand zero. Its answer callback/state domain is not a completed early-exit
+proof. The complete set of feasible TABLE1 exits, including teardown/external
+callbacks, is **not enumerated**. Consequently neither “all pre-threshold
+termination impossible” nor “eventual QUIT guaranteed after equality” is proved.
+
+## Consumed-difference list and research-only typed model
+
+Established differences remain S_EMPTY, S_GAMEOVER2, PLAYERSTEXT duration label,
+demo continuation program, expiry program, unavailable cards and demo menu
+organization. The expiry replay/interleaving edges and duration-label position above are
+additional consumed differences; the attract-only cheat/input gate is also
+recorded as a future control capability. Persistence is a pending classification, not a proved
+semantic difference. Physics/data materials, factory seeds and decoded audio
+models retain their previously established equivalence; they were not re-audited.
+
+The final exhaustive claim is **not made**: unresolved indirect graph domains
+can still contain an unknown consumed difference. Direct graph metadata covers
+8,375 TABLE1 instructions from the reviewed roots and 5,474 INTRO instructions;
+these counts are reachability evidence for those roots, not whole-binary or
+whole-native-consumer equivalence. The new resolver expands TABLE1 to 14,197 instructions, while keeping its
+twelve unresolved transfer domains and separate scope gates visible.
+
+Minimal proposed common representation, **research design only**:
+
+| Capability / typed node | Known fields | Remaining gate |
+| --- | --- | --- |
+| required roles | the five pinned runtime roles | identity already proved; no profile registration |
+| table availability | Party Land playable; TABLE2–4 advertising only | closed INTRO dispatch evidence |
+| INTRO presentation | welcome/notice/actions/acquisition page, selector/options rows, option labels, card crop/windows/palette/reveal schedule | typed fields above; use demo sources |
+| DemoBallContinuation | duration-label position 336; encoded display counter state; held snapshot restore; same-player save; QueueNewBall; ContinueProgram | full match/cheat/high-score root closure |
+| shared new-ball preparation | existing reset/player restore, visit-based waits and queued tasks | retain DOS order; do not implement raw graph execution |
+| CalculationLimit | counted event identity; uint16 initial 0; post-increment equality 35998; persistent table-process scope | external dispatch and exact native event mapping |
+| DemoInputPolicy | attract cheat gate; active tilt/music/pause command path | complete entry/lifetime and exit proof |
+| ExpiryProgram | clear/scroll/flash/score/wait/fade/quit typed nodes | task/effect preemption and eventual exit closure |
+| HighScorePersistence | factory/transient versus load/save lifecycle | Variant A/B reachability proof |
+
+Common matrix commands can retain the shared bonus prefix and have an explicit
+demo continuation node; ordinary Session.changeBall must not implement it.
+Task queues and program replacement remain common typed control concepts. Do
+not encode an unconditional ShootAgain=false, reset-on-new-game counter, or
+atomic expiry based on the current partial proof. This design is not yet
+mechanical DMO1 input because the stated gates remain open. No production
+source, descriptor, timer, importer, package or bundling code was changed.
+
+## Reproducibility and regression boundary
+
+New [audit_10min_demo_graph.py](../tools/audit_10min_demo_graph.py) verifies
+exact five-file identity, canonical INTRO/TABLE identities and four historical
+source hashes, derives the bounded bonus programs, checks reviewed instruction
+consumers, parses menu/card presentation and exports direct graph metadata.
+[audit_10min_demo_sdr.py](../tools/audit_10min_demo_sdr.py) additionally pins all
+eleven driver identities and interprets EXEPACK blocks in memory. Capstone is a
+research-only dependency; no runtime dependency or executable export is added.
+The tools fail on private input mutation and print metadata/semantic records
+only. They do not prove away an indirect boundary. The new domain resolver
+derives tables/definitions and iterates to a fixed point; its default closure
+check rejects the current result with exit 2. Program syntax and candidate
+target completeness are separate from feasible state/alias/admission proofs.
+
+Owner-local metadata: `/private/tmp/pf-dmo0-graph-evidence.json`. Reproduce with:
+
+```sh
+PF_10MIN_DEMO_DATA=/private/demo \
+PF_RUNTIME_DATA=/private/canonical \
+PF_DMO0_HISTORICAL_SOURCE=/private/historical \
+python tools/audit_10min_demo_graph.py --output /private/tmp/pf-dmo0-graph-evidence.json
+```
+
+With the same three variables, reproduce the partial domain metadata with
+`python tools/audit_10min_demo_domains.py --output /private/tmp/pf-dmo0-domains.json`.
+The expected current exit is **2**, after writing explicit UNKNOWN records.
+`--allow-open` suppresses that exit only for inspecting partial evidence.
+
+Use a research Python environment with Capstone. The same three variables enable
+[private graph tests](../tools/test_audit_10min_demo_graph.py); without them the
+suite cleanly skips before reading private data or importing Capstone. Tests
+cover linked program/tail, presentation consumer facts, explicit unresolved
+indirect verdicts, all eleven registration producers, hash-mutation rejection
+for TABLE1 and SDR, fixed-point growth, every glyph/table selector target,
+register preservation/clobber handling, the position-336 difference and the
+negative-persistence gate. This is static evidence, not a DOS gameplay execution
+test; no test claims that open IRQ or state domains have closed.
+
+| Current-pass validation | Result |
+| --- | --- |
+| New private graph/SDR research tests | PASS, thirteen tests |
+| Research tool on pinned private inputs | metadata checks PASS; resolver closure gate correctly rejects with exit 2 |
+| Public Python suite without private env | clean SKIP |
+| A/B/C/D coherent detection and existing 1024 profile matrix | PASS |
+| C/D seed mappings, Stones mappings/selectors, B/C/D priorities and shared construction | PASS existing focused private suite |
+| Demo rejection and demo/full PRG hybrids across A/B/C/D | PASS |
+| Go private suite with private env removed | clean SKIP of private tests; descriptor tests PASS |
+| Production runtime/profile changes | NONE |
+| Platform builds, native demo gameplay, timer smoke, bundling | not run; no production implementation |
+
+Focused Go command is `./tools/go.sh test ./internal/datalayout ./internal/frontend
+-run 'TestPrivate|TestPowerPackDescriptor|TestDeluxe' -count=1 -v`, with the five
+existing private runtime env variables. The actual current-pass log is
+`/private/tmp/pf-dmo0-final-go-tests.log`. No private test skipped in that run.
+No existing oracle, capture, profile or factory seed was modified. Prior-pass
+Windows/Linux build results are not claimed as current-pass validation.
+
+## Remaining DMO0 obligations and checkpoint
+
+1. BLOCKER 1: close the twelve enumerated TABLE1 transfer domains, INTRO/CODE2
+   far domains, state-feasible match/high-score/cheat/control roots, held-snapshot
+   paths and expiry task/effect interleaving; prove whether
+   any alternate graph can reach canonical session end before 35998.
+2. BLOCKER 2: finish all eleven SDR admission/IRQ semantics and the exact native
+   ElectronicsCalculation event, including pause/reset/expiry boundary contract.
+3. BLOCKER 4: close every indirect target domain and launcher/teardown path to
+   read/write bodies; classify persistence as A or B.
+4. Final consumed-difference exhaustiveness depends on those three closures.
+
+BLOCKER 3 is closed as documented above. No unknown transition was replaced
+with a native assumption. **DMO0 NOT CLOSED. DMO1 NOT STARTED.** No closure
+checkpoint commit was made, because the user authorizes it only after all
+semantic blockers close. Work remains local and reviewable.
+
+Changed files in this pass are this report and six research Python files:
+`audit_10min_demo_graph.py`, `audit_10min_demo_sdr.py`,
+`audit_10min_demo_programs.py`, `audit_10min_demo_domains.py`,
+`test_audit_10min_demo_graph.py`, `test_audit_10min_demo_domains.py`.
+The payload scan result below covers all seven changed research files. This checks these sources, not all ignored workspace artifacts.
+Scan PASS: 92 private PRG/MOD/EXE/SDR/BIN files, all eleven in-memory decoded SDR
+modules, 1,705 distinct nontrivial aligned 4 KiB samples and whole-file identity
+comparisons. Samples require more than 32 distinct byte values; this is a
+sampled payload-copy check, not an all-substring or all-workspace proof.
+Metadata is `/private/tmp/pf-dmo0-payload-scan.json`. Production runtime sources and
+descriptors remain identical to research HEAD and the production base.
+No executable chunks, images or decoded MOD audio
+were exported by this pass; SDR decoded bytes remain in memory. Existing
+untracked `.DS_Store` is unrelated and untouched. No push, tag or release.
