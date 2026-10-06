@@ -132,7 +132,7 @@ func TestPrivateDeluxeMappings(t *testing.T) {
 		}
 	}
 }
-func TestPrivateDeluxeCoherenceAndCRejection(t *testing.T) {
+func TestPrivateDeluxeCoherence(t *testing.T) {
 	a, b, d := privatePRGs(t, "PF_RUNTIME_DATA"), privatePRGs(t, "PF_POWERPACK_DATA"), privatePRGs(t, "PF_DELUXE_CD_DATA")
 	for _, other := range []map[string][]byte{a, b} {
 		// Every proper subset includes all single-role substitutions and both INTRO
@@ -150,25 +150,7 @@ func TestPrivateDeluxeCoherenceAndCRejection(t *testing.T) {
 			}
 		}
 	}
-	t.Run("C", func(t *testing.T) {
-		c := privatePRGs(t, "PF_UNSUPPORTED_CD_DATA")
-		if id, e := DetectInstallation(c); e == nil {
-			t.Fatal("C accepted", id)
-		}
-		for _, n := range prgNames {
-			if _, e := PreparePRGForProfile(DeluxeCDProfile, n, c[n]); e == nil {
-				t.Fatal("C role accepted as D", n)
-			}
-			mix := map[string][]byte{}
-			for _, key := range prgNames {
-				mix[key] = d[key]
-			}
-			mix[n] = c[n]
-			if id, e := DetectInstallation(mix); e == nil {
-				t.Fatal("D/C hybrid accepted", n, id)
-			}
-		}
-	})
+
 	for _, n := range prgNames {
 		bad := map[string][]byte{}
 		for _, key := range prgNames {

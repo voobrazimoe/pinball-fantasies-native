@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Compile reviewed CD-family address/typed metadata from private A/D evidence.
-No discovery, payload output or production scanning. C is never registered.
+No discovery, payload output or production scanning. C reuses this TABLE map
+through the separate alt metadata compiler.
 """
 import argparse
 import hashlib
@@ -41,7 +42,7 @@ def merge(spans):
     return result
 
 def generate(evidence, canonical, data):
-    assert fingerprint(data)==FINGERPRINT, 'not audited D (C must reject)'
+    assert fingerprint(data)==FINGERPRINT, 'not audited D (use alt metadata compiler for C)'
     audit=next(s for s in json.loads(evidence.read_text()) if s['fingerprint']==FINGERPRINT)
     profiles=json.loads((ROOT/'internal/datalayout/profiles.json').read_text())
     inventory={r['name']:r for r in json.loads((ROOT/'analysis/game-inventory.json').read_text())}

@@ -120,11 +120,19 @@ type Model struct {
 }
 
 func New(store Store, factory Factory) (*Model, error) {
+	var defaults [4]Scores
+	for i := range defaults {
+		defaults[i] = Defaults(i + 1)
+	}
+	return newWithDefaults(store, factory, defaults)
+}
+
+func newWithDefaults(store Store, factory Factory, defaults [4]Scores) (*Model, error) {
 	m := &Model{Mode: Startup, Settings: settings.Defaults(), Selected: 1, Store: store, Factory: factory, Counter: 540, Rank: -1}
 	for i := range m.Scores {
 		var e error
 		if store == nil {
-			m.Scores[i] = Defaults(i + 1)
+			m.Scores[i] = defaults[i]
 		} else {
 			m.Scores[i], e = store.Load(i + 1)
 		}

@@ -19,6 +19,17 @@ func TestPrivateDeluxeSharedRuntime(t *testing.T) {
 	if d == "" || a == "" || b == "" {
 		t.Skip("supply private A/B/D installations")
 	}
+	testDeluxeSharedRuntime(t, d, a, b, datalayout.DeluxeCDProfile)
+	t.Run("Alt", func(t *testing.T) {
+		c := os.Getenv("PF_DELUXE_CD_ALT_DATA")
+		if c == "" {
+			t.Skip("supply PF_DELUXE_CD_ALT_DATA")
+		}
+		testDeluxeSharedRuntime(t, c, a, b, datalayout.DeluxeCDAltProfile)
+	})
+}
+
+func testDeluxeSharedRuntime(t *testing.T, d, a, b, profile string) {
 	read := func(dir, name string) []byte {
 		raw, e := os.ReadFile(filepath.Join(dir, name))
 		if e != nil {
@@ -36,7 +47,7 @@ func TestPrivateDeluxeSharedRuntime(t *testing.T) {
 	for _, tc := range []struct {
 		dir, id  string
 		priority uint8
-	}{{a, datalayout.RetailProfile, 1}, {b, datalayout.PowerPackProfile, 0}, {d, datalayout.DeluxeCDProfile, 0}} {
+	}{{a, datalayout.RetailProfile, 1}, {b, datalayout.PowerPackProfile, 0}, {d, profile, 0}} {
 		// Stage only that installation. No canonical fixture is visible to Load or
 		// any of its four factories, and the optional CFG is intentionally absent.
 		r := loadCompatible(t, stageInstallation(t, tc.dir))
@@ -60,7 +71,7 @@ func TestPrivateDeluxeSharedRuntime(t *testing.T) {
 		if clock.Play(spec, 62, nil) != (tc.priority == 1) {
 			t.Fatal("arbitration")
 		}
-		if tc.id == datalayout.DeluxeCDProfile {
+		if tc.id == datalayout.DeluxeCDProfile || tc.id == datalayout.DeluxeCDAltProfile {
 			art := r.View.Art
 			if art.Startup[0].Width != 320 || art.Startup[0].Height != 123 || art.Startup[1].Height != 117 || art.StartupLowerY != 123 {
 				t.Fatal("geometry coerced")
@@ -123,14 +134,6 @@ func TestPrivateDeluxeSharedRuntime(t *testing.T) {
 		}
 		if !reflect.DeepEqual(x, y) {
 			t.Fatal(tc.name, "module differs")
-		}
-	}
-	// Installed validation/start and adoption use the same profile boundary.
-	for _, env := range []string{"PF_UNSUPPORTED_CD_DATA"} {
-		if dir := os.Getenv(env); dir != "" {
-			if _, e := Load(dir, nil); e == nil {
-				t.Fatal("C accepted by frontend")
-			}
 		}
 	}
 	out := prepare(d, "TABLE4.PRG")

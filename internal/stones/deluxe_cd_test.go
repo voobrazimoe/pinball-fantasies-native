@@ -11,9 +11,14 @@ import (
 )
 
 func TestPrivateDeluxeAreaSemantics(t *testing.T) {
+	for _, env := range []string{"PF_DELUXE_CD_DATA", "PF_DELUXE_CD_ALT_DATA"} {
+		t.Run(env, func(t *testing.T) { testDeluxeAreaSemantics(t, env) })
+	}
+}
+func testDeluxeAreaSemantics(t *testing.T, env string) {
 	var games []*Game
 	var inputs [][]byte
-	for _, env := range []string{"PF_RUNTIME_DATA", "PF_DELUXE_CD_DATA"} {
+	for _, env := range []string{"PF_RUNTIME_DATA", env} {
 		dir := os.Getenv(env)
 		if dir == "" {
 			t.Skip("supply " + env)

@@ -102,3 +102,23 @@ for name,layout in cd.items():
         assert re.fullmatch('[A-Z0-9_]+',s['role'])
 assert len(cd['TABLE4.PRG']['selectors'])==44
 print('PASS: CD descriptors contain address/geometry/hash metadata and typed handler identities only')
+
+alt=json.loads((root/'internal/datalayout/deluxe_cd_alt.json').read_text())
+assert set(alt)=={'intro','seeds'}
+assert alt['intro']['source_profile']['profile']=='dos-deluxe-cd-alt-linked-v1'
+assert set(alt['intro'])=={'decoded_size','copies','source_profile'}
+assert len(alt['intro']['source_profile']['pictures'])==17
+for span in alt['intro']['copies']:
+    assert set(span)=={'destination','source','size'}
+    assert all(isinstance(v,int) and v>0 for v in span.values())
+for r in alt['intro']['source_profile']['regions']:
+    assert set(r)<={'offset','size','purpose','sha256','kind'}
+for picture in alt['intro']['source_profile']['pictures']:
+    assert set(picture)=={'offset','kind','width','height','planes'}
+assert set(alt['seeds'])=={f'TABLE{i}.PRG' for i in range(1,5)}
+for seed in alt['seeds'].values():
+    assert set(seed)=={'source','destination','initials','sha256'}
+    assert seed['source']>0 and seed['destination']>0
+    assert len(seed['initials'])==4 and all(re.fullmatch('[A-Z *]{3}',s) for s in seed['initials'])
+    assert re.fullmatch('[0-9a-f]{64}',seed['sha256'])
+print('PASS: alt CD metadata contains INTRO addresses/geometry and typed factory seed constraints only; no duplicated TABLE map')

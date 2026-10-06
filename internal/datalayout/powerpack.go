@@ -111,5 +111,8 @@ func ValidateDecoded(name string, data []byte) error {
 	if err := validateProfile(name, data, linkedProfile(name, false)); err == nil {
 		return nil
 	}
-	return validateProfile(name, data, deluxeDecodedProfile(name))
+	if err := validateProfile(name, data, deluxeDecodedProfile(name)); err == nil {
+		return nil
+	}
+	return validateProfile(name, data, deluxeAltDecodedProfile(name))
 }

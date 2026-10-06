@@ -93,15 +93,19 @@ type Store interface {
 type FileStore struct{ Directory, SeedDirectory string }
 
 func (f FileStore) Load(table int) (Scores, error) {
+	return f.loadWithDefault(table, Defaults(table))
+}
+
+func (f FileStore) loadWithDefault(table int, fallback Scores) (Scores, error) {
 	name := fmt.Sprintf("TABLE%d.HI", table)
 	b, e := os.ReadFile(filepath.Join(f.Directory, name))
 	if os.IsNotExist(e) {
 		if f.SeedDirectory == "" {
-			return Defaults(table), nil
+			return fallback, nil
 		}
 		b, e = os.ReadFile(filepath.Join(f.SeedDirectory, name))
 		if os.IsNotExist(e) {
-			return Defaults(table), nil
+			return fallback, nil
 		}
 	}
 	if e != nil {
@@ -130,4 +134,15 @@ func (f FileStore) Save(table int, s Scores) error {
 		return ce
 	}
 	return os.Rename(name, filepath.Join(f.Directory, fmt.Sprintf("TABLE%d.HI", table)))
+}
+
+// Installation defaults are bound at Load, never stored globally or by profile.
+// Existing writable scores and optional .HI seeds keep their precedence.
+type installationScoreStore struct {
+	FileStore
+	defaults [4]Scores
+}
+
+func (s installationScoreStore) Load(table int) (Scores, error) {
+	return s.FileStore.loadWithDefault(table, s.defaults[table-1])
 }

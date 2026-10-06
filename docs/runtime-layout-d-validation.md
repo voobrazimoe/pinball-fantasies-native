@@ -1,6 +1,6 @@
 # CD-family layout D — semantics and validation, 2026-10-06
 
-Implemented locally from main `cdf608453e2a740e0304cb4b682db330ec401570`. D0 is closed; D1 registers `dos-deluxe-cd-linked-v1`. This name describes the proved Deluxe CD family, including the exact GOG runtime duplicate. It makes no Rev1/Rev2, Gold Pack, first/second revision or chronology claim. C and demos remain unsupported. A alone remains the pinned oracle.
+Implemented locally from main `cdf608453e2a740e0304cb4b682db330ec401570`. D0 is closed; D1 registers `dos-deluxe-cd-linked-v1`. This name describes the proved Deluxe CD family, including the exact GOG runtime duplicate. It makes no Rev1/Rev2, Gold Pack, first/second revision or chronology claim. At that implementation boundary C and demos remained unsupported; C is now separately supported as described in [C validation](runtime-layout-c-validation.md). A alone remains the pinned oracle.
 
 ## Identity and D0 evidence
 
@@ -78,7 +78,7 @@ Equivalent artwork, fonts/glyph records, control records, physics lookups, masks
 
 MOD2 and TABLE1–4 MODs are exact/shared; INTRO.MOD's known unconsumed trailer leaves the decoded model unchanged. All six role-specific shared Module decoders were DeepEqual-checked against A. There is no D audio decoder, engine, UI, gameplay-rule or physics-algorithm branch.
 
-## Coherence and unsupported C
+## Original D coherence and C rejection evidence
 
 A/B/D detect their respective profile. Tests cover all thirty proper substitutions for each A/D and B/D pair (sixty hybrids), including every PRG role, both INTRO directions, isolated TABLE1/TABLE4 and dangerous combinations. Malformed, unknown and incomplete installs reject. Existing A/B hybrid coverage remains.
 
@@ -123,7 +123,7 @@ Use owner-provided private fixtures; unset variables skip private tests in publi
 - PF_RUNTIME_DATA: A
 - PF_POWERPACK_DATA: B
 - PF_DELUXE_CD_DATA: D unpacked installation (neutral CD family, no chronology)
-- PF_UNSUPPORTED_CD_DATA: C, test-only rejection fixture
+- PF_DELUXE_CD_ALT_DATA: C, now a supported independent profile (renamed from the former PF_UNSUPPORTED_CD_DATA rejection fixture)
 - PF_LAYOUT_AUDIT_EVIDENCE: private final-comparison.json, for descriptor reproducibility
 
 Run `tools/go.sh test ./internal/datalayout ./internal/frontend ./internal/stones`, the supported shared package suite, `sh tools/test_android_import.sh`, and `tools/deluxe_cd_layout.py --evidence ... --canonical ... --data ... --check`. The static proof tool is `tools/deluxe_cd_semantics.py --canonical ... --data ... --source ...`; Capstone is a research-only dependency. It emits only role/address/count metadata and never executes code or exports payload.
@@ -145,3 +145,7 @@ Changed files:
 - docs: runtime-data.md, runtime-compatibility-audit.md, runtime-layout-d-validation.md
 
 The local implementation commit is recorded in the final response; embedding its own SHA here would change that commit.
+
+## C support follow-up
+
+C registration supersedes the original full-C rejection assertion above. The C/D identity boundary remains strict: all 1,024 A/B/C/D PRG combinations are now tested, with C/D mixed seeds rejected. `deluxe_cd.json` and its D metadata are unchanged; C reuses its TABLE spans, cue constraint and 44 typed selectors through a separate INTRO/seed overlay. D geometry, frontend/factories, Modules, typed roles, scores and import/adoption regressions were repeated; see the current [C report](runtime-layout-c-validation.md). A remains the sole oracle.

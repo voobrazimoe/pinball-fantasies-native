@@ -53,10 +53,18 @@ func LoadConfigured(dataDir string, store Store, configStore *settings.Store) (*
 	if err != nil {
 		return nil, err
 	}
+	prepared := make(map[string][]byte)
 	read := func(name string) ([]byte, error) {
 		data := inputs[name]
 		if strings.HasSuffix(name, ".PRG") {
-			return datalayout.PreparePRGForProfile(profileID, name, data)
+			if cached, ok := prepared[name]; ok {
+				return cached, nil
+			}
+			decoded, err := datalayout.PreparePRGForProfile(profileID, name, data)
+			if err == nil {
+				prepared[name] = decoded
+			}
+			return decoded, err
 		}
 		return data, nil
 	}
@@ -118,7 +126,29 @@ func LoadConfigured(dataDir string, store Store, configStore *settings.Store) (*
 		g.AttachAudio(tableMod)
 		return g, nil
 	}
-	model, e = New(store, factory)
+	var factoryScores [4]Scores
+	for i := range factoryScores {
+		name := fmt.Sprintf("TABLE%d.PRG", i+1)
+		decoded, err := read(name)
+		if err != nil {
+			return nil, err
+		}
+		initials, err := datalayout.FactoryInitials(name, decoded)
+		if err != nil {
+			return nil, err
+		}
+		factoryScores[i] = Defaults(i + 1)
+		for rank := range factoryScores[i] {
+			factoryScores[i][rank].Name = initials[rank]
+		}
+	}
+	switch s := store.(type) {
+	case FileStore:
+		store = installationScoreStore{FileStore: s, defaults: factoryScores}
+	case *FileStore:
+		store = installationScoreStore{FileStore: *s, defaults: factoryScores}
+	}
+	model, e = newWithDefaults(store, factory, factoryScores)
 	if e != nil {
 		return nil, e
 	}

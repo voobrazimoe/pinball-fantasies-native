@@ -1,6 +1,6 @@
 # Layout B validation — 2026-10-06
 
-Implemented from main `629f88a`. Profile: `dos-powerpack-linked-v1`, identified by the audited Power Pack marker; Gold Pack provenance is unproved. A remains `dos-retail-linked-v1` and the sole pinned oracle. C/D, Deluxe/GOG and demos remain research-only/unsupported.
+Implemented from main `629f88a`. Profile: `dos-powerpack-linked-v1`, identified by the audited Power Pack marker; Gold Pack provenance is unproved. A remains `dos-retail-linked-v1` and the sole pinned oracle. C/D are now supported as separate Deluxe CD-family profiles; see [C validation](runtime-layout-c-validation.md) and [D validation](runtime-layout-d-validation.md). Demos remain unsupported.
 
 The shared loader selects a coherent profile across all five PRGs before decoding. B has 918 exact compiled copy spans (16 INTRO, 479 TABLE1, 423 TABLE2), derived from the reviewed per-region mapping. Adjacent equal translations may share a span: this does not reduce the 17 required INTRO FORM records. TABLE3/4 use the existing byte view. The descriptor carries addresses/sizes and one typed S_EMPTY constraint, never commercial payload. Equal records are copied; B priority 0 is preserved, never replaced with A priority 1. Source validation and decoded-address validation are separate. Every validation/start re-detects identity; no state marker or UI is added.
 

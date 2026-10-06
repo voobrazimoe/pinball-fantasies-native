@@ -16,4 +16,12 @@ class LayoutCompilerTest(unittest.TestCase):
         a,d,e=map(Path,values)
         self.assertEqual((ROOT/'internal/datalayout/deluxe_cd.json').read_text(),encode(generate(e,a,d)))
 
+class AltLayoutCompilerTest(unittest.TestCase):
+    def test_private_reproducibility(self):
+        from deluxe_cd_alt_layout import generate, encode
+        values=[os.getenv(n) for n in ['PF_DELUXE_CD_ALT_DATA','PF_DELUXE_CD_DATA','PF_LAYOUT_AUDIT_EVIDENCE']]
+        if not all(values):self.skipTest('private C/D/audit evidence not supplied')
+        c,d,e=map(Path,values)
+        self.assertEqual((ROOT/'internal/datalayout/deluxe_cd_alt.json').read_text(),encode(generate(e,c,d)))
+
 if __name__=='__main__':unittest.main()

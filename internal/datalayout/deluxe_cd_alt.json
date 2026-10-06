@@ -1,0 +1,264 @@
+{
+  "intro": {
+    "decoded_size": 345678,
+    "copies": [
+      {
+        "destination": 27504,
+        "source": 27008,
+        "size": 8068
+      },
+      {
+        "destination": 35584,
+        "source": 35088,
+        "size": 33624
+      },
+      {
+        "destination": 69216,
+        "source": 68720,
+        "size": 4542
+      },
+      {
+        "destination": 73760,
+        "source": 73264,
+        "size": 24312
+      },
+      {
+        "destination": 98080,
+        "source": 97584,
+        "size": 19438
+      },
+      {
+        "destination": 117520,
+        "source": 117024,
+        "size": 14616
+      },
+      {
+        "destination": 132144,
+        "source": 131648,
+        "size": 17938
+      },
+      {
+        "destination": 150096,
+        "source": 149600,
+        "size": 18872
+      },
+      {
+        "destination": 168976,
+        "source": 168480,
+        "size": 18732
+      },
+      {
+        "destination": 187712,
+        "source": 187216,
+        "size": 22216
+      },
+      {
+        "destination": 209936,
+        "source": 209440,
+        "size": 13478
+      },
+      {
+        "destination": 233806,
+        "source": 233978,
+        "size": 240
+      },
+      {
+        "destination": 243728,
+        "source": 244064,
+        "size": 8150
+      },
+      {
+        "destination": 273488,
+        "source": 252224,
+        "size": 8706
+      },
+      {
+        "destination": 289072,
+        "source": 260944,
+        "size": 29026
+      },
+      {
+        "destination": 318112,
+        "source": 289984,
+        "size": 27566
+      }
+    ],
+    "source_profile": {
+      "profile": "dos-deluxe-cd-alt-linked-v1",
+      "regions": [
+        {
+          "offset": 233978,
+          "size": 240,
+          "purpose": "sidebar/options text"
+        }
+      ],
+      "pictures": [
+        {
+          "offset": 117024,
+          "kind": "ILBM",
+          "width": 640,
+          "height": 256,
+          "planes": 4
+        },
+        {
+          "offset": 27008,
+          "kind": "ILBM",
+          "width": 640,
+          "height": 28,
+          "planes": 4
+        },
+        {
+          "offset": 35088,
+          "kind": "ILBM",
+          "width": 640,
+          "height": 29,
+          "planes": 4
+        },
+        {
+          "offset": 131648,
+          "kind": "ILBM",
+          "width": 640,
+          "height": 95,
+          "planes": 4
+        },
+        {
+          "offset": 149600,
+          "kind": "ILBM",
+          "width": 640,
+          "height": 95,
+          "planes": 4
+        },
+        {
+          "offset": 168480,
+          "kind": "ILBM",
+          "width": 640,
+          "height": 200,
+          "planes": 4
+        },
+        {
+          "offset": 187216,
+          "kind": "ILBM",
+          "width": 640,
+          "height": 200,
+          "planes": 4
+        },
+        {
+          "offset": 244064,
+          "kind": "PBM ",
+          "width": 320,
+          "height": 123,
+          "planes": 8
+        },
+        {
+          "offset": 252224,
+          "kind": "PBM ",
+          "width": 320,
+          "height": 117,
+          "planes": 8
+        },
+        {
+          "offset": 260944,
+          "kind": "PBM ",
+          "width": 320,
+          "height": 130,
+          "planes": 8
+        },
+        {
+          "offset": 289984,
+          "kind": "PBM ",
+          "width": 320,
+          "height": 126,
+          "planes": 8
+        },
+        {
+          "offset": 73264,
+          "kind": "PBM ",
+          "width": 320,
+          "height": 110,
+          "planes": 8
+        },
+        {
+          "offset": 97584,
+          "kind": "PBM ",
+          "width": 320,
+          "height": 130,
+          "planes": 8
+        },
+        {
+          "offset": 68720,
+          "kind": "PBM ",
+          "width": 320,
+          "height": 200,
+          "planes": 8
+        },
+        {
+          "offset": 41568,
+          "kind": "ILBM",
+          "width": 640,
+          "height": 178,
+          "planes": 4
+        },
+        {
+          "offset": 215968,
+          "kind": "ILBM",
+          "width": 640,
+          "height": 200,
+          "planes": 4
+        },
+        {
+          "offset": 209440,
+          "kind": "ILBM",
+          "width": 640,
+          "height": 200,
+          "planes": 4
+        }
+      ]
+    }
+  },
+  "seeds": {
+    "TABLE1.PRG": {
+      "source": 56723,
+      "destination": 105814,
+      "initials": [
+        "CLS",
+        "RLZ",
+        "CLS",
+        "RLZ"
+      ],
+      "sha256": "91281fd53e2c3022acf37435ab4684bbb1e057fd3604f69f0d370e6e77c04160"
+    },
+    "TABLE2.PRG": {
+      "source": 55107,
+      "destination": 102134,
+      "initials": [
+        "CLS",
+        "RLZ",
+        "CLS",
+        "RLZ"
+      ],
+      "sha256": "4f44d3f33a867c1da83aae8383c7cb166b3411d677ef33a8317b3bb156384e99"
+    },
+    "TABLE3.PRG": {
+      "source": 55587,
+      "destination": 101238,
+      "initials": [
+        "CLS",
+        "RLZ",
+        "CLS",
+        "RLZ"
+      ],
+      "sha256": "91281fd53e2c3022acf37435ab4684bbb1e057fd3604f69f0d370e6e77c04160"
+    },
+    "TABLE4.PRG": {
+      "source": 40979,
+      "destination": 92022,
+      "initials": [
+        "CLS",
+        "RLZ",
+        "CLS",
+        "RLZ"
+      ],
+      "sha256": "4f44d3f33a867c1da83aae8383c7cb166b3411d677ef33a8317b3bb156384e99"
+    }
+  }
+}

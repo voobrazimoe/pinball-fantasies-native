@@ -37,10 +37,7 @@ func validate(dir string) error {
 		return err
 	}
 	for table := 1; table <= 4; table++ {
-		factory := frontend.Defaults(table)
-		if runtime.Model.Scores[table-1] != factory {
-			return fmt.Errorf("table %d: not factory defaults", table)
-		}
+		factory := runtime.Model.Scores[table-1]
 		saved := factory
 		saved.Insert(0, tablelogic.Number(999_000_000), [3]byte{'N', 'E', 'W'})
 		if err := store.Save(table, saved); err != nil {
@@ -57,10 +54,11 @@ func validate(dir string) error {
 		if err := os.Remove(filepath.Join(store.Directory, fmt.Sprintf("TABLE%d.HI", table))); err != nil {
 			return err
 		}
-		got, err = restarted.Load(table)
-		if err != nil {
-			return err
+		reset, resetErr := frontend.Load(dir, restarted)
+		if resetErr != nil {
+			return resetErr
 		}
+		got = reset.Model.Scores[table-1]
 		if got != factory {
 			return fmt.Errorf("table %d: reset failed", table)
 		}

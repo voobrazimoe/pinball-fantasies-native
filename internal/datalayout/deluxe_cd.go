@@ -43,6 +43,10 @@ func translateDeluxe(name string, data []byte) ([]byte, error) {
 	if !ok {
 		return nil, fmt.Errorf("%s: no supported data layout", name)
 	}
+	return translateDeluxeLayout(l, data)
+}
+
+func translateDeluxeLayout(l deluxeLayout, data []byte) ([]byte, error) {
 	decoded, err := translateRecords(l.linkedLayout, data)
 	if err != nil {
 		return nil, err

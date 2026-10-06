@@ -110,12 +110,16 @@ public final class DataImportPrivateTest {
                         hybrid.replacements.put(prgs[i], new File(other, prgs[i]));
                     rejects(importer, hybrid); identical(importer.data(), deluxe);
                 }
-                String c = System.getenv("PF_UNSUPPORTED_CD_DATA");
+                String c = System.getenv("PF_DELUXE_CD_ALT_DATA");
                 if (c != null) {
-                    rejects(importer, new Source(c)); identical(importer.data(), deluxe);
-                    for (String name : prgs) {
-                        Source mix = new Source(d); mix.replacements.put(name,new File(c,name));
-                        rejects(importer,mix); identical(importer.data(),deluxe);
+                    for (String base : new String[]{c,d}) {
+                        String other = base.equals(c) ? d : c;
+                        for (int mask=1;mask<31;mask++) {
+                            Source mix = new Source(base);
+                            for (int i=0;i<prgs.length;i++) if ((mask & (1<<i)) != 0)
+                                mix.replacements.put(prgs[i],new File(other,prgs[i]));
+                            rejects(importer,mix); identical(importer.data(),deluxe);
+                        }
                     }
                 }
                 Source damaged = new Source(d); damaged.replacements.put("INTRO.PRG",malformed);
@@ -129,7 +133,27 @@ public final class DataImportPrivateTest {
                 Files.createDirectory(new File(storage,"Data.previous").toPath());
                 importer.recover(); importer.bootstrap((DataImport.Source)null);
                 identical(importer.data(),deluxe); check(storage.list().length==1);
-                System.out.println("PASS private Android D staging/adoption/bootstrap, 60 A/B/D hybrids, C rejection, rollback and recovery");
+                if (c != null) {
+                    Source alt = new Source(c);
+                    importer.install(alt); identical(importer.data(),alt);
+                    importer.bootstrap((DataImport.Source)null);
+                    for (String other : new String[]{a,b}) for (int mask=1;mask<31;mask++) {
+                        Source mix=new Source(c);
+                        for(int i=0;i<prgs.length;i++) if((mask & (1<<i))!=0)
+                            mix.replacements.put(prgs[i],new File(other,prgs[i]));
+                        rejects(importer,mix); identical(importer.data(),alt);
+                    }
+                    rejects(failing,deluxe); identical(importer.data(),alt);
+                    Files.move(importer.data().toPath(),new File(storage,"Data.previous").toPath());
+                    Files.createDirectory(new File(storage,"Data.staging-interrupted").toPath());
+                    importer.recover(); importer.bootstrap((DataImport.Source)null);
+                    identical(importer.data(),alt);
+                    Files.createDirectory(new File(storage,"Data.previous").toPath());
+                    importer.recover(); importer.bootstrap((DataImport.Source)null);
+                    identical(importer.data(),alt); check(storage.list().length==1);
+                    System.out.println("PASS private Android C staging/adoption/bootstrap/relaunch, 60 C/D hybrids, 60 A/B/C hybrids, rollback and recovery");
+                } else System.out.println("SKIP private Android C: set PF_DELUXE_CD_ALT_DATA");
+                System.out.println("PASS private Android D staging/adoption/bootstrap, 60 A/B/D hybrids, rollback and recovery");
             } else System.out.println("SKIP private Android D: set PF_DELUXE_CD_DATA");
             System.out.println("PASS private Android A/B staging, shared validation, six hybrid rejections, malformed/incomplete rejection, rollback, recovery, cleanup and relaunch");
         } finally { DataImport.remove(root); }
