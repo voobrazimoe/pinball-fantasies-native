@@ -5,6 +5,7 @@ import "fmt"
 const (
 	RetailProfile    = "dos-retail-linked-v1"
 	PowerPackProfile = "dos-powerpack-linked-v1"
+	DeluxeCDProfile  = "dos-deluxe-cd-linked-v1"
 )
 
 // runtimeProfile confines linked addresses and consumed edition semantics to
@@ -23,6 +24,7 @@ var runtimeProfiles = []runtimeProfile{
 		}
 		return validateProfile(name, data, linkedProfile(name, true))
 	}, canonicalize: translateLinked},
+	{name: DeluxeCDProfile, validate: validateDeluxe, canonicalize: translateDeluxe},
 }
 
 var prgNames = []string{"INTRO.PRG", "TABLE1.PRG", "TABLE2.PRG", "TABLE3.PRG", "TABLE4.PRG"}

@@ -75,6 +75,10 @@ func translateLinked(name string, data []byte) ([]byte, error) {
 	if !ok {
 		return data, nil
 	}
+	return translateRecords(l, data)
+}
+
+func translateRecords(l linkedLayout, data []byte) ([]byte, error) {
 	decoded := make([]byte, l.DecodedSize)
 	for _, c := range l.Copies {
 		if c.Source < 0 || c.Size < 0 || c.Source > len(data) || c.Size > len(data)-c.Source ||
@@ -104,5 +108,8 @@ func ValidateDecoded(name string, data []byte) error {
 	if err := Validate(name, data); err == nil {
 		return nil
 	}
-	return validateProfile(name, data, linkedProfile(name, false))
+	if err := validateProfile(name, data, linkedProfile(name, false)); err == nil {
+		return nil
+	}
+	return validateProfile(name, data, deluxeDecodedProfile(name))
 }

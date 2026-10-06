@@ -423,7 +423,7 @@ func (v *View) startup(m *Model) *image.RGBA {
 	switch p.picture {
 	case 0:
 		blit(out, a[0], 0, 0, 320, 240, 0, 0)
-		blit(out, a[1], 0, 139, 320, 101, 0, 0)
+		blit(out, a[1], 0, v.Art.StartupLowerY, 320, 240-v.Art.StartupLowerY, 0, 0)
 	case 1:
 		// INTRO loads Viking at row240, but sets CRTC start to row247.
 		// The second IFF is 130 rows, starting at buffer row365.

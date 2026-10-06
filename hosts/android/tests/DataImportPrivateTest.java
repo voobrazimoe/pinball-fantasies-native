@@ -4,7 +4,7 @@ import java.io.*;
 import java.nio.file.*;
 import java.util.*;
 
-/** Optional private A/B integration: the actual filesystem transaction calls the
+/** Optional private A/B/D integration: the actual filesystem transaction calls the
  * real shared runtime validator. Provider streams stand in for SAF; no fixtures.
  */
 public final class DataImportPrivateTest {
@@ -97,6 +97,40 @@ public final class DataImportPrivateTest {
             Files.createDirectory(new File(storage, "Data.previous").toPath());
             importer.recover(); importer.bootstrap((DataImport.Source)null);
             identical(importer.data(), powerpack); check(storage.list().length == 1);
+            String d = System.getenv("PF_DELUXE_CD_DATA");
+            if (d != null) {
+                Source deluxe = new Source(d);
+                importer.install(deluxe); identical(importer.data(), deluxe);
+                importer.bootstrap((DataImport.Source)null);
+                int before = engine.stops;
+                String[] prgs = {"INTRO.PRG", "TABLE1.PRG", "TABLE2.PRG", "TABLE3.PRG", "TABLE4.PRG"};
+                for (String other : new String[]{a,b}) for (int mask=1; mask<31; mask++) {
+                    Source hybrid = new Source(d);
+                    for (int i=0; i<prgs.length; i++) if ((mask & (1<<i)) != 0)
+                        hybrid.replacements.put(prgs[i], new File(other, prgs[i]));
+                    rejects(importer, hybrid); identical(importer.data(), deluxe);
+                }
+                String c = System.getenv("PF_UNSUPPORTED_CD_DATA");
+                if (c != null) {
+                    rejects(importer, new Source(c)); identical(importer.data(), deluxe);
+                    for (String name : prgs) {
+                        Source mix = new Source(d); mix.replacements.put(name,new File(c,name));
+                        rejects(importer,mix); identical(importer.data(),deluxe);
+                    }
+                }
+                Source damaged = new Source(d); damaged.replacements.put("INTRO.PRG",malformed);
+                rejects(importer,damaged); identical(importer.data(),deluxe);
+                check(engine.stops==before);
+                rejects(failing,canonical); identical(importer.data(),deluxe);
+                Files.move(importer.data().toPath(),new File(storage,"Data.previous").toPath());
+                Files.createDirectory(new File(storage,"Data.staging-interrupted").toPath());
+                importer.recover(); importer.bootstrap((DataImport.Source)null);
+                identical(importer.data(),deluxe);
+                Files.createDirectory(new File(storage,"Data.previous").toPath());
+                importer.recover(); importer.bootstrap((DataImport.Source)null);
+                identical(importer.data(),deluxe); check(storage.list().length==1);
+                System.out.println("PASS private Android D staging/adoption/bootstrap, 60 A/B/D hybrids, C rejection, rollback and recovery");
+            } else System.out.println("SKIP private Android D: set PF_DELUXE_CD_DATA");
             System.out.println("PASS private Android A/B staging, shared validation, six hybrid rejections, malformed/incomplete rejection, rollback, recovery, cleanup and relaunch");
         } finally { DataImport.remove(root); }
     }

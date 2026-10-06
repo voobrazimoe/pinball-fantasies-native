@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"image"
+	"pinballfantasies/internal/datalayout"
 )
 
 // FrontendPicture is native IFF content, never a loaded DOS executable segment.
@@ -18,22 +19,27 @@ type FrontendArt struct {
 	Tables                   [4]*FrontendPicture
 	Startup                  [8]*FrontendPicture
 	HighLogo, HighMono       *FrontendPicture
+	StartupLowerY            int
 }
 
 func DecodeFrontend(data []byte) (*FrontendArt, error) {
 	if err := validateLayout("INTRO.PRG", data); err != nil {
 		return nil, err
 	}
-	offsets := []int{0x1cb10, 0x6b70, 0x8b00, 0x20430, 0x24a50, 0x29410, 0x2dd40, 0x3b810, 0x42c50, 0x46930, 0x4daa0, 0x12020, 0x17f20, 0x10e60, 0xa450, 0x34d90, 0x33410}
-	pics := make([]*FrontendPicture, len(offsets))
-	for i, o := range offsets {
+	layout, err := datalayout.DecodedFrontendLayout(data)
+	if err != nil {
+		return nil, err
+	}
+	pics := make([]*FrontendPicture, len(layout.Pictures))
+	for i, descriptor := range layout.Pictures {
+		o := descriptor.Offset
 		p, e := decodeFrontendIFF(data, o)
 		if e != nil {
 			return nil, fmt.Errorf("INTRO IFF %x: %w", o, e)
 		}
 		pics[i] = p
 	}
-	a := &FrontendArt{Logo: pics[0], Font: pics[1], MonoFont: pics[2],
+	a := &FrontendArt{Logo: pics[0], Font: pics[1], MonoFont: pics[2], StartupLowerY: layout.StartupLowerY,
 		SidebarInfo: string(data[233806:233926]), OptionsInfo: string(data[233926:234046])}
 	copy(a.Tables[:], pics[3:7])
 	copy(a.Startup[:], pics[7:15])

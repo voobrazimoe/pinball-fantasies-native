@@ -9,7 +9,15 @@ func validateLayout(name string, data []byte) error {
 	if err := datalayout.ValidateDecoded(name, data); err != nil {
 		return err
 	}
-	for _, want := range datalayout.Pictures(name) {
+	pictures := datalayout.Pictures(name)
+	if name == "INTRO.PRG" {
+		layout, err := datalayout.DecodedFrontendLayout(data)
+		if err != nil {
+			return err
+		}
+		pictures = layout.Pictures
+	}
+	for _, want := range pictures {
 		// Both image decoders enforce chunk extents, mask/compression, palette and
 		// row boundaries. Enforce profile geometry too: consumers use fixed sizes.
 		if name != "INTRO.PRG" {

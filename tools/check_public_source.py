@@ -75,3 +75,30 @@ for name,layout in linked.items():
     for jingle in layout.get('jingles',[]):
         assert jingle=={'role':'S_EMPTY','destination':0x1a9ac,'source':0x1a9bc,'position':62,'repeat':0,'priority':0}
 print('PASS: Power Pack descriptors contain reviewed addresses and typed cue semantics only')
+
+# CD descriptors contain only reviewed regions, geometry and semantic tokens.
+cd=json.loads((root/'internal/datalayout/deluxe_cd.json').read_text())
+assert set(cd)==set(profiles)
+for name,layout in cd.items():
+    assert set(layout)<= {'decoded_size','copies','source_profile','jingles','selectors'}
+    assert isinstance(layout['decoded_size'],int) and layout['decoded_size']>0
+    for copy in layout['copies']:
+        assert set(copy)=={'destination','source','size'}
+        assert all(isinstance(v,int) and v>0 for v in copy.values())
+    p=layout['source_profile']
+    assert set(p)=={'profile','regions','pictures'} and p['profile']=='dos-deluxe-cd-linked-v1'
+    for r in p['regions']:
+        assert set(r)<= {'offset','size','purpose','sha256','kind'}
+        assert r['offset']>0 and r['size']>0
+        assert r['purpose'] in {r['purpose'] for r in profiles[name]['regions']}
+        if 'sha256' in r:assert re.fullmatch('[0-9a-f]{64}',r['sha256'])
+    for picture in p['pictures']:
+        assert set(picture)=={'offset','kind','width','height','planes'}
+    for j in layout.get('jingles',[]):
+        assert j==dict(role='S_EMPTY',destination=0x1a9ac,source=0xe9e9,position=62,repeat=0,priority=0)
+    for s in layout.get('selectors',[]):
+        assert set(s)=={'destination','source','raw','native_id','role'}
+        assert all(isinstance(s[k],int) and s[k]>0 for k in ('destination','source','raw','native_id'))
+        assert re.fullmatch('[A-Z0-9_]+',s['role'])
+assert len(cd['TABLE4.PRG']['selectors'])==44
+print('PASS: CD descriptors contain address/geometry/hash metadata and typed handler identities only')
