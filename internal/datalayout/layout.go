@@ -44,6 +44,10 @@ func Validate(name string, data []byte) error {
 	if !ok {
 		return fmt.Errorf("%s: no supported data layout", name)
 	}
+	return validateProfile(name, data, p)
+}
+
+func validateProfile(name string, data []byte, p Profile) error {
 	for _, picture := range p.Pictures {
 		if err := validatePicture(data, picture); err != nil {
 			return fmt.Errorf("%s: unsupported layout %s: %w", name, p.Profile, err)

@@ -62,3 +62,16 @@ for name,profile in profiles.items():
     for picture in profile['pictures']:
         assert set(picture)=={'offset','kind','width','height','planes'}
 print('PASS: runtime compatibility profiles contain addresses, geometry and hashes only')
+
+# B descriptors export only compiled copy addresses and the proved typed cue.
+linked=json.loads((root/'internal/datalayout/powerpack.json').read_text())
+assert set(linked)=={'INTRO.PRG','TABLE1.PRG','TABLE2.PRG'}
+for name,layout in linked.items():
+    assert set(layout) == ({'decoded_size','copies','jingles'} if name=='TABLE1.PRG' else {'decoded_size','copies'})
+    assert isinstance(layout['decoded_size'],int) and layout['decoded_size']>0
+    for copy in layout['copies']:
+        assert set(copy)=={'destination','source','size'}
+        assert all(isinstance(v,int) and v>0 for v in copy.values())
+    for jingle in layout.get('jingles',[]):
+        assert jingle=={'role':'S_EMPTY','destination':0x1a9ac,'source':0x1a9bc,'position':62,'repeat':0,'priority':0}
+print('PASS: Power Pack descriptors contain reviewed addresses and typed cue semantics only')

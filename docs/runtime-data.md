@@ -51,3 +51,5 @@ The local-only personal builder embeds the eleven compatible game-data files abo
 Game matrix fonts and presentation records come from the supplied game data where applicable. The small native sidebar font used by the frontend is project-authored code rather than a redistributed PC BIOS or emulator ROM font.
 
 See [provenance](provenance.md) for the licensing boundary.
+
+Supported linked DOS layouts are A (`dos-retail-linked-v1`) and the audited Power Pack-marked B (`dos-powerpack-linked-v1`). Every installation must match one coherent profile; mixed A/B INTRO/TABLE1/TABLE2 sets are rejected. Both use the same import UI and engine, and B preserves its S_EMPTY jingle priority 0 (A has 1). Only A is the pinned canonical oracle. Gold Pack identity is unproved; C/D, Deluxe/GOG and demo layouts remain unsupported/research-only. This is not support for all DOS releases.

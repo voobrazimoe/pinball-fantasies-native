@@ -1,6 +1,6 @@
 # Shared runtime compatibility audit
 
-Runtime compatibility and exact reference identity are separate contracts. This audit covers Windows, Linux and macOS; a future Android host should call the same engine/shared loader.
+Runtime compatibility and exact reference identity are separate contracts. Windows, Linux, macOS and Android use the same engine/shared loader. The supported DOS layouts are A (`dos-retail-linked-v1`) and B (`dos-powerpack-linked-v1`). A remains the only pinned canonical oracle. C/D, Deluxe/GOG and demo layouts remain unsupported/research-only.
 
 ## Before and after, by input
 
@@ -8,16 +8,16 @@ Every PRG previously required the SHA-256 of the entire inventoried executable b
 
 | File | Previous runtime whole-file SHA | Runtime compatibility now | Actually consumed content |
 | --- | --- | --- | --- |
-| `INTRO.PRG` | Yes, pinned INTRO build | `dos-retail-linked-v1`: seventeen IFF anchors and exact expected geometry; bounded sidebar/options records | FORM/chunk headers, BMHD, CMAP and BODY at the seventeen addresses below; text `[233806,234046)` |
+| `INTRO.PRG` | Yes, pinned INTRO build | Registered A/B profiles: seventeen IFF anchors and exact expected geometry; bounded sidebar/options records | FORM/chunk headers, BMHD, CMAP and BODY at the seventeen addresses below; text `[233806,234046)` |
 | `INTRO.MOD` | Yes; its hash selected omitted sample slots | Four-channel 31-slot `M.K.`; at least 44 orders; structurally bounded patterns/samples; verified omitted-silent-slot variant or full sample storage | Sample headers `[20,950)`, length byte 950, active orders from 952, marker `[1080,1084)`, pattern cells from 1084, declared playable sample bytes; title/restart byte and checksum do not select compatibility |
 | `MOD2.MOD` | Yes, pinned menu module | Same tracker structure; at least 15 orders, full sample storage | Same tracker records; no INTRO omission rule |
-| `TABLE1.PRG` | Yes, pinned Party Land build | Canonical linked DOS profile; structural PBMs plus bounded artwork and regional control/physics fingerprints | Four playfield strips, foreground, ball literals, physics lookups/descriptors/masks/frames, matrix fonts/text/animation records, lamps and duck gates |
+| `TABLE1.PRG` | Yes, pinned Party Land build | Registered A/B linked DOS profiles; structural PBMs plus bounded artwork and regional control/physics fingerprints | Four playfield strips, foreground, ball literals, physics lookups/descriptors/masks/frames, matrix fonts/text/animation records, lamps and duck gates |
 | `TABLE1.MOD` | Yes | Same tracker structure; at least 64 orders; required effect slots 7, 22–25, 28–30 | Same module records; native effect sample numbering is preserved; PCM identity is not required |
-| `TABLE2.PRG` | Yes, pinned Speed Devils build | Canonical linked DOS profile; structural PBMs plus bounded artwork and regional control/physics fingerprints | Same categories as table 1, with Speed Devils addresses and lamp packet references |
+| `TABLE2.PRG` | Yes, pinned Speed Devils build | Registered A/B linked DOS profiles; structural PBMs plus bounded artwork and regional control/physics fingerprints | Same categories as table 1, with Speed Devils addresses and lamp packet references |
 | `TABLE2.MOD` | Yes | Same tracker structure; at least 65 orders; required nonempty effect slots 23–30 | Same module records; source-referenced effect slot 22 is deliberately empty in the oracle and remains safely silent |
-| `TABLE3.PRG` | Yes, pinned Gameshow build | Canonical linked DOS profile; structural PBMs plus bounded artwork and regional control/physics fingerprints | Same common categories, Gameshow lamp packets and strided gate masks |
+| `TABLE3.PRG` | Yes, pinned Gameshow build | Registered A/B linked DOS profiles; structural PBMs plus bounded artwork and regional control/physics fingerprints | Same common categories, Gameshow lamp packets and strided gate masks |
 | `TABLE3.MOD` | Yes | Same tracker structure; decode at least 63 source-referenced orders, including orders 61/62 beyond the legacy song-length byte 61; effect slots 7, 15, 22–25, 28–30 | All 64 stored patterns selected by the verified 63-order extent, then samples; no invented edition offsets |
-| `TABLE4.PRG` | Yes, pinned Stones build | Canonical linked DOS profile; structural PBMs including the final 320×1219 record; regional control/physics checks | Common categories, strided gates, area rectangles/handler selectors/terminators, packed tower artwork |
+| `TABLE4.PRG` | Yes, pinned Stones build | Registered A/B linked DOS profiles; structural PBMs including the final 320×1219 record; regional control/physics checks | Common categories, strided gates, area rectangles/handler selectors/terminators, packed tower artwork |
 | `TABLE4.MOD` | Yes | Same tracker structure; at least 66 orders; effect slots 2, 6, 10, 23–25, 28–30 | Same tracker records, including all 64 selected patterns |
 | `PINBALL.CFG` | No in shared settings loader; **yes in the personal builder**, and wrongly documented as required game payload | Optional settings. Valid six-byte DOS seed or native PFNC record; missing/malformed records use shared native defaults. No identity hash | DOS six bytes, or eleven-byte versioned PFNC header/payload. Writable native state takes precedence over installation seed |
 
@@ -67,13 +67,15 @@ INTRO omission is selected by structure and its file role, not SHA: all eleven o
 
 ## Shared boundary and extension
 
-`frontend.LoadConfigured` reads every PRG through `datalayout.PreparePRG`, then the common asset/physics/presentation decoders. MOD roles use explicit shared decoders. Settings always use `settings.Store.Load`. Linux and Windows call this shared frontend loader; the macOS C bridge uses `engine.Load`, which calls the same loader.
+`frontend.LoadConfigured` reads the eleven required inputs, uses `datalayout.DetectInstallation` to select one coherent PRG profile, and calls `PreparePRGForProfile` before the common asset/physics/presentation decoders. MOD roles use explicit shared decoders. Settings always use `settings.Store.Load`. Linux and Windows call this shared frontend loader; the macOS C bridge uses `engine.Load`, which calls the same loader.
 
 macOS validates the source installation before copying, validates its isolated staging directory again to catch changes during copying, and publishes the imported directory only after both shared compatibility checks pass. Personal Windows/Linux packaging also uses the shared runtime validator; it records current input hashes for reproducibility rather than requiring pinned oracle identity. CFG is an optional packaged seed, never required pristine commercial payload.
 
-`runtimeProfile` separates source-layout validation and canonicalization from the canonical engine data contract. Another possessed and validated layout can add an adapter at this shared boundary, with reviewed offsets and control/pointer translations. It can reuse the game engine. No unpossessed edition offsets, heuristic executable scanning or additional edition claims have been added.
+`runtimeProfile` confines source-layout validation and reviewed address translation to the loader/decode boundary. A keeps its original byte view. B uses the address-only `powerpack.json` descriptor to copy consumed regions into the shared decoder address contract, preserving actual input bytes. `Validate` remains the canonical source validator; `ValidateDecoded` accepts registered shared-address semantics, including B's separately fingerprinted three-byte S_EMPTY record. Source detection never uses decoded-data validation.
 
-Only one DOS linked layout has been validated here. Multiple legitimate DOS revisions can share it **if their consumed artwork/record geometry and native-coupled semantics match**; different unused code, titles and audio bytes alone do not require a new engine. A second possessed installation has now been audited below; it is not supported because relocation alone does not preserve every consumed behavioral record. Cross-revision acceptance remains limited to the registered profile. Moved records, changed native-coupled controls, other module layouts and Amiga/CD32 inputs are outside this profile and return an unsupported-layout error.
+Detection validates every required picture's exact anchor, geometry and bounded chunks, and every consumed region's bounds, typed constraints and existing semantic fingerprints. B relocates those same checks to its reviewed source offsets, with the proved S_EMPTY semantic fingerprint. Neither whole-install hashes nor a search for FORM/PBM select runtime acceptance. Opaque artwork and unused executable bytes retain the existing compatibility policy. Unknown or malformed layouts fail before fixed-address decoding. All five PRGs must validate under one profile; INTRO/TABLE1/TABLE2 hybrids are rejected. TABLE3/4 share the same A/B source descriptor and decoding path. Required files still produce filename-specific missing-file errors, and CFG remains optional.
+
+Android SAF/provider streams and embedded sources use `DataImport`: copy to staging, shared native validation with disposable state, transactional adoption, backup recovery and bootstrap. macOS validates source and staging through the same engine. The profile is cheaply re-detected on each validation/start; no marker file or new UI is required.
 
 ## Exact oracle contract
 
@@ -87,67 +89,23 @@ The native Apple Silicon app/archive/shared-library build passed, including the 
 
 No full historical source/DOSBox acceptance result is claimed: those private inputs/captures are absent. Existing oracle expectations were preserved, and all available selected oracle checks passed. Regression coverage includes optional/modified/malformed/PFNC settings, all four original tables, unused executable-header mutation, opaque artwork and audio variation, strict-oracle rejection of identity changes, broken FORM/geometry, truncated required regions, incompatible descriptors, tracker bounds/loops/references, and the Windows/Linux/macOS call chain. Native platform execution and source/DOSBox fixture availability must be reported separately from cross-compilation and shared tests.
 
-## Possessed alternate installation audit (2026-10-05)
+## Layout B production support (2026-10-06)
 
-Read-only comparison of the owner's working `PINBALLF` and alternate
-`21STCENT/FANTASY` directories found the following boundary. The directory name
-does not establish a release/marketing identity. **No second runtime profile is
-registered.** The canonical profile and pinned oracle inventory are unchanged.
+The private audit identifies B by the parent `21STINFO.DAT` Power Pack marker (1996). This supports the neutral runtime ID `dos-powerpack-linked-v1`; Gold Pack identity has not been proved. Both possessed B copies have the same eleven-file identity. Runtime compatibility does not make B oracle-identical: no B hash was added to the oracle inventory or verifier.
 
-| Required input | Alternate result against the shared runtime |
+| B input | Reviewed mapping / semantics |
 | --- | --- |
-| INTRO.PRG | Unsupported canonical offsets; all 17 required IFF FORM records are byte-equivalent at shifted offsets, with identical geometry/planes. Thirteen move by -704 bytes and four by -640. The complete 240-byte sidebar/options record moves by -641. |
-| INTRO.MOD | Accepted unchanged by the decoder; only the two trailing, unconsumed bytes differ. Decoded orders, patterns and samples are identical. |
-| MOD2.MOD | Accepted; byte-identical. |
-| TABLE1.PRG | Unsupported offsets **and a behavioral control difference**: PBMs and most consumed records move by +16, material/high-score/scroll records by +14. Neighbor-anchored S_EMPTY changes jingle priority. |
-| TABLE1.MOD | Accepted; byte-identical. |
-| TABLE2.PRG | Unsupported offsets; all consumed regions have equivalent bytes at the investigated +16/+17 offsets; PBMs move by +16. This is a relocation candidate, not a registered/accepted profile. |
-| TABLE2.MOD | Accepted; byte-identical. |
-| TABLE3.PRG | Accepted unchanged; byte-identical. |
-| TABLE3.MOD | Accepted; byte-identical. |
-| TABLE4.PRG | Accepted unchanged; byte-identical. |
-| TABLE4.MOD | Accepted; byte-identical. |
+| INTRO.PRG | All 17 required FORM payloads and geometry match A: thirteen shifts -704, four -640; sidebar/options 240-byte record shifts -641. |
+| TABLE1.PRG | Per-region map, principally +16 and +14; PBMs +16. All 1,632 consumed regions are mapped; 1,631 payload-equivalent and one proved cue difference. |
+| TABLE2.PRG | All 1,450 consumed regions are payload-equivalent, with per-region +16/+17 shifts; PBMs +16. |
+| TABLE3/4.PRG | Byte-exact A; no adapter/copy is used. |
+| INTRO.MOD | Decoder-equivalent A; only unconsumed trailer differs. |
+| MOD2 / TABLE1–4.MOD | Byte-exact A; the existing role-specific decoders are shared. |
 
-CFG is present and decodable in PINBALLF and absent in the alternate installation;
-it is optional mutable state, so its absence is not a rejection reason.
+The complete exact per-region mapping is compiled in `internal/datalayout/powerpack.json`. `tools/powerpack_layout.py` reproduces this metadata from the private final-comparison evidence and possessed A/B data, verifies every mapped region/FORM byte, and permits only the proved S_EMPTY difference. It exports no game payload and performs no discovery search. Overlapping copies with inconsistent translations are rejected during generation.
 
-The first runtime failure is INTRO.PRG's missing canonical FORM/ILBM anchor at
-`0x1cb10`. Independent validation also rejects TABLE1.PRG and TABLE2.PRG at their
-first canonical PBM anchors. This is a shared runtime compatibility rejection,
-not an Android SAF failure.
+S_EMPTY at A `0x1a9ac` and B `0x1a9bc` has position 62, repeat 0, and priority **A=1, B=0**. Translation copies the actual three-byte record without normalizing it. `Content.decodeRecords` copies it into the decoded record model; `Display.Jingle` returns a typed `JingleSpec`; Party Land `playJingle` passes it to the shared `MusicClock.Play` arbitration. At current priority 1, A's S_EMPTY is accepted and B's is rejected. The existing `Cue` caller clears current priority before requesting its cue, so both are accepted there and retain their respective requested priorities. Scheduler initialization/return priorities and algorithms are unchanged; they are separate control state, not overrides of the decoded request.
 
-The exhaustive read-map comparison covered playfield PBMs, foreground planes,
-collision masks, delta/sine/material data, flipper descriptors/collision frames,
-glyph pointers/stores, matrix records/control/bitmap extents, fonts, lamps,
-gates/areas, palette literals, spring/flipper graphics and table-specific tower
-artwork. TABLE1 has 1,632 regions: 1,606 match at +16 and 25 at +14, leaving
-S_EMPTY. TABLE2 has 1,450 regions: 1,104 match at +16 and 346 at +17. Identical
-short strings elsewhere in a PRG are only investigation leads; they are not
-record-identity evidence or runtime scan rules.
+Private tests use `PF_RUNTIME_DATA` for A and `PF_POWERPACK_DATA` for B. They skip when private inputs are absent. Coverage includes profile identity, all six INTRO/TABLE1/TABLE2 hybrids, source/decoded validation, complete mapped records/FORM extents, graphics/physics/control model equality, all six decoded modules, four session factories and the real Party Land cue path plus arbitration. `tools/test_android_import.sh` additionally uses real private files and the shared runtime validator for transaction/recovery tests when both variables are supplied. Commercial inputs and temporary copies stay outside the repository.
 
-S_EMPTY is at canonical `0x1a9ac`, alternate `0x1a9bc`. The preceding jingle and
-following S_MAIN establish the +16 neighborhood. Position/repeat remain equal;
-priority differs. `Display.Jingle` interprets this field, and Party Land's
-`ToggleMusic` schedules `Cue("S_EMPTY")` when disabling background music.
-The shared music clock uses priority to arbitrate cues. Consequently a pure
-relocation cannot satisfy the existing semantic fingerprint. Its meaning across
-alternate DOS control flow has not been independently established. This pass
-keeps the installation unsupported rather than replacing the record, relaxing its
-hash, or adding edition-specific gameplay. Alternate four-table gameplay is
-therefore **NOT TESTED**, not a bootstrap acceptance claim.
-
-Reproduce privately with:
-
-```sh
-python3 tools/audit_runtime_installations.py \
-  --canonical /private/path/PINBALLF \
-  --alternate /private/path/21STCENT/FANTASY \
-  --output .cache/edition-audit/report.json
-```
-
-The ignored report inventories all source filenames/sizes/hashes and records
-only offsets, equality, candidate locations and independent validator results.
-`cmd/pflayoutaudit` checks every required file without early exit or source writes.
-No payload, whole-file input hashes, new source fingerprints or edition offsets
-are added to the production profile. Private regressions use PF_RUNTIME_DATA and
-PF_UNSUPPORTED_DATA; strict oracle tests still require the original pinned inputs.
+Native execution, host import validation and simulated SAF/provider transaction coverage are distinct from Android device/emulator acceptance and DOS-original parity; the latter require their own external environments/captures.

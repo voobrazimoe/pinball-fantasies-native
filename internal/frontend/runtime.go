@@ -25,20 +25,38 @@ type Runtime struct {
 	Intro, Menu *audio.Module
 	Player      *audio.Player
 	PCM         []byte
+	ProfileID   string
 }
+
+var runtimeNamesRequired = []string{"INTRO.PRG", "INTRO.MOD", "MOD2.MOD", "TABLE1.PRG", "TABLE1.MOD", "TABLE2.PRG", "TABLE2.MOD", "TABLE3.PRG", "TABLE3.MOD", "TABLE4.PRG", "TABLE4.MOD"}
 
 func Load(dataDir string, store Store) (*Runtime, error) {
 	// Library callers get installation compatibility without user-config writes.
 	return LoadConfigured(dataDir, store, nil)
 }
 func LoadConfigured(dataDir string, store Store, configStore *settings.Store) (*Runtime, error) {
-	read := func(name string) ([]byte, error) {
+	// Read required inputs before decoding so incomplete installs keep their
+	// normal filename error. Adoption and relaunch re-detect the same profile.
+	inputs := make(map[string][]byte)
+	prgs := make(map[string][]byte)
+	for _, name := range runtimeNamesRequired {
 		data, err := os.ReadFile(filepath.Join(dataDir, name))
 		if err != nil {
 			return nil, err
 		}
+		inputs[name] = data
 		if strings.HasSuffix(name, ".PRG") {
-			return datalayout.PreparePRG(name, data)
+			prgs[name] = data
+		}
+	}
+	profileID, err := datalayout.DetectInstallation(prgs)
+	if err != nil {
+		return nil, err
+	}
+	read := func(name string) ([]byte, error) {
+		data := inputs[name]
+		if strings.HasSuffix(name, ".PRG") {
+			return datalayout.PreparePRGForProfile(profileID, name, data)
 		}
 		return data, nil
 	}
@@ -84,7 +102,6 @@ func LoadConfigured(dataDir string, store Store, configStore *settings.Store) (*
 		return nil, fmt.Errorf("MOD2.MOD: %w", e)
 	}
 	config := settings.Defaults()
-	var err error
 	if configStore != nil {
 		config, err = configStore.Load()
 	} else {
@@ -184,7 +201,7 @@ func LoadConfigured(dataDir string, store Store, configStore *settings.Store) (*
 	view.GameshowMatrix = presentation.New(3, showData)
 	view.StonesMatrix = presentation.New(4, stonesData)
 	view.StonesMatrix.UseSourceMatrixOff()
-	return &Runtime{Model: model, View: view, Intro: intro, Menu: menu, Player: audio.New(intro)}, nil
+	return &Runtime{ProfileID: profileID, Model: model, View: view, Intro: intro, Menu: menu, Player: audio.New(intro)}, nil
 }
 
 // AudioSource identifies a continuous producer, independently of visual modes.

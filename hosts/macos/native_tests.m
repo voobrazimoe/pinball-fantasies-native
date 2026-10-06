@@ -385,12 +385,12 @@ static void compatibilityImportTests(NSString *originals) {
     NSData *accepted=[NSData dataWithContentsOfFile:[destination stringByAppendingPathComponent:@"TABLE1.PRG"]];
     NSString *path=[source stringByAppendingPathComponent:@"TABLE1.PRG"];
     NSMutableData *bytes=[NSMutableData dataWithContentsOfFile:path];
-    ((uint8_t *)bytes.mutableBytes)[336944]^=1; /* consumed FORM anchor */
+    bytes.length=100; /* truncated consumed data rejects every registered layout */
     assert([bytes writeToFile:path atomically:YES]);
     assert(!pf_import_assets(source,destination,pf_validate_assets,&error));
     assert([accepted isEqualToData:[NSData dataWithContentsOfFile:[destination stringByAppendingPathComponent:@"TABLE1.PRG"]]]);
     assert([fm removeItemAtPath:root error:NULL]);
-    puts("PASS shared macOS import compatibility: absent/modified CFG, unused PRG bytes, anchor rejection, prior import preserved");
+    puts("PASS shared macOS import compatibility: absent/modified CFG, unused PRG bytes, truncation rejection, prior import preserved");
 }
 
 int main(int argc,const char **argv) {

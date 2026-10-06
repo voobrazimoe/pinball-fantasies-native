@@ -41,10 +41,10 @@ func TestPossessedCanonicalAndNearMisses(t *testing.T) {
 		})
 	}
 }
-func TestPossessedUnsupportedInstallationIndependently(t *testing.T) {
-	dir := os.Getenv("PF_UNSUPPORTED_DATA")
+func TestPossessedPowerPackIndependently(t *testing.T) {
+	dir := os.Getenv("PF_POWERPACK_DATA")
 	if dir == "" {
-		t.Skip("set PF_UNSUPPORTED_DATA to audited alternate inputs")
+		t.Skip("set PF_POWERPACK_DATA to audited alternate inputs")
 	}
 	for name := range profiles {
 		b, e := os.ReadFile(filepath.Join(dir, name))
@@ -52,7 +52,7 @@ func TestPossessedUnsupportedInstallationIndependently(t *testing.T) {
 			t.Fatal(e)
 		}
 		_, e = PreparePRG(name, b)
-		want := name == "TABLE3.PRG" || name == "TABLE4.PRG"
+		want := true
 		if (e == nil) != want {
 			t.Fatalf("%s acceptance=%v want %v", name, e == nil, want)
 		}

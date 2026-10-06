@@ -238,7 +238,7 @@ func TestHostsShareRuntimeBoundary(t *testing.T) {
 	for _, tc := range []struct{ path, call string }{
 		{"../../cmd/pinballfantasies/main.go", "frontend.LoadConfigured("},
 		{"../../internal/engine/engine.go", "frontend.LoadConfigured("},
-		{"../../internal/frontend/runtime.go", "datalayout.PreparePRG("},
+		{"../../internal/frontend/runtime.go", "datalayout.PreparePRGForProfile("},
 		{"../../cmd/pfengine/main.go", "engine.Load("},
 	} {
 		b, err := os.ReadFile(tc.path)

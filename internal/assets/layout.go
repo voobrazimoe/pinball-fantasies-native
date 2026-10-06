@@ -6,7 +6,7 @@ import (
 )
 
 func validateLayout(name string, data []byte) error {
-	if err := datalayout.Validate(name, data); err != nil {
+	if err := datalayout.ValidateDecoded(name, data); err != nil {
 		return err
 	}
 	for _, want := range datalayout.Pictures(name) {
