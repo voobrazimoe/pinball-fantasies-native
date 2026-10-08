@@ -810,3 +810,5 @@ persistent State semantics are unchanged. Detailed errors are diagnostic-only.
 The final acceptance evidence and remaining device/CI checks are recorded in
 [android-a6-acceptance.md](android-a6-acceptance.md). A7 and main integration remain
 outside this branch task.
+
+<!-- CI baseline probe for PR #3; not for merge -->
