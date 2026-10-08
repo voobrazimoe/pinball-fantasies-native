@@ -26,6 +26,7 @@ extern "C" {
 #define PF_MODE_INITIALS 9
 #define PF_MODE_ENTRY_WAIT 10
 #define PF_MODE_QUIT 11
+#define PF_MODE_CLOSING 12
 /* Sink runs synchronously on the engine call path. PCM is interleaved signed
  * little-endian int16, 48000 Hz stereo; bytes is divisible by four. Borrowed
  * samples are valid ONLY during the callback: copy into a host-owned ring.

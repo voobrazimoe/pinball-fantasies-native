@@ -56,8 +56,9 @@ TABLE4.PRG TABLE4.MOD
 
 The official **10-minute Party Land DOS demo** is also supported: supply a
 folder with only its `INTRO.PRG`, `INTRO.MOD`, `MOD2.MOD`, `TABLE1.PRG` and
-`TABLE1.MOD`, and the app starts the demo directly in Party Land, ending when
-its timer expires. See [the demo notes](docs/partyland-10min-demo.md) for what
+`TABLE1.MOD`, and the app runs the demo's own intro, table selector (Party Land
+is the only playable table) and options; a game ends when the demo timer
+expires. See [the demo notes](docs/partyland-10min-demo.md) for what
 is proved and what follows the full-game rules.
 
 `PINBALL.CFG` is an optional legacy settings seed. Missing or malformed settings use native defaults; writable PFNC settings live in native state. Runtime accepts the supported consumed-data layout; exact whole-file hashes are reserved for research and parity fixtures.

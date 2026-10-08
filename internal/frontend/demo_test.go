@@ -37,6 +37,27 @@ func demoTimer(t *testing.T, r *Runtime) uint16 {
 	return c
 }
 
+func demoKeys(t *testing.T, r *Runtime, keys ...Key) {
+	t.Helper()
+	for _, k := range keys {
+		if err := r.Update(Input{Keys: []Key{k}}); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+func demoFrames(t *testing.T, r *Runtime, n int) {
+	t.Helper()
+	for i := 0; i < n; i++ {
+		if err := r.Update(Input{}); err != nil {
+			t.Fatal(err)
+		}
+		if i%97 == 0 && r.Frame() == nil {
+			t.Fatal("no frame")
+		}
+	}
+}
+
+// INTRO -> selector -> options -> Party Land, with pause and quit question.
 func TestPrivateDemoRuntimeLifecycle(t *testing.T) {
 	dir := privateDemoDir(t)
 	state := t.TempDir()
@@ -44,64 +65,131 @@ func TestPrivateDemoRuntimeLifecycle(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if r.ProfileID != DemoProfileID || r.Model.Mode != Playing || r.Model.Selected != 1 || r.Model.Hz() != 71 {
-		t.Fatal(r.ProfileID, r.Model.Mode)
+	m := r.Model
+	if r.ProfileID != DemoProfileID || !m.Demo || m.Mode != Startup || r.View == nil || len(r.View.Art.TextPages) != 2 {
+		t.Fatal(r.ProfileID, m.Mode)
 	}
-	for i := 0; i < 200; i++ {
-		if err := r.Update(Input{}); err != nil {
-			t.Fatal(err)
+	if m.Factories[1] != nil || m.Factories[2] != nil || m.Factories[3] != nil {
+		t.Fatal("unavailable tables must have no factory")
+	}
+	demoFrames(t, r, 120)
+	demoKeys(t, r, Space)
+	if m.Mode != Selector {
+		t.Fatal(m.Mode)
+	}
+	// The demo sidebar names only Party Land, options and quit.
+	if r.View.Art.SidebarInfo[12:24] != "F1 -   PARTY" {
+		t.Fatalf("%q", r.View.Art.SidebarInfo[:36])
+	}
+	demoKeys(t, r, F2, F3, F4)
+	if m.Mode != Selector || m.Selected != 1 || m.Session != nil {
+		t.Fatal("unavailable table selected", m.Mode, m.Selected)
+	}
+	// Selector text cycles the demo's own two SHOWTEXT pages.
+	seen := map[int]bool{}
+	for i := 0; i < 6000 && len(seen) < 2; i++ {
+		demoFrames(t, r, 1)
+		if m.Mode == SelectorText {
+			seen[m.TextPage] = true
+			if p := r.View.textPage(m); len(p) != 12 {
+				t.Fatal(p)
+			}
 		}
 	}
-	if demoTimer(t, r) != 200 || r.Frame() == nil {
-		t.Fatal(demoTimer(t, r))
+	if !seen[1] || !seen[2] {
+		t.Fatal("demo text pages not reached", seen)
 	}
-	// Pause: no electronics, no audio, timer and session unchanged.
-	if err := r.Update(Input{Keys: []Key{P}}); err != nil || r.Model.Mode != Paused {
-		t.Fatal(err, r.Model.Mode)
+	for m.Mode != Selector {
+		demoFrames(t, r, 1)
 	}
-	for i := 0; i < 500; i++ {
-		if err := r.Update(Input{}); err != nil || r.PCM != nil {
-			t.Fatal(err)
+	demoKeys(t, r, F5)
+	if m.Mode != Options {
+		t.Fatal(m.Mode)
+	}
+	demoFrames(t, r, 60)
+	demoKeys(t, r, Escape)
+	demoFrames(t, r, 60)
+	if m.Mode != Selector {
+		t.Fatal("options did not return", m.Mode)
+	}
+	demoKeys(t, r, F1)
+	if m.Mode != TableAttract || m.Selected != 1 {
+		t.Fatal(m.Mode)
+	}
+	demoFrames(t, r, 50)
+	// The attract cheat gate is retained: EARTHQUAKE disables tilt.
+	for _, c := range "EARTHQUAKE" {
+		for k := Key(0); k < 60; k++ {
+			if Initial(k) == byte(c) {
+				demoKeys(t, r, k)
+				break
+			}
 		}
+	}
+	if !m.cheatTiltDisabled {
+		t.Fatal("attract cheat not accepted")
+	}
+	demoFrames(t, r, 50)
+	demoKeys(t, r, F4) // the attract start keys select PLAYERS
+	if m.Mode != Playing {
+		t.Fatal(m.Mode)
+	}
+	if g, ok := m.Session.(interface{ PlayerCount() int }); !ok || g.PlayerCount() != 4 {
+		t.Fatal("attract F4 must start four players")
+	}
+	if m.selectionOpen {
+		t.Fatal("the demo omits the chute start-player route")
+	}
+	if c := demoTimer(t, r); c != 0 {
+		t.Fatal("table attract counted", c)
+	}
+	demoFrames(t, r, 199)
+	demoKeys(t, r, Escape) // the demo omits the chute quit route
+	if m.Mode != Playing {
+		t.Fatal("chute Escape left play", m.Mode)
 	}
 	if demoTimer(t, r) != 200 {
-		t.Fatal("paused calculation counted")
+		t.Fatal(demoTimer(t, r))
 	}
-	if err := r.Update(Input{Keys: []Key{Space}}); err != nil || r.Model.Mode != Playing {
-		t.Fatal(r.Model.Mode)
+	demoKeys(t, r, P)
+	demoFrames(t, r, 300)
+	if m.Mode != Paused || demoTimer(t, r) != 200 {
+		t.Fatal("paused calculation counted", m.Mode, demoTimer(t, r))
 	}
-	// Esc asks; any other key resumes; Y quits.
-	r.Update(Input{Keys: []Key{Escape}})
-	if r.Model.Mode != QuitQuestion {
-		t.Fatal(r.Model.Mode)
+	demoKeys(t, r, Escape, Key(21)) // Y
+	if m.Mode != Selector || m.Session != nil {
+		t.Fatal(m.Mode)
 	}
-	r.Update(Input{Keys: []Key{Key(49)}}) // N
-	if r.Model.Mode != Playing {
-		t.Fatal(r.Model.Mode)
-	}
-	r.Update(Input{Keys: []Key{Escape}})
-	r.Update(Input{Keys: []Key{Key(21)}}) // Y
-	if r.Model.Mode != Quit || r.Model.End != Aborted {
-		t.Fatal(r.Model.Mode)
-	}
-	// Volatile scores/settings: nothing is written beside the user's data.
+	// Volatile scores: nothing is written to the native score store.
 	if entries, _ := os.ReadDir(state); len(entries) != 0 {
-		t.Fatal("demo session wrote state", entries)
+		t.Fatal("demo wrote scores", entries)
 	}
 }
 
-func TestPrivateDemoRuntimeEndsAtQuit(t *testing.T) {
+// QUIT(0) ends TABLE1 and the launcher runs INTRO again, with a fresh table
+// lifetime on the next entry.
+func TestPrivateDemoRuntimeQuitRestartsIntro(t *testing.T) {
 	r, err := Load(privateDemoDir(t), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	for i := 0; i < 40000 && r.Model.Mode != Quit; i++ {
+	m := r.Model
+	demoKeys(t, r, Space, F1, F1)
+	if m.Mode != Playing {
+		t.Fatal(m.Mode)
+	}
+	for i := 0; i < 40000 && m.Mode == Playing; i++ {
 		if err := r.Update(Input{}); err != nil {
 			t.Fatal(err)
 		}
 	}
-	if r.Model.Mode != Quit || r.Model.End != ProgramQuit || demoTimer(t, r) != 37047 {
-		t.Fatal(r.Model.Mode, demoTimer(t, r))
+	if m.Mode != Startup || m.Session != nil || m.End != Completed {
+		t.Fatal(m.Mode)
+	}
+	demoFrames(t, r, 30)
+	demoKeys(t, r, Space, F1, F1)
+	if m.Mode != Playing || demoTimer(t, r) != 0 {
+		t.Fatal("next table entry is not a fresh lifetime")
 	}
 }
 
@@ -120,5 +208,47 @@ func TestPrivateDemoFolderErrors(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "TABLE1.PRG"), b, 0600)
 	if _, err := Load(dir, nil); err == nil {
 		t.Fatal("altered demo accepted")
+	}
+}
+
+// The launcher prints its closing text after INTRO quits, then waits for Esc.
+func TestPrivateDemoClosingMessage(t *testing.T) {
+	dir := privateDemoDir(t)
+	if _, err := Load(dir, nil); err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(filepath.Join(os.Getenv("PF_10MIN_DEMO_DATA"), "PINBALL.EXE"))
+	if err != nil {
+		t.Skip("demo launcher not supplied")
+	}
+	r, _ := Load(dir, nil)
+	demoKeys(t, r, Space, Escape)
+	if r.Model.Mode != Quit {
+		t.Fatal("without the launcher Esc quits directly", r.Model.Mode)
+	}
+	if err = os.WriteFile(filepath.Join(dir, "PINBALL.EXE"), b, 0600); err != nil {
+		t.Fatal(err)
+	}
+	r, err = Load(dir, nil)
+	if err != nil || len(r.Model.ClosingText) < 10 {
+		t.Fatal(err, r.Model.ClosingText)
+	}
+	demoKeys(t, r, Space, Escape)
+	if r.Model.Mode != Closing || r.Frame().Rect.Dy() != 400 {
+		t.Fatal(r.Model.Mode)
+	}
+	demoKeys(t, r, Space, F1)
+	if r.Model.Mode != Closing {
+		t.Fatal("only Esc leaves the closing text")
+	}
+	demoKeys(t, r, Escape)
+	if r.Model.Mode != Quit || r.Model.End != ProgramQuit {
+		t.Fatal(r.Model.Mode)
+	}
+	// A different launcher contributes no text.
+	b[0x43f+3] ^= 1
+	os.WriteFile(filepath.Join(dir, "PINBALL.EXE"), b, 0600)
+	if r, _ = Load(dir, nil); r.Model.ClosingText != nil {
+		t.Fatal("altered launcher text accepted")
 	}
 }

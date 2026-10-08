@@ -9,6 +9,7 @@ import (
 	"pinballfantasies/internal/presentation"
 	"pinballfantasies/internal/settings"
 	"strconv"
+	"strings"
 )
 
 type View struct {
@@ -46,6 +47,8 @@ func (v *View) framePresentation(m *Model, full bool) *image.RGBA {
 		return v.selectorFrame(m)
 	case Quit:
 		return black(640, 240)
+	case Closing:
+		return v.closingFrame(m)
 	}
 	out := m.Session.Frame()
 	draw.Draw(out, image.Rect(0, c.MatrixY(), 320, c.MatrixY()+33), image.NewUniform(color.RGBA{0, 0, 0, 255}), image.Point{}, draw.Src)
@@ -331,7 +334,7 @@ func (v *View) selectorFrame(m *Model) *image.RGBA {
 	} else {
 		lines := v.textPage(m)
 		y := 14
-		high := highTextPage(m.TextPage)
+		high := v.demoTextPages() == nil && highTextPage(m.TextPage)
 		font := v.Art.Font
 		level := 63
 		if m.TextTick < 45 {
@@ -387,7 +390,18 @@ func highTextPage(page int) bool {
 	return page == 1 || page == 2 || page == 5 || page == 6 || page == 9 || page == 10
 }
 
+// demoTextPages is the demo's own SHOWTEXT cycle, nil for full installations.
+func (v *View) demoTextPages() [][]string {
+	if v.Art == nil {
+		return nil
+	}
+	return v.Art.TextPages
+}
+
 func (v *View) textPage(m *Model) []string {
+	if pages := v.demoTextPages(); pages != nil {
+		return pages[(m.TextPage+len(pages)-1)%len(pages)]
+	}
 	if highTextPage(m.TextPage) {
 		var lines []string
 		names := []string{"PARTY LAND", "SPEED DEVILS", "BILLION DOLLAR", "STONES N BONES"}
@@ -545,4 +559,25 @@ func monoColorScale(index byte, step, denominator int) color.RGBA {
 		rgb = [3]int{17, 17, 25}
 	}
 	return color.RGBA{assets.DACRGB(byte(rgb[0] * step / denominator)), assets.DACRGB(byte(rgb[1] * step / denominator)), assets.DACRGB(byte(rgb[2] * step / denominator)), 255}
+}
+
+// closingFrame is the launcher's DOS text screen (80x25 cells, 640x400),
+// drawn with the INTRO font at half width so 69-column rows fit.
+func (v *View) closingFrame(m *Model) *image.RGBA {
+	out := black(640, 400)
+	for i, line := range m.ClosingText {
+		line = strings.ToUpper(line)
+		full := black(18*len(line)+24, 14)
+		v.selectorTextFont(full, v.Art.Font, line, 0, 0, 63)
+		for y := 0; y < 14; y++ {
+			for x := 0; 2*x+1 < full.Rect.Dx() && 8+x < 640; x++ {
+				a, b := full.RGBAAt(2*x, y), full.RGBAAt(2*x+1, y)
+				if int(b.R)+int(b.G)+int(b.B) > int(a.R)+int(a.G)+int(a.B) {
+					a = b
+				}
+				out.SetRGBA(8+x, 16+i*16+y, a)
+			}
+		}
+	}
+	return out
 }

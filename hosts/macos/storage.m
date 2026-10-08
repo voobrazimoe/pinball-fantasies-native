@@ -51,6 +51,9 @@ BOOL pf_import_assets(NSString *source,NSString *destination,PFValidateAssets va
     BOOL ok=NO;
     NSMutableArray *names=[pf_installation_assets(source) mutableCopy];
     if ([fm fileExistsAtPath:[source stringByAppendingPathComponent:@"PINBALL.CFG"]]) [names addObject:@"PINBALL.CFG"];
+    /* The demo launcher only supplies the closing text; it is never executed. */
+    if ([names containsObject:@"TABLE1.PRG"] && ![names containsObject:@"TABLE2.PRG"] &&
+        [fm fileExistsAtPath:[source stringByAppendingPathComponent:@"PINBALL.EXE"]]) [names addObject:@"PINBALL.EXE"];
     for (NSString *name in names) {
         if (!regular([source stringByAppendingPathComponent:name],error)) goto cleanup;
     }
