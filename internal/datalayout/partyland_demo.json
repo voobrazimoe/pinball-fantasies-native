@@ -244,6 +244,15 @@
    }
   }
  },
+ "launcher": {
+  "records": {
+   "CLOSING_MESSAGE": {
+    "source": 1087,
+    "size": 307,
+    "sha256": "ae0d0cf12d15c2fc2f4e3db5d36c7cacc8d73e5c823fed7798da9e1d1d638f0c"
+   }
+  }
+ },
  "table1": {
   "decoded_size": 536822,
   "copies": [

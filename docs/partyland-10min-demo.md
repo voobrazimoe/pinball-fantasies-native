@@ -88,11 +88,9 @@ These paths run the full-game Party Land rules unchanged:
 - The fade snapshots the live DAC at FADE. The research candidate snapshots it
   at load time, so lit lamps differ.
 - Options: the native options page and persisted native settings (balls,
-  angle, scrolling, music, resolution). The demo options page also lists a
-  colour-mode row, which is not reproduced; the ball count is shown but the
-  demo continuation never reads it.
-- Not reproduced: multiplayer (F1-F8 in the chute), cheats and the launcher's
-  closing message.
+  angle, scrolling, music, resolution). The demo's colour-mode row is dropped
+  intentionally; the ball count is shown but the demo continuation never
+  reads it.
 
 ## INTRO, selector and options
 
@@ -107,10 +105,22 @@ The demo starts with its own INTRO, through the shared native front end:
   `ESC - QUIT`, then the options help), read from the user's file.
 - SHOWTEXT cycle of the demo's two pages, welcome and availability, read from
   the user's file. There is no high-score or credits page in the demo cycle.
-- F1 loads Party Land's attract; any start key starts one player.
+- F1 loads Party Land's attract. Attract start keys F1-F8 (or Enter) set
+  PLAYERS as in the demo's attract start (`0x64cf`). The demo continuation
+  never rotates PLAYER, so player 1 keeps the ball; only a canonical
+  shoot-again or match fallback can change it. The demo omits the chute
+  start-player and chute quit routes, so F1-F8 and Esc in the chute do
+  nothing.
+- The retained attract-only cheat gate accepts the thirteen original cheats
+  (for example EARTHQUAKE disables tilt).
+- Esc in the selector runs the launcher's zero-table-selection exit: its
+  closing text (from the user's `PINBALL.EXE`, record `0x43f`, hash-checked)
+  in a 640x400 text screen, until Esc. Without a matching launcher, Esc quits
+  directly. Imports copy `PINBALL.EXE` only for demo folders; it is never
+  executed.
 - High scores are volatile factory values: no HI load or save.
-- In play, P pauses and Esc asks to quit, with Y returning to the selector, as in
-  the full game. The linked QUIT(0) after expiry returns to a fresh INTRO, as
+- In play, P pauses; Esc while paused asks to quit, with Y returning to the
+  selector. The linked QUIT(0) after expiry returns to a fresh INTRO, as
   the DOS launcher runs INTRO again. Each table entry is a new table lifetime
   (timer 0, not expired).
 

@@ -285,8 +285,8 @@ func (r *Runtime) Update(in Input) error {
 		return e
 	}
 	m := r.Model
-	if m.Suspended() || m.Mode == Quit {
-		return nil
+	if m.Suspended() || m.Mode == Quit || m.Mode == Closing {
+		return nil // the launcher's text screen is silent
 	}
 	if m.sessionSynced {
 		r.PCM = m.Session.PCM()

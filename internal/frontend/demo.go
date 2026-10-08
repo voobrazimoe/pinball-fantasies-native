@@ -106,6 +106,12 @@ func loadDemo(dataDir string, configStore *settings.Store) (*Runtime, error) {
 		return nil, err
 	}
 	model.Demo = true
+	// The launcher is not a runtime role; its closing text is shown when supplied.
+	if launcher, err := os.ReadFile(filepath.Join(dataDir, "PINBALL.EXE")); err == nil {
+		if text, err := datalayout.DemoClosingMessage(launcher); err == nil {
+			model.ClosingText = text
+		}
+	}
 	model.Settings = config
 	model.SettingsStore = configStore
 	return &Runtime{ProfileID: id, Model: model, View: NewView(art, data), Intro: intro, Menu: menu, Player: audio.New(intro)}, nil

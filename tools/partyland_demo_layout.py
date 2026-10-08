@@ -30,6 +30,8 @@ RECORDS = {
 # selector/options sidebar record (two 120-byte blocks of 12-column rows).
 INTRO_PAGES = {"WELCOME_PAGE": 0x580D, "AVAILABLE_PAGE": 0x5869}
 INTRO_SIDEBAR = (0x396D3, 240)
+# Launcher zero-table-selection exit: DOS '$'-terminated closing message.
+LAUNCHER_MESSAGE = 0x43F
 
 
 def sha(b):
@@ -111,9 +113,18 @@ def main():
     at, n = INTRO_SIDEBAR
     intro_records["SIDEBAR"] = {"source": at, "size": n, "sha256": sha(intro[at:at + n])}
 
+    launcher = (demo_dir / "PINBALL.EXE").read_bytes()
+    for f in evidence["support_research_inputs"]:
+        if f["name"] == "PINBALL.EXE" and (len(launcher) != f["size"] or sha(launcher) != f["sha256"]):
+            sys.exit("PINBALL.EXE: not the reviewed demo launcher")
+    end = launcher.index(b"$", LAUNCHER_MESSAGE) + 1
+    launcher_records = {"CLOSING_MESSAGE": {"source": LAUNCHER_MESSAGE, "size": end - LAUNCHER_MESSAGE,
+                                            "sha256": sha(launcher[LAUNCHER_MESSAGE:end])}}
+
     out = {
         "profile": PROFILE,
         "intro": {"regions": intro_regions, "pictures": pictures, "records": intro_records},
+        "launcher": {"records": launcher_records},
         "table1": {"decoded_size": decoded_size,
                    "copies": [{"destination": d, "source": s, "size": n} for d, s, n in merged],
                    "jingles": jingles, "reviewed": reviewed, "records": records},

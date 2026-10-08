@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"strings"
 )
 
 // PartyLandDemoProfile is the official 10-minute DOS demo: Party Land only,
@@ -28,7 +29,8 @@ var partyLandDemo = func() (l struct {
 		Pictures []Picture
 		Records  map[string]demoRecord
 	}
-	Table1 struct {
+	Launcher struct{ Records map[string]demoRecord }
+	Table1   struct {
 		DecodedSize int `json:"decoded_size"`
 		Copies      []recordCopy
 		Jingles     []jingleRecord
@@ -170,4 +172,16 @@ func DemoRecords(table []byte) (PartyLandDemoRecords, error) {
 		out.ExpiryTexts[i] = text
 	}
 	return out, nil
+}
+
+// DemoClosingMessage is the launcher's exit text (PINBALL.EXE, zero-table
+// selection path), split into rows. The launcher is optional for play.
+func DemoClosingMessage(launcher []byte) ([]string, error) {
+	r := partyLandDemo.Launcher.Records["CLOSING_MESSAGE"]
+	if err := validateProfile("PINBALL.EXE", launcher, Profile{Profile: PartyLandDemoProfile,
+		Regions: []Region{{Offset: r.Source, Size: r.Size, Purpose: "demo launcher closing message", SHA256: r.SHA256}}}); err != nil {
+		return nil, err
+	}
+	text := string(launcher[r.Source : r.Source+r.Size-1]) // without the DOS '$'
+	return strings.Split(strings.TrimRight(text, "\r\n"), "\r\n"), nil
 }

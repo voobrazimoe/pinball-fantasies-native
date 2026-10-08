@@ -117,17 +117,37 @@ func TestPrivateDemoRuntimeLifecycle(t *testing.T) {
 		t.Fatal(m.Mode)
 	}
 	demoFrames(t, r, 50)
-	demoKeys(t, r, F4) // single player in the demo, whatever the start key
+	// The attract cheat gate is retained: EARTHQUAKE disables tilt.
+	for _, c := range "EARTHQUAKE" {
+		for k := Key(0); k < 60; k++ {
+			if Initial(k) == byte(c) {
+				demoKeys(t, r, k)
+				break
+			}
+		}
+	}
+	if !m.cheatTiltDisabled {
+		t.Fatal("attract cheat not accepted")
+	}
+	demoFrames(t, r, 50)
+	demoKeys(t, r, F4) // the attract start keys select PLAYERS
 	if m.Mode != Playing {
 		t.Fatal(m.Mode)
 	}
-	if g, ok := m.Session.(interface{ PlayerCount() int }); !ok || g.PlayerCount() != 1 {
-		t.Fatal("demo started more than one player")
+	if g, ok := m.Session.(interface{ PlayerCount() int }); !ok || g.PlayerCount() != 4 {
+		t.Fatal("attract F4 must start four players")
+	}
+	if m.selectionOpen {
+		t.Fatal("the demo omits the chute start-player route")
 	}
 	if c := demoTimer(t, r); c != 0 {
 		t.Fatal("table attract counted", c)
 	}
-	demoFrames(t, r, 200)
+	demoFrames(t, r, 199)
+	demoKeys(t, r, Escape) // the demo omits the chute quit route
+	if m.Mode != Playing {
+		t.Fatal("chute Escape left play", m.Mode)
+	}
 	if demoTimer(t, r) != 200 {
 		t.Fatal(demoTimer(t, r))
 	}
@@ -188,5 +208,47 @@ func TestPrivateDemoFolderErrors(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "TABLE1.PRG"), b, 0600)
 	if _, err := Load(dir, nil); err == nil {
 		t.Fatal("altered demo accepted")
+	}
+}
+
+// The launcher prints its closing text after INTRO quits, then waits for Esc.
+func TestPrivateDemoClosingMessage(t *testing.T) {
+	dir := privateDemoDir(t)
+	if _, err := Load(dir, nil); err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(filepath.Join(os.Getenv("PF_10MIN_DEMO_DATA"), "PINBALL.EXE"))
+	if err != nil {
+		t.Skip("demo launcher not supplied")
+	}
+	r, _ := Load(dir, nil)
+	demoKeys(t, r, Space, Escape)
+	if r.Model.Mode != Quit {
+		t.Fatal("without the launcher Esc quits directly", r.Model.Mode)
+	}
+	if err = os.WriteFile(filepath.Join(dir, "PINBALL.EXE"), b, 0600); err != nil {
+		t.Fatal(err)
+	}
+	r, err = Load(dir, nil)
+	if err != nil || len(r.Model.ClosingText) < 10 {
+		t.Fatal(err, r.Model.ClosingText)
+	}
+	demoKeys(t, r, Space, Escape)
+	if r.Model.Mode != Closing || r.Frame().Rect.Dy() != 400 {
+		t.Fatal(r.Model.Mode)
+	}
+	demoKeys(t, r, Space, F1)
+	if r.Model.Mode != Closing {
+		t.Fatal("only Esc leaves the closing text")
+	}
+	demoKeys(t, r, Escape)
+	if r.Model.Mode != Quit || r.Model.End != ProgramQuit {
+		t.Fatal(r.Model.Mode)
+	}
+	// A different launcher contributes no text.
+	b[0x43f+3] ^= 1
+	os.WriteFile(filepath.Join(dir, "PINBALL.EXE"), b, 0600)
+	if r, _ = Load(dir, nil); r.Model.ClosingText != nil {
+		t.Fatal("altered launcher text accepted")
 	}
 }

@@ -26,6 +26,8 @@ const (
 	Initials
 	EntryWait
 	Quit
+	// Closing is the demo launcher's exit text after INTRO quits (Esc).
+	Closing
 )
 
 type Reason uint8
@@ -117,9 +119,11 @@ type Model struct {
 	ReturnMode                           Mode
 	PauseDelay                           int
 	audioMode                            Mode
-	// Demo is the official 10-minute demo INTRO: Party Land only, single
-	// player, its own two SHOWTEXT pages, and QUIT returning to INTRO.
-	Demo bool
+	// Demo is the official 10-minute demo INTRO: Party Land only, its own
+	// two SHOWTEXT pages, and QUIT returning to INTRO. ClosingText is the
+	// launcher's exit text shown after Esc in the selector, when supplied.
+	Demo        bool
+	ClosingText []string
 }
 
 func New(store Store, factory Factory) (*Model, error) {
@@ -355,6 +359,10 @@ func (m *Model) Update(in Input) error {
 				if e := m.saveSettings(); e != nil {
 					return e
 				}
+				if len(m.ClosingText) > 0 {
+					m.Mode = Closing // the launcher prints its text, then waits for Esc
+					return nil
+				}
 				m.Mode = Quit
 				m.End = ProgramQuit
 				return nil
@@ -395,6 +403,12 @@ func (m *Model) Update(in Input) error {
 					m.advanceSelector(k == Enter)
 				}
 			}
+		case Closing:
+			if k == Escape {
+				m.Mode = Quit
+				m.End = ProgramQuit
+				return nil
+			}
 		case Options:
 			if m.OptionTick < 45 || m.OptionsLeaving {
 				continue
@@ -428,7 +442,7 @@ func (m *Model) Update(in Input) error {
 					}
 				}
 				count := 1
-				if k != Enter && !m.Demo {
+				if k != Enter {
 					count = int(k-F1) + 1
 				}
 				if e := m.startPlayers(count); e != nil {
@@ -463,7 +477,7 @@ func (m *Model) Update(in Input) error {
 			}
 			if k == P && m.PauseDelay == 0 {
 				m.Mode = Paused
-			} else if k == Escape && m.SessionReady() {
+			} else if k == Escape && m.SessionReady() && !m.Demo { // the demo omits the chute quit route
 				m.End = Aborted
 				m.attract()
 			}
@@ -689,7 +703,7 @@ func (m *Model) advanceStartup() {
 }
 
 func (m Mode) String() string {
-	names := [...]string{"startup", "selector", "selector text", "options", "table attract", "playing", "paused", "quit question", "game over", "initials", "entry wait", "quit"}
+	names := [...]string{"startup", "selector", "selector text", "options", "table attract", "playing", "paused", "quit question", "game over", "initials", "entry wait", "quit", "closing"}
 	if int(m) >= len(names) {
 		return "unknown"
 	}

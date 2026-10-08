@@ -219,3 +219,22 @@ func TestTimedDemoPlayedSession(t *testing.T) {
 	c, _, _ := g.Demo()
 	t.Logf("played session: %d drains, QUIT at timer %d, score %s", drains, c, g.Score)
 }
+
+// Attract F1-F8 set PLAYERS, but DEMOVER_CHANGE_PLAYER never rotates PLAYER.
+func TestTimedDemoMultiplayerKeepsPlayerOne(t *testing.T) {
+	g := timedDemoFixture(t)
+	g.StartPlayers(4)
+	if g.PlayerCount() != 4 {
+		t.Fatal(g.PlayerCount())
+	}
+	for i := 0; i < 12; i++ {
+		if !g.demoChangePlayer() {
+			t.Fatal("demo continuation rejected")
+		}
+		g.tasks = [50]func() bool{}
+		g.waitCounters = make(map[string]uint16)
+		if g.Session.CurrentPlayer != 1 || g.BallNumber != 1 {
+			t.Fatal("player rotated", g.Session.CurrentPlayer)
+		}
+	}
+}
