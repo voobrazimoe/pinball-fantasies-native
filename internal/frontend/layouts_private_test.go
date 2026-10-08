@@ -10,9 +10,10 @@ import (
 	"testing"
 )
 
-// Every supported layout must play every table exactly like canonical A: the
-// same scripted plunger/flipper inputs give the same score, game length, PCM
-// and final frame. Only the profile-specific startup pictures may differ.
+// This scripted plunger/flipper run gives the same score, game length, PCM and
+// final frame on every supported layout as on canonical A. It does not reach
+// the edition differences (startup pictures, factory initials, S_EMPTY
+// priority), which the per-profile tests cover.
 func TestPrivateLayoutsPlayLikeCanonical(t *testing.T) {
 	layouts := []struct{ env, profile string }{
 		{"PF_RUNTIME_DATA", datalayout.RetailProfile},
