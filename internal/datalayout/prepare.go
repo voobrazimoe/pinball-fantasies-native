@@ -27,6 +27,8 @@ var runtimeProfiles = []runtimeProfile{
 	}, canonicalize: translateLinked},
 	{name: DeluxeCDProfile, validate: validateDeluxe, canonicalize: translateDeluxe},
 	{name: DeluxeCDAltProfile, validate: validateDeluxeAlt, canonicalize: translateDeluxeAlt},
+	// The demo lacks TABLE2-4, so DetectInstallation never selects it.
+	{name: PartyLandDemoProfile, validate: validatePartyLandDemo, canonicalize: translatePartyLandDemo},
 }
 
 var prgNames = []string{"INTRO.PRG", "TABLE1.PRG", "TABLE2.PRG", "TABLE3.PRG", "TABLE4.PRG"}

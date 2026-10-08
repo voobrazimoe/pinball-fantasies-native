@@ -1,0 +1,24 @@
+// Passive handoff reconstruction in an isolated canonical-A replay only.
+package partyland
+
+func liveTaskSites(g *Game) [50]string {
+ var out [50]string
+ for i,t := range g.tasks { if t!=nil { out[i]=g.ResearchTaskNames[g.taskIDs[i]]; if out[i]=="" {panic("unmapped live task")} } }
+ return out
+}
+
+var collisionReplayGame *Game
+
+// Source primitive cross-check from the actual final replay Game. The linked
+// demo matrix interpreter supplies its producer after scan 35967. This probe
+// only corroborates native task/reset effects; demo expiry ordering is checked
+// separately from linked operands, because A has no demo expiry program.
+func collisionNativeTasks(g *Game) []map[string]any {
+ out:=[]map[string]any{frozen(selected(g))}
+ for n:=35878;n<=35998;n++ {
+  g.Tick++;g.clock+=1030;g.audioTick();g.Display.Flash();g.runTasks();g.flashTick()
+  if n==35967 {g.waitAt("NEW_BALL_TASK",30,g.newBall)}
+  v:=selected(g);v["calculation"]=n;out=append(out,frozen(v))
+ }
+ return out
+}

@@ -1,0 +1,50 @@
+// Research-only isolated canonical-A fresh input replay.
+package partyland
+import("encoding/json";"os";"testing";"reflect";"math/rand";"pinballfantasies/internal/physics";"pinballfantasies/internal/settings")
+func researchSetballLimit(g *Game)uint16{return 80}
+func researchDropLimit(g *Game)uint16{return 27}
+func researchFlashLimit(g *Game)uint16{if g.ResearchPartyMutation=="wait_plus_one" {return 28};return 27}
+func researchDropSlots(g *Game,site string)func(){reserved:=false;if site=="BEFOREFLASH"&&g.ResearchPartyMutation=="child_earlier_slot"&&g.tasks[0]==nil {g.tasks[0]=func()bool{return false};reserved=true};return func(){if reserved{g.tasks[0]=nil}}}
+type flashScript struct{Release,Charge,LP,LD,LO,RP,RD,RO,ControlsEnd int}
+func flashFresh(t *testing.T,s flashScript,limit int,trace bool,mutation string)map[string]any{
+ g:=newTestGame(t);g.Configure(settings.Legacy());g.ResearchDemoEnabled=true;g.ResearchPartyMutation=mutation
+ g.Display.Content.Texts["S_GAMEOVER2"]=append([]byte(nil),postConfig.Jingle...)
+ researchScrollTexts(g)
+ capture,before,fire,arcade:=0,0,0,0;rows:=[]map[string]any{};bs:=[]map[string]any{};events:=[]map[string]any{};reads:=[][]any{};marks:=[]map[string]any{};physical:=[]map[string]any{}
+ snap:=func()map[string]any{v:=postSnapshot(g);v["clock"]=g.clock;v["SCREENFORCE"]=g.ScreenForce;v["screen_offset"]=g.Physics.ScreenOffset;v["raster"]=g.Physics.Raster;v["source_HOLDSTILL"]=g.ResearchSourceHold;v["native_capture_Hold"]=g.ResearchCaptureHold;v["Dragon"]=g.Dragon;v["FiveMillion"]=g.FiveMillion;v["BallFeature"]=g.BallFeature;v["JackpotNormal"]=g.JackpotNormal;v["JackpotTimed"]=g.JackpotTimed;return v}
+ g.ResearchObserve=func(role string){
+  if role=="area_before:GROPE"&&capture==0 {capture=int(g.Tick)}
+  if role=="area_after:GROPB" {for _,name:=range liveTaskSites(g){if name=="arcade.func1" {arcade=int(g.Tick)}}}
+  if role=="body_after:BEFOREFLASH"&&before==0 {before=int(g.Tick)}
+  if role=="body_after:DURINGFLASH"&&fire==0 {fire=int(g.Tick)}
+  if trace&&(capture>0&&int(g.Tick)>=capture ||arcade>0||s.ControlsEnd>0&&int(g.Tick)>=s.ControlsEnd-1||int(g.Tick)>=35997){v:=snap();v["boundary"]=role;bs=append(bs,v)}
+ }
+ g.Physics.ResearchTrace=func(role string,v ...int){if trace&&int(g.Tick)>=35998&&int(g.Tick)<=36173{r:=[]any{role,int(g.Tick)};for _,n:=range v{r=append(r,n)};reads=append(reads,r);if role=="late_before"||role=="late_after"||role=="step_before"||role=="step_after" {x:=snap();x["boundary"]=role;bs=append(bs,x)}}}
+ for n:=1;n<=limit&&!g.ResearchQuit;n++{
+  in:=physics.Inputs{Down:n<s.Release&&(s.Charge==0||n>=s.Release-s.Charge),Release:n==s.Release}
+  if n>=s.Release&&((s.ControlsEnd>0&&n<=s.ControlsEnd)||(s.ControlsEnd==0&&capture==0)){k:=n-s.Release;if s.LP>0{in.Left=(k+s.LO)%s.LP<s.LD};if s.RP>0{in.Right=(k+s.RO)%s.RP<s.RD}}
+  wasLost:=g.Phase==BallLost;if err:=g.Sync(in);err!=nil{t.Fatal(err)};if trace&&!wasLost&&n>=35998&&len(g.Physics.Events)>0{physical=append(physical,map[string]any{"calculation":n,"events":append([]physics.Event(nil),g.Physics.Events...)})}
+  for _,e:=range g.Events{if e.Kind=="Switch"||e.Kind=="MatrixStarted"||e.Kind=="TaskReady"||e.Kind=="Sound"||e.Kind=="Music"||e.Kind=="AudioRejected" {marks=append(marks,map[string]any{"calculation":n,"event":e})}}
+  if trace&&(n==1||n==s.Release-1||n==s.Release||capture>0&&n>=capture||arcade>0||s.ControlsEnd>0&&n>=s.ControlsEnd-1||n>=35997){v:=snap();v["input"]=in;rows=append(rows,v);if len(g.Events)>0 {events=append(events,map[string]any{"calculation":n,"events":append([]Event(nil),g.Events...)})}}
+  if !trace&&(fire>0||g.Phase==BallLost){break}
+ }
+ return map[string]any{"script":s,"capture":capture,"arcade_pending_producer":arcade,"BEFOREFLASH_fire":before,"DURINGFLASH_fire":fire,"rows":rows,"boundaries":bs,"event_rows":events,"milestones":marks,"physics_reads":reads,"physical_events":physical,"final":snap(),"mutation":mutation}
+}
+func TestResearchFlashSearch(t *testing.T){researchSetup();r:=rand.New(rand.NewSource(1));var first,found map[string]any;trials,longTrials:=0,0
+ for i:=0;i<32000;i++{s:=flashScript{Release:33+r.Intn(128),Charge:18+r.Intn(15),LP:20+r.Intn(200),RP:20+r.Intn(200)};s.LD=r.Intn(s.LP+1);s.LO=r.Intn(s.LP);s.RD=r.Intn(s.RP+1);s.RO=r.Intn(s.RP)
+  x:=flashFresh(t,s,s.Release+2000,false,"");trials++;f:=x["DURINGFLASH_fire"].(int);c:=x["capture"].(int);if c==0||f==0{continue};if first==nil {s.ControlsEnd=c;first=flashFresh(t,s,f,true,"");t.Log("any",s,c,f)}
+  if f%128!=35998%128{continue};s.ControlsEnd=c;s.Release+=35998-f;s.ControlsEnd+=35998-f;longTrials++;x=flashFresh(t,s,36002,false,"");t.Log("candidate",longTrials,s,x["capture"],x["DURINGFLASH_fire"])
+  if x["DURINGFLASH_fire"]==35998{found=x;break}
+ }
+ raw,_:=json.Marshal(map[string]any{"trials":trials,"long_trials":longTrials,"any":first,"found":found});os.WriteFile(os.Getenv("PF_FLASH_OUTPUT"),raw,0600);if found==nil{t.Fatal("finite search found no equality; no exclusion")};t.Log("found",found["script"],found["capture"],found["BEFOREFLASH_fire"],found["DURINGFLASH_fire"])
+}
+func TestResearchFlashWitness(t *testing.T){researchSetup();raw,_:=os.ReadFile(os.Getenv("PF_FLASH_SCRIPT"));var s flashScript;json.Unmarshal(raw,&s)
+ a,b:=flashFresh(t,s,105000,true,""),flashFresh(t,s,105000,true,"");if !reflect.DeepEqual(a,b){t.Fatal("nondeterministic replay")};if a["DURINGFLASH_fire"]!=35998{t.Fatal("wrong first equality")}
+ short:=flashScript{Release:131,Charge:21,LP:79,LD:43,LO:48,RP:166,RD:44,RO:29,ControlsEnd:798};c,d:=flashFresh(t,short,910,true,""),flashFresh(t,short,910,true,"");if !reflect.DeepEqual(c,d){t.Fatal("nondeterministic first dragon")};out:=map[string]any{"witness":a,"deterministic_equal":true,"any_capture":c,"any_capture_deterministic_equal":true};for _,m:=range []string{"wait_plus_one","child_earlier_slot","remove_hold_clear","release_physics"}{out[m]=flashFresh(t,s,36002,true,m)};raw,_=json.Marshal(out);os.WriteFile(os.Getenv("PF_FLASH_OUTPUT"),raw,0600);t.Log("witness",s,"capture",a["capture"],"before",a["BEFOREFLASH_fire"],"fire",a["DURINGFLASH_fire"],"final",a["final"].(map[string]any)["calculation"])
+}
+
+func TestResearchFlashInventoryProducer(t *testing.T){researchSetup();r:=rand.New(rand.NewSource(1));var found map[string]any;trials:=0
+ for i:=0;i<16000;i++{s:=flashScript{Release:33+r.Intn(128),Charge:18+r.Intn(15),LP:20+r.Intn(200),RP:20+r.Intn(200)};s.LD=r.Intn(s.LP+1);s.LO=r.Intn(s.LP);s.RD=r.Intn(s.RP+1);s.RO=r.Intn(s.RP)
+ x:=flashFresh(t,s,s.Release+2200,false,"");trials++;if x["arcade_pending_producer"].(int)>0 {s.ControlsEnd=x["arcade_pending_producer"].(int);a,b:=flashFresh(t,s,s.ControlsEnd+1,true,""),flashFresh(t,s,s.ControlsEnd+1,true,"");if !reflect.DeepEqual(a,b){t.Fatal("inventory producer nondeterminism")};found=a;break}}
+ raw,_:=json.Marshal(map[string]any{"trials":trials,"found":found});os.WriteFile(os.Getenv("PF_FLASH_OUTPUT"),raw,0600);if found==nil{t.Fatal("finite search; no impossible claim")};t.Log("inventory producer",trials,found["script"],found["arcade_pending_producer"])
+}

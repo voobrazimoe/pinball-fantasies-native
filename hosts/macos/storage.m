@@ -9,6 +9,17 @@ NSArray<NSString *> *pf_required_assets(void) {
     return @[@"INTRO.PRG",@"INTRO.MOD",@"MOD2.MOD",@"TABLE1.PRG",@"TABLE1.MOD",
              @"TABLE2.PRG",@"TABLE2.MOD",@"TABLE3.PRG",@"TABLE3.MOD",@"TABLE4.PRG",@"TABLE4.MOD"];
 }
+NSArray<NSString *> *pf_demo_assets(void) {
+    return @[@"INTRO.PRG",@"INTRO.MOD",@"MOD2.MOD",@"TABLE1.PRG",@"TABLE1.MOD"];
+}
+/* A folder without any TABLE2-4.PRG is offered as the official 10-minute
+   Party Land demo. The shared engine alone decides whether it is that demo. */
+NSArray<NSString *> *pf_installation_assets(NSString *source) {
+    NSFileManager *fm=NSFileManager.defaultManager;
+    for (NSString *name in @[@"TABLE2.PRG",@"TABLE3.PRG",@"TABLE4.PRG"])
+        if ([fm fileExistsAtPath:[source stringByAppendingPathComponent:name]]) return pf_required_assets();
+    return pf_demo_assets();
+}
 NSString *pf_support_path(NSString *base) { return [base stringByAppendingPathComponent:@"PinballFantasies"]; }
 BOOL pf_validate_assets(NSString *data,NSError **error) {
     NSFileManager *fm=NSFileManager.defaultManager;
@@ -38,7 +49,7 @@ BOOL pf_import_assets(NSString *source,NSString *destination,PFValidateAssets va
     NSString *stage=[parent stringByAppendingPathComponent:[@".import-" stringByAppendingString:NSUUID.UUID.UUIDString]];
     if (![fm createDirectoryAtPath:stage withIntermediateDirectories:NO attributes:@{NSFilePosixPermissions:@0700} error:error]) return NO;
     BOOL ok=NO;
-    NSMutableArray *names=[pf_required_assets() mutableCopy];
+    NSMutableArray *names=[pf_installation_assets(source) mutableCopy];
     if ([fm fileExistsAtPath:[source stringByAppendingPathComponent:@"PINBALL.CFG"]]) [names addObject:@"PINBALL.CFG"];
     for (NSString *name in names) {
         if (!regular([source stringByAppendingPathComponent:name],error)) goto cleanup;
@@ -85,7 +96,7 @@ BOOL pf_storage_prepare_at(NSString *base,NSString *resources,NSString **data,NS
         return pf_import_assets(bundled,*data,pf_validate_assets,error);
     while (YES) {
         NSAlert *explanation=[NSAlert new]; explanation.messageText=@"Original game files are required";
-        explanation.informativeText=@"Select the folder containing your original DOS Pinball Fantasies INTRO.PRG, INTRO.MOD, MOD2.MOD and TABLE1–4 PRG/MOD files. Validated files will be copied to Application Support. Game data is not included.";
+        explanation.informativeText=@"Select the folder containing your original DOS Pinball Fantasies INTRO.PRG, INTRO.MOD, MOD2.MOD and TABLE1–4 PRG/MOD files, or the official 10-minute Party Land demo (INTRO, MOD2 and TABLE1 files only). Validated files will be copied to Application Support. Game data is not included.";
         [explanation addButtonWithTitle:@"Choose Files…"]; [explanation addButtonWithTitle:@"Quit"];
         if ([explanation runModal]!=NSAlertFirstButtonReturn) return NO;
         NSOpenPanel *panel=[NSOpenPanel openPanel]; panel.canChooseDirectories=YES;

@@ -19,7 +19,17 @@ import (
 	"strings"
 )
 
+// runtimeSession is an optional internal host adapter. Ordinary installations
+// continue through Model and View; experimental code supplies this only by tag.
+type runtimeSession interface {
+	Update(Input) error
+	Frame(bool) *image.RGBA
+	FocusLost(bool) error
+	Diagnostic() string
+}
+
 type Runtime struct {
+	session     runtimeSession
 	Model       *Model
 	View        *View
 	Intro, Menu *audio.Module
@@ -42,6 +52,9 @@ func LoadConfigured(dataDir string, store Store, configStore *settings.Store) (*
 	for _, name := range runtimeNamesRequired {
 		data, err := os.ReadFile(filepath.Join(dataDir, name))
 		if err != nil {
+			if missingFullInstallation(err) && demoFolder(dataDir) {
+				return loadDemo(dataDir)
+			}
 			return nil, err
 		}
 		inputs[name] = data
@@ -243,9 +256,30 @@ func (r *Runtime) AudioSource() any {
 	return r.Player
 }
 
-func (r *Runtime) Frame() *image.RGBA { return r.View.Frame(r.Model) }
+func (r *Runtime) Frame() *image.RGBA {
+	if r.session != nil {
+		return r.session.Frame(false)
+	}
+	return r.View.Frame(r.Model)
+}
+func (r *Runtime) FocusLost(close bool) error {
+	r.PCM = nil
+	if r.session != nil {
+		return r.session.FocusLost(close)
+	}
+	return r.Model.Update(Input{FocusLost: true, Close: close})
+}
+func (r *Runtime) Diagnostic() string {
+	if r.session != nil {
+		return r.session.Diagnostic()
+	}
+	return ""
+}
 func (r *Runtime) Update(in Input) error {
 	r.PCM = nil
+	if r.session != nil {
+		return r.session.Update(in)
+	}
 	before := r.Model.Mode
 	if e := r.Model.Update(in); e != nil {
 		return e
@@ -281,6 +315,9 @@ func (r *Runtime) Update(in Input) error {
 // FramePresentation scopes a render-only override to this retrieval. It cannot
 // affect Update, source camera arithmetic, settings writes or future sessions.
 func (r *Runtime) FramePresentation(full bool) *image.RGBA {
+	if r.session != nil {
+		return r.session.Frame(full)
+	}
 	var p *physics.Game
 	switch g := r.Model.Session.(type) {
 	case *partyland.Game:

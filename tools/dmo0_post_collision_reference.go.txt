@@ -1,0 +1,109 @@
+// Research-only semantic projection in an isolated canonical-A checkout.
+// Generated metadata contains command operands and text lengths, never payload. ScrollLengths counts bytes BEFORE the FF terminator.
+package partyland
+
+import (
+ "encoding/json"
+ "os"
+ "reflect"
+ "pinballfantasies/internal/physics"
+ "testing"
+)
+
+var postConfig struct { Commands []matrixCommand; ScrollLengths []int; Jingle []byte }
+var postResult map[string]any
+var expiryIndex int
+
+func researchElectronics(g *Game) {
+ if !g.ResearchDemoEnabled||g.ResearchLastCalculation==g.Tick{return}
+ g.ResearchLastCalculation=g.Tick;g.ResearchTimer++
+ if g.ResearchTimer==35998 {researchInstallExpiry(g,"timer equality")}
+}
+func researchInstallExpiry(g *Game, reason string) {
+ g.ResearchExpiryVisits=0
+ g.ResearchExpired=true
+ g.Physics.Ball.Hold=true
+ // The linked jingle is position 13, repeat 0, priority 255; no device clock.
+ a:=g.musicClock()
+ a.Play(g.Display.Jingle("S_GAMEOVER2"),62,timing.Cues)
+ g.storeMusicClock(a)
+ g.beginMatrix("RESEARCH_EXPIRY")
+ g.emit("ResearchExpiryInstalled",reason,uint64(g.ResearchTimer))
+}
+func researchSetup() {
+ raw,err:=os.ReadFile(os.Getenv("PF_POST_CONFIG"));if err!=nil {panic(err)}
+ if err=json.Unmarshal(raw,&postConfig);err!=nil {panic(err)}
+ expiryIndex=len(timing.Commands)
+ timing.Labels["RESEARCH_EXPIRY"]=expiryIndex
+ timing.Commands=append(timing.Commands,postConfig.Commands...)
+ timing.Effects["RESEARCH_MINUTE5"]=effectSpec{Jingle:"S_GAMEOVER2",Matrix:"RESEARCH_EXPIRY",Priority:255}
+}
+// Owned timing representation: glyph stores cannot branch or modify phase.
+// ScrollLengths is the verified distance to FF, not the buffer length.
+func researchScrollTexts(g *Game) {
+ for i,n:=range postConfig.ScrollLengths {
+  if n<21 || n>=200 {panic("invalid verified scroll extent")}
+  text:=make([]byte,n+1);text[n]=255
+  g.Display.Content.Texts[[]string{"RESEARCH_SCROLL1","RESEARCH_SCROLL2"}[i]]=text
+ }
+}
+func researchScrollPhase(g *Game) uint64 {return reflect.ValueOf(g.Display).Elem().FieldByName("scrollPhase").Uint()}
+func postSnapshot(g *Game) map[string]any {
+ v:=selected(g);v["calculation"]=g.Tick;v["timer"]=g.ResearchTimer;v["expired"]=g.ResearchExpired
+ v["matrix_remaining"]=g.matrix.remaining;v["matrix_text_left"]=g.matrix.textLeft
+ v["QUIT"]=g.ResearchQuit
+ v["expiry_visits"]=g.ResearchExpiryVisits;v["scroll_phase"]=researchScrollPhase(g)
+ v["events"]=append([]Event(nil),g.Events...)
+ return frozen(v)
+}
+func researchStart(t *testing.T) *Game {
+ s:=replayScript{Release:35460,Charge:22,LP:52,LD:8,LO:46,RP:30,RD:21,RO:22}
+ r:=replay(t,s,36000,false);if !r.Valid||r.Drain!=35877 {t.Fatal("saved prefix identity")}
+ g:=collisionReplayGame
+ g.Display.Content.Texts["S_GAMEOVER2"]=append([]byte(nil),postConfig.Jingle...)
+ collisionNativeTasks(g)
+ // Supply the single already-admitted matrix visit omitted by primitive probe.
+ g.matrixTick()
+ g.Events=nil
+ g.ResearchDemoEnabled=true;g.ResearchExpired=true;g.ResearchTimer=35998;g.ResearchLastCalculation=35998
+ researchScrollTexts(g)
+ return g
+}
+// Export a fresh concrete replay Game for external frontend pause-cycle tests.
+func ResearchPostCollisionStart(t *testing.T)*Game {return researchStart(t)}
+func ResearchPostSnapshot(g *Game)map[string]any{return postSnapshot(g)}
+func ResearchPostConfigure(){researchSetup()}
+
+func runPost(t *testing.T,mode int, mutation string) map[string]any {
+ g:=researchStart(t);start:=postSnapshot(g)
+ rows:=[]map[string]any{start};eventRows:=[]map[string]any{};ops:=[]map[string]any{};drains:=[]map[string]any{}
+ var previous string
+ g.ResearchAfterWait=func(site string){if site=="SETBALL" {if mutation=="clear_expired" {g.ResearchExpired=false};v:=postSnapshot(g);v["boundary"]="immediately after SETBALL body, before remaining scan/spring/matrix/late physics";rows=append(rows,v)}}
+ g.ResearchObserve=func(role string){if role=="drain_entry"&&mutation=="block_effect" {g.inhibitEffect=true};if role=="RESEARCH_MINUTE5_result"&&mutation=="replace_program" {g.beginMatrix("SHOWPLAYERSTS")};if role=="drain_entry"||role=="RESEARCH_MINUTE5_request"||role=="RESEARCH_MINUTE5_result" {v:=postSnapshot(g);v["boundary"]=role;drains=append(drains,v)}}
+ trajectory:=[]map[string]any{}
+ var priorTrajectory string
+ for n:=35999;n<=103000&&!g.ResearchQuit;n++ {
+  in:=physics.Inputs{}
+  if mode==1 {in.Down=n>=36079&&n<36101;in.Release=n==36101;in.Right=n>=36101&&n<37101}
+  if mode==2 {in.Down=n>=36206&&n<36228;in.Release=n==36228;if n>=36228 {d:=n-36228;in.Left=(d+46)%52<8;in.Right=(d+22)%30<21}}
+  if err:=g.Sync(in);err!=nil {t.Fatal(err)}
+  v:=postSnapshot(g)
+  // Full per-calculation state through SETBALL and first launch/drain/expiry;
+  // later idle trajectory is compressed without removing timer admissions.
+  if n<=36180||(mode>0&&n<=36800)||g.Phase==BallLost||(!g.matrix.sourceProgram&&g.matrix.next>=expiryIndex) {rows=append(rows,v)}
+  if len(g.Events)>0 {eventRows=append(eventRows,map[string]any{"calculation":n,"events":v["events"]})}
+  key:=g.matrix.op
+  if key!=previous {ops=append(ops,map[string]any{"calculation":n,"op":key,"pc":g.matrix.next,"remaining":g.matrix.remaining,"text_left":g.matrix.textLeft});previous=key}
+  tv:=map[string]any{"ball":g.Physics.Ball,"SCORECHANGED":g.ScoreChanged,"score":g.Score.Uint64(),"INH_EFF":g.inhibitEffect,"SPECIALMODE":g.special(),"tasks":liveTaskSites(g),"phase":g.Phase,"expired":g.ResearchExpired,"in_chute":g.inChute,"input":in}
+  raw,_:=json.Marshal(tv);k:=string(raw)
+  if k==priorTrajectory {trajectory[len(trajectory)-1]["end"]=n} else {trajectory=append(trajectory,map[string]any{"start":n,"end":n,"state":frozen(tv)});priorTrajectory=k}
+  if n==65536 {v["boundary"]="host calculation 65536";rows=append(rows,v)}
+  if mutation!=""&&len(drains)>0 {break}
+ }
+ return map[string]any{"start":start,"rows":rows,"event_rows":eventRows,"matrix_progression":ops,"drain_boundaries":drains,"trajectory":trajectory,"final":postSnapshot(g),"input":map[string]any{"mode":mode,"mutation":mutation,"Down_start":36079,"Release":36101,"Right_end":37101}}
+}
+func TestResearchPostCollision(t *testing.T) {
+ researchSetup()
+ postResult=map[string]any{"no_input":runPost(t,0,""),"single_launch":runPost(t,1,""),"periodic_launch":runPost(t,2,""),"mutation_clear_expired":runPost(t,2,"clear_expired"),"mutation_block_effect":runPost(t,2,"block_effect"),"mutation_replace_program":runPost(t,2,"replace_program")}
+ raw,_:=json.Marshal(postResult);if err:=os.WriteFile(os.Getenv("PF_POST_OUTPUT"),raw,0600);err!=nil {t.Fatal(err)}
+}

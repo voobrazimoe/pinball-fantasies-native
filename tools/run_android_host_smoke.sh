@@ -46,6 +46,14 @@ wait_for() {
             cat "$scratch/log"
             return
         fi
+        # The streaming collector can drop a line; the device buffer, cleared
+        # by begin_phase, is the authority for this phase.
+        timeout 10 adb logcat -d -v brief -s PinballFantasies:I AndroidRuntime:E GameActivity:V libc:F DEBUG:F '*:S' \
+            > "$scratch/dump" 2>&1 || true
+        if grep -q "$pattern" "$scratch/dump"; then
+            cat "$scratch/dump"
+            return
+        fi
         attempt=$((attempt + 1))
         sleep 1
     done
@@ -73,6 +81,9 @@ require_same_host() {
 test -f "$APK"
 timeout 60 adb install -r "$APK"
 timeout 10 adb shell settings put system accelerometer_rotation 0
+# A System UI ANR on a loaded CI emulator otherwise takes window focus from the
+# activity under test, so the host never gains focus and never presents.
+timeout 10 adb shell settings put global hide_error_dialogs 1
 timeout 10 adb shell wm user-rotation lock 0
 timeout 10 adb shell input keyevent KEYCODE_WAKEUP
 timeout 10 adb shell wm dismiss-keyguard
@@ -123,9 +134,9 @@ require_same_host
 
 # A3 no-data inputs/Back must keep the same legal native shell alive.
 begin_phase
-for key in KEYCODE_F1 KEYCODE_F8 KEYCODE_ENTER KEYCODE_DPAD_DOWN KEYCODE_SHIFT_LEFT KEYCODE_SHIFT_RIGHT KEYCODE_SPACE KEYCODE_P KEYCODE_M KEYCODE_BACK; do
-    timeout 10 adb shell input keyevent "$key"
-done
+# One input invocation: each one starts a Java CLI, which is slow under CI's -Xint.
+timeout 30 adb shell input keyevent KEYCODE_F1 KEYCODE_F8 KEYCODE_ENTER KEYCODE_DPAD_DOWN \
+    KEYCODE_SHIFT_LEFT KEYCODE_SHIFT_RIGHT KEYCODE_SPACE KEYCODE_P KEYCODE_M KEYCODE_BACK
 timeout 10 adb shell input swipe 900 1600 900 1800 150
 require_same_host
 

@@ -21,7 +21,8 @@ var upper = []region{
 	{175, 100, 200, 130, "BYGEL4B"}, {260, 130, 280, 150, "BYGEL13"}, {3, 245, 22, 270, "GROPA"},
 }
 
-func (g *Game) checkAreas() {
+// areaConsumer selects the shared first-match identity without callback effects.
+func (g *Game) areaConsumer() string {
 	b := g.Physics.Ball
 	x, y := uint16(b.PixelX+8), uint16(b.PixelY+8+g.Physics.ScreenOffset)
 	list := lower
@@ -36,16 +37,25 @@ func (g *Game) checkAreas() {
 	}
 	for _, r := range list {
 		if x >= uint16(r.x1) && x <= uint16(r.x2) && y >= uint16(r.y1) && y <= uint16(r.y2) {
-			if g.lastCheck != r.label {
-				g.lastCheck = r.label
-				g.trigger(r.label)
-				g.lastArea = g.lastCheck
-			}
-			return
+			return r.label
 		}
 	}
-	g.lastCheck = ""
+	return ""
 }
+
+func (g *Game) checkAreas() {
+	label := g.areaConsumer()
+	if label == "" {
+		g.lastCheck = ""
+		return
+	}
+	if g.lastCheck != label {
+		g.lastCheck = label
+		g.trigger(label)
+		g.lastArea = g.lastCheck
+	}
+}
+
 func (g *Game) trigger(label string) {
 	g.emit("Switch", label, 0)
 	switch label {
