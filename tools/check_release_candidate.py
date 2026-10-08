@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify a complete public v0.1.3 candidate before owner package smoke.
+"""Verify a complete public release candidate before owner package smoke.
 
 Requires dissect.squashfs (pip install dissect.squashfs==1.12).
 No original data is needed; --originals adds an owner-local byte-block scan.
@@ -17,6 +17,7 @@ import sys
 import zipfile
 
 ROOT=Path(__file__).resolve().parent.parent
+VERSION,VERSION_CODE='0.1.4','4'
 sys.path.insert(0,str(ROOT/'tools'))
 from check_app_icons import check_exe
 from dissect.squashfs import SquashFS
@@ -66,7 +67,7 @@ def verify(directory,source_sha,evidence,sdk,originals=None):
             for member,data in members.items(): safe_path(member);scan(name+'/'+member,data)
             app='Pinball Fantasies.app/Contents/'
             info=plistlib.loads(members[app+'Info.plist'])
-            assert info['CFBundleShortVersionString']=='0.1.3'
+            assert info['CFBundleShortVersionString']==VERSION
             assert info['CFBundleIconFile']=='pf-icon.icns'
             assert source_sha.startswith(info['PFHostBuild'])
             assert members[app+'Resources/pf-icon.icns']==(ROOT/'art/app-icon/pf-icon.icns').read_bytes()
@@ -128,7 +129,7 @@ def verify(directory,source_sha,evidence,sdk,originals=None):
     buildtools=sdk/'build-tools/36.0.0'
     apk=directory/NAMES[4]
     badging=subprocess.check_output([str(buildtools/'aapt2'),'dump','badging',str(apk)],text=True)
-    assert "versionName='0.1.3'" in badging and "versionCode='3'" in badging
+    assert f"versionName='{VERSION}'" in badging and f"versionCode='{VERSION_CODE}'" in badging
     assert "name='io.github.voobrazimoe.pinballfantasies'" in badging
     assert "application-label:'Pinball Fantasies'" in badging
     assert 'ic_launcher' in badging and 'Personal' not in badging

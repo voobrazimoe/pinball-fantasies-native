@@ -14,10 +14,11 @@ The final owner RC check covers icon masks, the no-data shell, SAF import,
 gameplay launch, touch and smoothness; it is separate from accepted A6 testing.
 
 Install the staged public APK, open the app and tap **Import DOS folder**.
-Choose the folder containing the supported canonical 11 PRG/MOD files listed in
-the README; `PINBALL.CFG` is optional. Validated copies go to private app storage,
-while the source files remain unchanged. Public APKs contain no commercial data.
-`21STCENT/FANTASY` is not supported. The current candidate is a development-signed
+Choose the folder containing the 11 PRG/MOD files of any supported DOS
+installation listed in the README (retail, Power Pack `21STCENT/FANTASY`, or a
+Deluxe CD/GOG `PFD/FANTASY` set); `PINBALL.CFG` is optional. Validated copies go
+to private app storage, while the source files remain unchanged. Public APKs
+contain no commercial data. The current candidate is a development-signed
 universal APK (arm64-v8a + x86_64), not the local-only personal APK.
 See [v0.1.3 preparation](release-v0.1.3.md).
 
