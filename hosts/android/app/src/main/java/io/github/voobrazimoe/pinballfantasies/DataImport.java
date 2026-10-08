@@ -9,6 +9,15 @@ final class DataImport {
     static final List<String> REQUIRED = Collections.unmodifiableList(Arrays.asList(
             "INTRO.PRG", "INTRO.MOD", "MOD2.MOD", "TABLE1.PRG", "TABLE1.MOD",
             "TABLE2.PRG", "TABLE2.MOD", "TABLE3.PRG", "TABLE3.MOD", "TABLE4.PRG", "TABLE4.MOD"));
+    // Official 10-minute Party Land demo runtime roles; the engine decides.
+    static final List<String> DEMO = Collections.unmodifiableList(Arrays.asList(
+            "INTRO.PRG", "INTRO.MOD", "MOD2.MOD", "TABLE1.PRG", "TABLE1.MOD"));
+    /** A selection without any TABLE2-4.PRG is offered as the demo. */
+    static List<String> requiredFor(Map<String, String> selected) {
+        for (String name : Arrays.asList("TABLE2.PRG", "TABLE3.PRG", "TABLE4.PRG"))
+            if (selected.containsKey(name)) return REQUIRED;
+        return DEMO;
+    }
     interface Source {
         Map<String, String> entries() throws IOException;
         InputStream open(String id) throws IOException;
@@ -41,7 +50,7 @@ final class DataImport {
             if (name != null && selected.put(name, entry.getValue()) != null)
                 throw new IOException("Ambiguous filename: " + name);
         }
-        for (String name : REQUIRED)
+        for (String name : requiredFor(selected))
             if (!selected.containsKey(name)) throw new IOException("Missing required file: " + name);
         return selected;
     }

@@ -100,6 +100,7 @@ type Game struct {
 	touchDisabled                                                                  bool
 	duckDisabled                                                                   [3]bool
 	snacks                                                                         [3]bool
+	timed                                                                          *timedDemo // nil outside the 10-minute demo
 }
 
 func New(table *physics.Table, data []byte) *Game {
@@ -244,6 +245,9 @@ func (g *Game) Sync(input physics.Inputs) error { return g.SyncWithMatrixBudget(
 func (g *Game) SyncWithMatrixBudget(input physics.Inputs, timeLeft bool) error {
 	g.matrixTimeLeft = timeLeft
 	g.Events = g.Events[:0]
+	if g.timed != nil {
+		g.timed.counted = false
+	}
 	g.Tick++
 	if !g.inChute {
 		g.Session.SelectionOpen = false
@@ -270,8 +274,8 @@ func (g *Game) SyncWithMatrixBudget(input physics.Inputs, timeLeft bool) error {
 		return nil
 	}
 	if g.Phase == BallLost {
-
-		g.Display.Flash() // MATRIX_BLINKOR precedes DO_TASKS.
+		g.demoElectronics() // held/lost balls still count; UPDATE_COUNTERS is skipped
+		g.Display.Flash()   // MATRIX_BLINKOR precedes DO_TASKS.
 		g.runTasks()
 		g.flashTick()
 		if g.Phase == GameOver {
@@ -286,7 +290,8 @@ func (g *Game) SyncWithMatrixBudget(input physics.Inputs, timeLeft bool) error {
 	err := g.Physics.Sync(input)
 	// Drain bypasses electronics in PF3. Continue the ball-loss display tasks.
 	if g.Phase == BallLost {
-		g.Display.Flash() // MATRIX_BLINKOR precedes DO_TASKS.
+		g.demoElectronics() // the drain read the old expired flag first
+		g.Display.Flash()   // MATRIX_BLINKOR precedes DO_TASKS.
 		g.runTasks()
 		g.flashTick()
 		if g.Phase == GameOver {
@@ -344,6 +349,13 @@ func (g *Game) flashTick() {
 	}
 }
 func (g *Game) beforeTargets() {
+	g.updateCounters()
+	g.demoElectronics()
+	g.checkAreas()
+}
+
+// updateCounters is the UPDATE_COUNTERS prefix, before table electronics.
+func (g *Game) updateCounters() {
 	g.Random++
 	dec(&g.SkillTime)
 	dec(&g.LoopTime)
@@ -366,7 +378,6 @@ func (g *Game) beforeTargets() {
 			g.flash(14, 8, 0, false)
 		}
 	}
-	g.checkAreas()
 }
 func (g *Game) afterTargets(input physics.Inputs) {
 	g.tiltControl(input)

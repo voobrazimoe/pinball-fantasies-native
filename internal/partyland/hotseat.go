@@ -49,7 +49,12 @@ func (g *Game) PlayerScores() []tablelogic.Decimal {
 func (g *Game) PlayerCount() int   { return g.Session.PlayerCount }
 func (g *Game) CurrentPlayer() int { return g.Session.CurrentPlayer }
 func (g *Game) playerText() {
+	var balls []byte
+	if g.timed != nil {
+		balls = g.Display.Content.Texts["BALLSTEXT"]
+	}
 	g.Display.SetPlayers(g.Session.CurrentPlayer, g.Session.PlayerCount, int(g.BallNumber))
+	g.demoPlayerText(balls)
 }
 func (g *Game) savePlayer() { g.Session.Save(g.SavePlayerState()) }
 func (g *Game) advancePlayer() bool {

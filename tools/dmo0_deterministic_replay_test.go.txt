@@ -1,0 +1,103 @@
+// Copied into an isolated, owner-local canonical-A test harness only.
+package partyland
+
+import (
+ "encoding/json"
+ "fmt"
+ "os"
+ "reflect"
+ "testing"
+ "pinballfantasies/internal/physics"
+ "pinballfantasies/internal/settings"
+)
+
+type replayScript struct { Release, RightStart, RightEnd, Charge, LP,LD,LO,RP,RD,RO int }
+type replayRun struct {
+ Script replayScript
+ Release, Bygel, Drain int
+ Valid bool
+ Rows []map[string]any
+ PhysicsReads []json.RawMessage
+ Checkpoints []map[string]any
+ Electronics int
+}
+func selected(g *Game) map[string]any {
+ return map[string]any{"ball":g.Physics.Ball,"spring":g.Physics.SpringPosition,
+ "spring_valid":g.Physics.SpringValid,"score":g.Score.Uint64(),"SCORECHANGED":g.ScoreChanged,
+ "totals":[4]uint64{g.Bonus.Uint64(),uint64(g.Cyclones),g.HappyTotal.Uint64(),g.MegaTotal.Uint64()},
+ "XXBALLE":g.matchBall,"INH_EFF":g.inhibitEffect,"SPECIALMODE":g.special(),
+ "BALL_DOWN":g.Physics.Ball.Lost,"LOOSING":g.Phase==BallLost,"phase":g.Phase,
+ "light39":g.Lights[39],"lights":g.Lights,"last_area":g.lastArea,"last_check":g.lastCheck,
+ "matrix_op":g.matrix.op,"matrix_active":g.matrix.active,"matrix_pc":g.matrix.next,"effect_accepted":g.effectAccepted,
+ "task_ids":g.taskIDs,"waits":g.waitCounters,"random":g.Random,"partyflash":g.partyFlash,
+ "mode_time":g.ModeTime,"skill_time":g.SkillTime,"inhibit_reverse_time":g.InhibitReverseTime,
+ "reverse_time":g.ReverseTime,"loop_time":g.LoopTime,"Arcade":g.Arcade,"touch_disabled":g.touchDisabled,
+ "Happy":g.Happy,"Mega":g.Mega,"PukeForbidden":g.PukeForbidden,"InhibitReverse":g.InhibitReverse,
+ "in_chute":g.inChute,"flippers":g.Physics.Flippers,"audio_priority":g.Audio.Priority}
+}
+func frozen(v map[string]any)map[string]any {raw,_:=json.Marshal(v);var out map[string]any;json.Unmarshal(raw,&out);return out}
+func replay(t *testing.T,s replayScript,limit int,trace bool) replayRun {
+ t.Helper();g:=newTestGame(t);g.Configure(settings.Legacy())
+ out:=replayRun{Script:s,Valid:true};n:=0
+ var reads [][]any;dict:=map[string]int{};var previous string
+ g.Physics.ResearchTrace=func(role string,args ...int){if trace {row:=[]any{role};for _,v:=range args {row=append(row,v)};reads=append(reads,row)};if role=="electronics" {out.Electronics++}}
+ g.ResearchObserve=func(role string){
+  if role=="BYGEL1"||role=="BYGEL2" {out.Bygel=n;if g.Lights[39] {out.Valid=false}}
+  if trace {v:=selected(g);v["calculation"]=n;v["boundary"]=role;v["clock_low8"]=uint8(g.clock);out.Checkpoints=append(out.Checkpoints,frozen(v))}
+ }
+ if trace {v:=selected(g);v["calculation"]=0;v["boundary"]="fresh New + Configure(Legacy)";out.Checkpoints=append(out.Checkpoints,frozen(v))}
+ for n=1;n<=limit;n++ {
+  reads=nil
+  in:=physics.Inputs{Down:n<s.Release&&(s.Charge==0||n>=s.Release-s.Charge),Release:n==s.Release,Right:n>=s.Release+s.RightStart&&n<s.Release+s.RightEnd}
+  if s.LP>0 && n>=s.Release {d:=n-s.Release;in.Left=(d+s.LO)%s.LP<s.LD;in.Right=(d+s.RO)%s.RP<s.RD}
+  if err:=g.Sync(in);err!=nil {t.Fatal(err)}
+  if n==s.Release {out.Release=n;if trace {v:=selected(g);v["calculation"]=n;v["boundary"]="after release calculation";out.Checkpoints=append(out.Checkpoints,frozen(v))}}
+  if g.Bonus.Uint64()!=0||g.Cyclones!=0||g.HappyTotal.Uint64()!=0||g.MegaTotal.Uint64()!=0||g.matchBall {out.Valid=false}
+  if trace {
+   raw,_:=json.Marshal(reads);key:=string(raw);id,exists:=dict[key];if !exists {id=len(out.PhysicsReads);dict[key]=id;out.PhysicsReads=append(out.PhysicsReads,raw)}
+   v:=selected(g);delete(v,"random");v["input"]=in;v["events"]=append([]Event(nil),g.Events...);v["physics_events"]=append([]physics.Event(nil),g.Physics.Events...);v["physics_reads_id"]=id
+   // Maps in snapshots must be immutable copies, since waits mutate next sync.
+   raw,_=json.Marshal(v);key=string(raw)
+   if previous==key {out.Rows[len(out.Rows)-1]["end"]=n} else {var payload map[string]any;json.Unmarshal(raw,&payload);out.Rows=append(out.Rows,map[string]any{"start":n,"end":n,"state":payload});previous=key}
+  }
+  if g.Phase==BallLost {out.Drain=n;out.Valid=out.Valid&&out.Bygel>0&&g.ScoreChanged&&!g.inhibitEffect&&g.effectAccepted;if trace {v:=selected(g);v["calculation"]=n;v["boundary"]="after drain calculation";out.Checkpoints=append(out.Checkpoints,frozen(v))};return out}
+ }
+ out.Valid=false;return out
+}
+func TestResearchDeterministicReplay(t *testing.T) {
+ s:=replayScript{Release:61,RightEnd:1000}
+ if p:=os.Getenv("PF_REPLAY_SCRIPT");p!="" {raw,err:=os.ReadFile(p);if err!=nil {t.Fatal(err)};if err=json.Unmarshal(raw,&s);err!=nil {t.Fatal(err)}}
+ a,b:=replay(t,s,36000,true),replay(t,s,36000,true)
+ if !reflect.DeepEqual(a,b) {t.Fatal("nondeterministic replay")}
+ if !a.Valid {t.Fatal("invalid BYGEL scored drain witness",a.Bygel,a.Drain)}
+ m:=s;if m.Charge>0 {m.Charge--} else {m.Release--} // remove one Down calculation, or shift release one calculation
+ mutation:=replay(t,m,36000,false)
+ if mutation.Valid&&mutation.Drain==a.Drain&&mutation.Bygel==a.Bygel {t.Fatal("one input mutation did not change witness")}
+ out:=map[string]any{"witness":a,"mutation":mutation,"clock_codec":"for calculation n: u16(1030*n), low8 = (6*n)%256","trace_codec":"inclusive start..end repeats state; physics_reads_id indexes full ordered consumer observations"}
+ raw,_:=json.Marshal(out);if err:=os.WriteFile(os.Getenv("PF_REPLAY_OUTPUT"),raw,0600);err!=nil {t.Fatal(err)}
+ fmt.Printf("release=%d BYGEL=%d drain=%d valid=%v trace_runs=%d read_dictionaries=%d\n",a.Release,a.Bygel,a.Drain,a.Valid,len(a.Rows),len(a.PhysicsReads))
+}
+
+func TestResearchDelayAndHold(t *testing.T) {
+ s:=replayScript{Release:35460,Charge:22,LP:52,LD:8,LO:46,RP:30,RD:21,RO:22}
+ var variations []replayRun
+ for _,release:=range []int{132,260,388,1156,16516,35458,35459,35460,35461,35462} {
+  v:=s;v.Release=release;r:=replay(t,v,release+1500,false);variations=append(variations,r)
+  if release==35460 && (!r.Valid||r.Drain!=35877||r.Bygel!=35790) {t.Fatal("exact target changed",r)}
+ }
+ g:=newTestGame(t);g.Configure(settings.Legacy())
+ var checkpoints []map[string]any
+ electronics:=0;g.Physics.ResearchTrace=func(role string,v ...int){if role=="electronics" {electronics++}}
+ for n:=1;n<35517;n++ {
+  if err:=g.Sync(physics.Inputs{Down:true});err!=nil {t.Fatal(err)}
+  b:=g.Physics.Ball
+  if g.Phase!=Playing||b.Lost||b.High||b.PixelX<290||b.PixelX>310||b.PixelY<520||b.PixelY>540||g.ScoreChanged||g.Score.Uint64()!=0||g.Bonus.Uint64()!=0||g.Cyclones!=0||g.HappyTotal.Uint64()!=0||g.MegaTotal.Uint64()!=0||g.matchBall||g.inhibitEffect {t.Fatalf("hold state changed at %d",n)}
+  if n>=32&&g.Physics.SpringPosition!=32 {t.Fatalf("saturated charge changed at %d",n)}
+  if n==1||n==19||n==32||n==128||n==35460||n==35516 {v:=selected(g);v["calculation"]=n;checkpoints=append(checkpoints,frozen(v))}
+ }
+ if electronics!=35516 {t.Fatal("hold did not continue electronics",electronics)}
+ holds:=[]replayRun{}
+ for _,release:=range []int{61,189,35517} {v:=replayScript{Release:release,RightEnd:1000};a:=replay(t,v,release+1500,false);b:=replay(t,v,release+1500,false);if !reflect.DeepEqual(a,b)||!a.Valid {t.Fatal("hold release determinism/route",release)};holds=append(holds,a)}
+ raw,_:=json.Marshal(map[string]any{"release_variation":variations,"long_down_hold":map[string]any{"calculations":35516,"electronics":electronics,"all_selected_assertions":true,"checkpoints":checkpoints,"release_replays":holds},"neighbors":"direct input variations; absence of exact neighbor is not an exclusion proof"})
+ if err:=os.WriteFile(os.Getenv("PF_REPLAY_VARIATIONS"),raw,0600);err!=nil {t.Fatal(err)}
+}

@@ -17,7 +17,9 @@ func (g *Game) drain() {
 		return
 	}
 	g.Audio.Priority = 0
-	g.effect("LOSTBALL", 0, 0)
+	if !g.demoScoredDrain() {
+		g.effect("LOSTBALL", 0, 0)
+	}
 	g.Audio.Priority = 0
 	g.Audio.ReturnPosition = 62
 	g.waitAt("SOUNDRINNER", 5, func() { g.sound("SRINNER") })
@@ -49,6 +51,7 @@ func (g *Game) newBall() {
 	g.Physics.Ball.HitX = 0
 	g.Physics.Ball.HitY = 0
 	g.resetBall()
+	g.demoNewBall()
 	g.HappyTotal = Decimal{}
 	g.MegaTotal = Decimal{}
 	g.Phase = NewBall
@@ -63,7 +66,7 @@ func (g *Game) newBall() {
 	g.Physics.TargetRaster = -1
 	g.playerText()
 	if !g.partyFlash {
-		g.beginMatrix("SHOWPLAYERSTS") // WHEN_NEW_BALL_RESET calls DO_MATRIX.
+		g.beginMatrix(g.playerPanel(true)) // WHEN_NEW_BALL_RESET calls DO_MATRIX.
 	}
 	g.emit("NewBall", "NEW_BALL", uint64(g.BallNumber))
 	g.waitAt("SOUNDNEWBALL", 50, func() { g.sound("SNEWBALL") })

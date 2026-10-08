@@ -97,17 +97,45 @@ func (g *Game) Release(charge, jitter uint8) {
 // two sc_program passes, then DO_PHYSICS; late raster executes one pass.
 // One step always checks collision, resolves it, updates flipper state, moves
 // the ball, then copies any overlapping flipper mask.
-func (g *Game) Sync(input Inputs) error {
+func (g *Game) Sync(input Inputs) error { return g.sync(input, nil) }
+
+// SyncWithGate is an internal candidate boundary. Admission is before the
+// entire named consumer; accepting an aggregate accepts all of its effects.
+// The caller owns sticky failure and must not re-enter after a rejected gate.
+// Ordinary hosts continue to call Sync, with no admission policy.
+func (g *Game) SyncWithGate(input Inputs, gate func(producer, consumer string) error) error {
+	if gate == nil {
+		return fmt.Errorf("candidate consumption gate is required")
+	}
+	if err := gate("candidate", "physics.Sync"); err != nil {
+		return err
+	}
+	return g.sync(input, gate)
+}
+
+func (g *Game) sync(input Inputs, gate func(string, string) error) error {
+	admit := func(producer, consumer string) error {
+		if gate != nil {
+			return gate(producer, consumer)
+		}
+		return nil
+	}
 	g.Events = g.Events[:0]
 	if g.Stopped {
 		return nil
 	}
 	for i := 0; i < 2; i++ {
+		if err := admit("physics.Sync", "physics.step"); err != nil {
+			return err
+		}
 		if err := g.step(input); err != nil {
 			return err
 		}
 	}
 	if g.pendingBumper {
+		if err := admit("pendingBumper", "OnEvent"); err != nil {
+			return err
+		}
 		g.Events = append(g.Events, g.pendingEvent)
 		g.pendingBumper = false
 		if g.OnEvent != nil {
@@ -117,9 +145,15 @@ func (g *Game) Sync(input Inputs) error {
 	if g.TiltCounter > 0 {
 		g.TiltCounter--
 	}
+	if err := admit("physics.Sync", "checkRamps/checkLevels"); err != nil {
+		return err
+	}
 	g.checkRamps()
 	g.checkLevels()
 	if g.Ball.Lost {
+		if err := admit("Ball.Lost", "drain/OnEvent"); err != nil {
+			return err
+		}
 		g.Stopped = true
 		e := Event{Kind: EventDrain, X: g.Ball.PixelX, Y: g.Ball.PixelY}
 		g.Events = append(g.Events, e)
@@ -129,14 +163,29 @@ func (g *Game) Sync(input Inputs) error {
 		return nil
 	}
 	if g.BeforeTargets != nil {
+		if err := admit("physics.Sync", "BeforeTargets"); err != nil {
+			return err
+		}
 		g.BeforeTargets()
+	}
+	if err := admit("physics.Sync", "checkSpringAndTargets/OnEvent"); err != nil {
+		return err
 	}
 	g.checkSpringAndTargets()
 	if g.AfterTargets != nil {
+		if err := admit("physics.Sync", "AfterTargets"); err != nil {
+			return err
+		}
 		g.AfterTargets(input)
 	}
 	if g.BeforeLate != nil {
+		if err := admit("physics.Sync", "BeforeLate"); err != nil {
+			return err
+		}
 		g.BeforeLate()
+	}
+	if err := admit("physics.Sync", "scroll/ScrollForce"); err != nil {
+		return err
 	}
 	g.scroll()
 	lateSteps := 1
@@ -144,6 +193,9 @@ func (g *Game) Sync(input Inputs) error {
 		lateSteps = 2
 	}
 	for i := 0; i < lateSteps; i++ {
+		if err := admit("physics.Sync", "physics.step"); err != nil {
+			return err
+		}
 		if err := g.step(input); err != nil {
 			return err
 		}

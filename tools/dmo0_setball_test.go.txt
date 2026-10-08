@@ -1,0 +1,38 @@
+// Research-only fresh input replay, copied into an isolated native reference.
+package partyland
+import("encoding/json";"os";"testing";"reflect";"pinballfantasies/internal/physics";"pinballfantasies/internal/settings")
+func researchSetballLimit(g *Game) uint16 {if g.ResearchPartyMutation=="limit_plus_one" {return 81};return 80}
+func intsAny(v []int)[]any {o:=make([]any,len(v));for i,n:=range v{o[i]=n};return o}
+func setballFresh(t *testing.T,release,charge,right int,trace bool,mutation string) map[string]any {
+ g:=newTestGame(t);g.Configure(settings.Legacy());g.ResearchDemoEnabled=true;g.ResearchPartyMutation=mutation
+ g.Display.Content.Texts["S_GAMEOVER2"]=append([]byte(nil),postConfig.Jingle...)
+ researchScrollTexts(g)
+ rows:=[]map[string]any{};boundaries:=[]map[string]any{};events:=[]map[string]any{};drain:=0;scored:=false;prefixScoreFalse:=true;prefixResetOne:=true;roles:=map[string]int{};physicsReads:=map[string]bool{};equalityReads:=[][]any{}
+ g.Physics.ResearchTrace=func(role string,v ...int){if trace&&drain==0 {raw,_:=json.Marshal(append([]any{role},intsAny(v)...));physicsReads[string(raw)]=true};if trace&&int(g.Tick)==35998 {equalityReads=append(equalityReads,append([]any{role},intsAny(v)...))};if trace&&drain>0&&int(g.Tick)==35998&& (role=="late_before"||role=="late_after") {x:=postSnapshot(g);x["boundary"]=role;boundaries=append(boundaries,x)}}
+ snap:=func()map[string]any{v:=postSnapshot(g);v["VISAKEYS"]=false;return v}
+ g.ResearchObserve=func(role string){
+  if drain==0 {roles[role]++}
+  if role=="drain_entry" {if drain==0 {drain=int(g.Tick);scored=g.ScoreChanged}}
+  if trace&&(int(g.Tick)>=drain&&drain>0||role=="drain_entry") {v:=snap();v["boundary"]=role;boundaries=append(boundaries,v)}
+ }
+ for n:=1;n<=37200&&!g.ResearchQuit;n++ {
+  in:=physics.Inputs{Down:n<release&&(charge==0||n>=release-charge),Release:n==release,Right:n>=release&&n<release+right}
+  if err:=g.Sync(in);err!=nil {t.Fatal(err)}
+  if drain==0||n==drain {prefixScoreFalse=prefixScoreFalse&&!g.ScoreChanged;prefixResetOne=prefixResetOne&&g.ResearchResetCount==1}
+  if trace&&(n==1||n==release-1||n==release||n>=drain&&drain>0) {v:=snap();v["input"]=in;rows=append(rows,v)}
+  if trace&&len(g.Events)>0&&n>=drain&&drain>0 {events=append(events,map[string]any{"calculation":n,"events":append([]Event(nil),g.Events...)})}
+  if !trace&&drain>0 {break}
+  if mutation!=""&&n>=36002 {break}
+ }
+ final:=map[string]any{};if trace {final=snap()};return map[string]any{"prefix_score_false":prefixScoreFalse,"prefix_reset_one":prefixResetOne,"prefix_roles":roles,"prefix_physics_reads":physicsReads,"equality_physics_reads":equalityReads,"release":release,"charge":charge,"right_duration":right,"drain":drain,"scored":scored,"rows":rows,"boundaries":boundaries,"event_rows":events,"final":final,"mutation":mutation}
+}
+func TestResearchSetballSearch(t *testing.T){researchSetup()
+ // Exact fresh script selected by the saved finite release search. Neighbors
+ // are not required to exist: failed finite searches are not exclusion proofs.
+ release:=35764;a,b:=setballFresh(t,release,0,0,true,""),setballFresh(t,release,0,0,true,"")
+ if !reflect.DeepEqual(a,b){t.Fatal("nondeterministic target")}
+ if a["drain"]!=35888||a["scored"].(bool){t.Fatal("target unscored drain")}
+ out:=map[string]any{"witness":a,"deterministic_equal":true,"neighbors":[]map[string]any{setballFresh(t,35758,0,0,true,"")},"limit_plus_one":setballFresh(t,release,0,0,true,"limit_plus_one"),"matrix_replace":setballFresh(t,release,0,0,true,"matrix_replace")}
+ raw,_:=json.Marshal(out);if err:=os.WriteFile(os.Getenv("PF_SETBALL_OUTPUT"),raw,0600);err!=nil{t.Fatal(err)}
+ t.Log("target",release,a["drain"],"final",a["final"].(map[string]any)["calculation"])
+}

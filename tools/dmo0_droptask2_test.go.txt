@@ -1,0 +1,55 @@
+// Research-only template copied to an isolated canonical-A reference.
+package partyland
+import("encoding/json";"os";"testing";"reflect";"math/rand";"pinballfantasies/internal/physics";"pinballfantasies/internal/settings")
+func researchSetballLimit(g *Game)uint16{return 80}
+func researchDropLimit(g *Game)uint16{if g.ResearchPartyMutation=="wait_plus_one" {return 28};return 27}
+// Counterfactual allocator mutation only; never used in witness runs.
+func researchDropSlots(g *Game,site string)func(){reserved:=[]int{};if site=="DROPTASK2"&&g.ResearchPartyMutation=="child_later_slot" {parent:=0;for i,t:=range g.tasks{if t!=nil&&g.ResearchTaskNames[g.taskIDs[i]]=="DROPTASK1" {parent=i}};for i:=0;i<parent;i++{if g.tasks[i]==nil {reserved=append(reserved,i);g.tasks[i]=func()bool{return false}}}};return func(){for _,i:=range reserved{g.tasks[i]=nil}}}
+type dropScript struct{Release,Charge,LP,LD,LO,RP,RD,RO,ControlsEnd int}
+func dropFresh(t *testing.T,s dropScript,limit int,trace bool,mutation string)map[string]any{
+ g:=newTestGame(t);g.Configure(settings.Legacy());g.ResearchDemoEnabled=true;g.ResearchPartyMutation=mutation
+ g.Display.Content.Texts["S_GAMEOVER2"]=append([]byte(nil),postConfig.Jingle...)
+ researchScrollTexts(g)
+ capture,start,fire1,fire2:=0,0,0,0;captureLabel:="";rows:=[]map[string]any{};bs:=[]map[string]any{};events:=[]map[string]any{};reads:=[][]any{};marks:=[]map[string]any{}
+ snap:=func()map[string]any{v:=postSnapshot(g);v["clock"]=g.clock;v["SCREENFORCE"]=g.ScreenForce;v["screen_offset"]=g.Physics.ScreenOffset;v["raster"]=g.Physics.Raster;v["VISAKEYS"]=false;return v}
+ g.ResearchObserve=func(role string){
+  if role=="area_before:GROPD"&&capture==0 {capture=int(g.Tick);captureLabel="GROPD"}
+  if role=="start_drop_before"&&start==0 {start=int(g.Tick)}
+  if role=="body_after:DROPTASK1"&&fire1==0{fire1=int(g.Tick)}
+  if role=="body_after:DROPTASK2"&&fire2==0{fire2=int(g.Tick)}
+  if trace&&(capture>0&&int(g.Tick)>=capture ||int(g.Tick)>=35997){v:=snap();v["boundary"]=role;bs=append(bs,v)}
+ }
+ g.Physics.ResearchTrace=func(role string,v ...int){if trace&&int(g.Tick)==35998{r:=[]any{role};for _,n:=range v{r=append(r,n)};reads=append(reads,r);if role=="late_before"||role=="late_after"||role=="step_before"||role=="step_after" {v:=snap();v["boundary"]=role;bs=append(bs,v)}}}
+ for n:=1;n<=limit&&!g.ResearchQuit;n++{
+  in:=physics.Inputs{Down:n<s.Release&&(s.Charge==0||n>=s.Release-s.Charge),Release:n==s.Release}
+  if n>=s.Release&&((s.ControlsEnd>0&&n<=s.ControlsEnd)||(s.ControlsEnd==0&&(capture==0||n<=capture))){k:=n-s.Release;if s.LP>0{in.Left=(k+s.LO)%s.LP<s.LD};if s.RP>0{in.Right=(k+s.RO)%s.RP<s.RD}}
+  if err:=g.Sync(in);err!=nil{t.Fatal(err)}
+  for _,e:=range g.Events{if e.Kind=="Switch"||e.Kind=="MatrixStarted"||e.Kind=="TaskReady" {marks=append(marks,map[string]any{"calculation":n,"event":e})}}
+  if trace&&(n==1||n==s.Release-1||n==s.Release||capture>0&&n>=capture||n>=35997){v:=snap();v["input"]=in;rows=append(rows,v);if len(g.Events)>0 {events=append(events,map[string]any{"calculation":n,"events":append([]Event(nil),g.Events...)})}}
+  if !trace&&(fire2>0||g.Phase==BallLost){break}
+  if mutation!=""&&n>=36002{break}
+ }
+ return map[string]any{"script":s,"capture":capture,"capture_label":captureLabel,"START_DROP":start,"DROPTASK1_fire":fire1,"DROPTASK2_fire":fire2,"rows":rows,"boundaries":bs,"event_rows":events,"milestones":marks,"equality_physics_reads":reads,"final":snap(),"mutation":mutation}
+}
+func TestResearchDropSearch(t *testing.T){researchSetup();r:=rand.New(rand.NewSource(1));var found map[string]any;trials:=0
+ for i:=0;i<16000;i++{s:=dropScript{Release:33+r.Intn(128),Charge:18+r.Intn(15),LP:20+r.Intn(200),RP:20+r.Intn(200)};s.LD=r.Intn(s.LP+1);s.LO=r.Intn(s.LP);s.RD=r.Intn(s.RP+1);s.RO=r.Intn(s.RP)
+  if i<512{s=dropScript{Release:i+2}}
+  x:=dropFresh(t,s,s.Release+2000,false,"");trials++
+  if x["capture"].(int)>0&&x["DROPTASK2_fire"].(int)>0{found=dropFresh(t,s,s.Release+2200,true,"");break}
+ }
+ raw,_:=json.Marshal(map[string]any{"trials":trials,"found":found});os.WriteFile(os.Getenv("PF_DROP_OUTPUT"),raw,0600);if found==nil{t.Fatal("finite search found no tunnel; no exclusion claim")};t.Log("trials",trials,"script",found["script"],"capture",found["capture"],"start",found["START_DROP"],"fire",found["DROPTASK2_fire"])
+}
+func TestResearchDropTargetSearch(t *testing.T){researchSetup();r:=rand.New(rand.NewSource(1));var found map[string]any;trials,longTrials:=0,0
+ for i:=0;i<32000;i++ {s:=dropScript{Release:33+r.Intn(128),Charge:18+r.Intn(15),LP:20+r.Intn(200),RP:20+r.Intn(200)};s.LD=r.Intn(s.LP+1);s.LO=r.Intn(s.LP);s.RD=r.Intn(s.RP+1);s.RO=r.Intn(s.RP)
+  x:=dropFresh(t,s,s.Release+2200,false,"");trials++;f:=x["DROPTASK2_fire"].(int);if x["capture"].(int)==0||f==0||f%128!=35998%128 {continue}
+  // Only a candidate generator. Every delayed candidate is replayed fresh.
+  s.Release+=35998-f;longTrials++;x=dropFresh(t,s,36005,false,"")
+  if x["DROPTASK2_fire"]==35998 {found=x;break}
+ }
+ raw,_:=json.Marshal(map[string]any{"trials":trials,"long_trials":longTrials,"found":found});os.WriteFile(os.Getenv("PF_DROP_OUTPUT"),raw,0600);if found==nil{t.Fatal("finite timing search found no equality; no exclusion claim")};t.Log("trials",trials,"long",longTrials,"script",found["script"],"capture",found["capture"],"start",found["START_DROP"],"fire",found["DROPTASK2_fire"])
+}
+func TestResearchDropWitness(t *testing.T){researchSetup();raw,_:=os.ReadFile(os.Getenv("PF_DROP_SCRIPT"));var s dropScript;json.Unmarshal(raw,&s)
+ a,b:=dropFresh(t,s,37500,true,""),dropFresh(t,s,37500,true,"");if !reflect.DeepEqual(a,b){t.Fatal("nondeterministic input replay")};if a["DROPTASK2_fire"]!=35998{t.Fatal("wrong first equality")}
+ short:=dropScript{Release:124,Charge:27,LP:119,LD:59,LO:63,RP:208,RD:47,RO:117,ControlsEnd:331};c,d:=dropFresh(t,short,519,true,""),dropFresh(t,short,519,true,"");if !reflect.DeepEqual(c,d){t.Fatal("nondeterministic first capture")};
+ out:=map[string]any{"witness":a,"deterministic_equal":true,"any_capture":c,"any_capture_deterministic_equal":true,"wait_plus_one":dropFresh(t,s,36002,true,"wait_plus_one"),"drop_state":dropFresh(t,s,36002,true,"drop_state"),"clear_hold":dropFresh(t,s,36002,true,"clear_hold"),"child_later_slot":dropFresh(t,s,36002,true,"child_later_slot")};raw,_=json.Marshal(out);os.WriteFile(os.Getenv("PF_DROP_OUTPUT"),raw,0600);t.Log("script",s,"capture",a["capture"],"start",a["START_DROP"],"drop1",a["DROPTASK1_fire"],"drop2",a["DROPTASK2_fire"],"final",a["final"].(map[string]any)["calculation"])
+}

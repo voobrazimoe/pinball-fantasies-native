@@ -83,6 +83,15 @@ public final class DataImportTest {
             importer.install(new Source());
             check(importer.data().list().length == 12);
             check(new File(importer.data(), "PINBALL.CFG").isFile());
+            // A selection without TABLE2-4.PRG is offered as the 10-minute demo.
+            Source demo = new Source(); demo.names.remove("pinball.cfg");
+            for (String name : Arrays.asList("table2.prg", "table2.mod", "table3.prg", "table3.mod", "table4.prg", "table4.mod"))
+                demo.names.remove(name);
+            check(DataImport.requiredFor(DataImport.select(demo.entries())).equals(DataImport.DEMO));
+            importer.install(demo); check(importer.data().list().length == 5);
+            Source partial = new Source(); partial.names.remove("table2.prg");
+            rejects(() -> importer.install(partial)); check(importer.data().list().length == 5);
+            importer.install(new Source()); check(importer.data().list().length == 12);
             // Failed initial rename leaves Data at its original path.
             DataImport firstRenameFailure = new DataImport(storage, state, engine, (from, to) -> {
                 throw new IOException("injected initial rename failure");
