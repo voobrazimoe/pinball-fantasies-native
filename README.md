@@ -8,14 +8,14 @@ First public beta of a native, source-guided reimplementation of the DOS version
 
 ## Quick start
 
-Download the published [v0.1.3 prerelease](https://github.com/voobrazimoe/pinball-fantasies-native/releases/tag/v0.1.3) for your platform:
+Download the published [v0.1.4 prerelease](https://github.com/voobrazimoe/pinball-fantasies-native/releases/tag/v0.1.4) for your platform:
 
-- [Windows x86_64: pinballfantasies.exe](https://github.com/voobrazimoe/pinball-fantasies-native/releases/download/v0.1.3/pinballfantasies.exe)
-- [Linux x86_64: PinballFantasies-x86_64.AppImage](https://github.com/voobrazimoe/pinball-fantasies-native/releases/download/v0.1.3/PinballFantasies-x86_64.AppImage)
-- [macOS Apple Silicon ARM64: PinballFantasies-arm64.zip](https://github.com/voobrazimoe/pinball-fantasies-native/releases/download/v0.1.3/PinballFantasies-arm64.zip)
-- [macOS Intel x86_64: PinballFantasies-x86_64.zip](https://github.com/voobrazimoe/pinball-fantasies-native/releases/download/v0.1.3/PinballFantasies-x86_64.zip)
-- [Android ARM64 + x86_64: PinballFantasies-android.apk](https://github.com/voobrazimoe/pinball-fantasies-native/releases/download/v0.1.3/PinballFantasies-android.apk)
-- [SHA256 checksums](https://github.com/voobrazimoe/pinball-fantasies-native/releases/download/v0.1.3/SHA256SUMS.txt)
+- [Windows x86_64: pinballfantasies.exe](https://github.com/voobrazimoe/pinball-fantasies-native/releases/download/v0.1.4/pinballfantasies.exe)
+- [Linux x86_64: PinballFantasies-x86_64.AppImage](https://github.com/voobrazimoe/pinball-fantasies-native/releases/download/v0.1.4/PinballFantasies-x86_64.AppImage)
+- [macOS Apple Silicon ARM64: PinballFantasies-arm64.zip](https://github.com/voobrazimoe/pinball-fantasies-native/releases/download/v0.1.4/PinballFantasies-arm64.zip)
+- [macOS Intel x86_64: PinballFantasies-x86_64.zip](https://github.com/voobrazimoe/pinball-fantasies-native/releases/download/v0.1.4/PinballFantasies-x86_64.zip)
+- [Android ARM64 + x86_64: PinballFantasies-android.apk](https://github.com/voobrazimoe/pinball-fantasies-native/releases/download/v0.1.4/PinballFantasies-android.apk)
+- [SHA256 checksums](https://github.com/voobrazimoe/pinball-fantasies-native/releases/download/v0.1.4/SHA256SUMS.txt)
 
 Every build starts by offering a choice until the full game is installed: **import the full game** from your original DOS folder, or **play the bundled 10-minute demo**. Imported files are validated and copied into the app's own storage; the choice no longer appears once the full game is imported.
 
@@ -34,7 +34,7 @@ chmod +x PinballFantasies-x86_64.AppImage
 
 ## Android quick start
 
-Download the public `PinballFantasies-android.apk` from the v0.1.3 prerelease above:
+Download the public `PinballFantasies-android.apk` from the v0.1.4 prerelease above:
 
 1. Install the APK and open Pinball Fantasies (Android 8.1 or later).
 2. Tap **Import DOS folder** and choose the folder containing the supported original DOS files listed below, or tap **Play 10-minute demo**.
