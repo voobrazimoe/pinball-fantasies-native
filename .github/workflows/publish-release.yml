@@ -1,0 +1,52 @@
+name: Draft public prerelease
+# Collects the asset-free packages that the Desktop release candidate, macOS
+# native hosts and Android host workflows built for the dispatched commit, and
+# creates a DRAFT prerelease. Nothing is public until the owner presses Publish.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag, e.g. v0.1.4 (docs/release-notes-<tag>.md must exist)'
+        required: true
+permissions:
+  contents: write
+  actions: read
+jobs:
+  draft:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ inputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Refuse an existing tag or release
+        run: |
+          test -f "docs/release-notes-${TAG}.md"
+          if git ls-remote --exit-code --tags origin "refs/tags/${TAG}"; then echo "tag ${TAG} exists"; exit 1; fi
+          if gh release view "${TAG}" >/dev/null 2>&1; then echo "release ${TAG} exists"; exit 1; fi
+      - name: Download packages built from this exact commit
+        run: |
+          set -eu
+          mkdir -p dl stage
+          for workflow in release-candidate.yml macos.yml android-host.yml public.yml; do
+            run=$(gh run list --workflow "$workflow" --commit "$GITHUB_SHA" --status success --limit 1 --json databaseId --jq '.[0].databaseId')
+            if [ -z "$run" ] || [ "$run" = null ]; then echo "no successful $workflow run for $GITHUB_SHA"; exit 1; fi
+            echo "$workflow: run $run"
+            if [ "$workflow" != public.yml ]; then gh run download "$run" --dir "dl/$workflow"; fi
+          done
+          cp dl/release-candidate.yml/PinballFantasies-windows-linux-public/windows/pinballfantasies.exe stage/
+          cp dl/release-candidate.yml/PinballFantasies-windows-linux-public/linux/PinballFantasies-x86_64.AppImage stage/
+          cp dl/macos.yml/PinballFantasies-macos-arm64-adhoc/PinballFantasies-arm64.zip stage/
+          cp dl/macos.yml/PinballFantasies-macos-x86_64-adhoc/PinballFantasies-x86_64.zip stage/
+          cp dl/android-host.yml/PinballFantasies-android-public/app-debug.apk stage/PinballFantasies-android.apk
+          cd stage
+          sha256sum pinballfantasies.exe PinballFantasies-x86_64.AppImage \
+            PinballFantasies-arm64.zip PinballFantasies-x86_64.zip \
+            PinballFantasies-android.apk > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+      - name: Create draft prerelease
+        run: |
+          gh release create "${TAG}" stage/* --draft --prerelease \
+            --target "$GITHUB_SHA" --title "Pinball Fantasies ${TAG}" \
+            --notes-file "docs/release-notes-${TAG}.md"

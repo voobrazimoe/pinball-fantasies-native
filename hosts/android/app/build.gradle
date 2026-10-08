@@ -27,8 +27,8 @@ android {
         targetSdk 36
         manifestPlaceholders = [appLabel: personalAssets != null ? 'Pinball Fantasies (Personal)' : '@string/app_name']
         testInstrumentationRunner 'io.github.voobrazimoe.pinballfantasies.ImportInstrumentation'
-        versionCode 3
-        versionName '0.1.3'
+        versionCode 4
+        versionName '0.1.4'
 
         ndk {
             abiFilters 'arm64-v8a', 'x86_64'

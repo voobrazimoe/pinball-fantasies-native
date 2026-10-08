@@ -39,12 +39,16 @@ Download the public `PinballFantasies-android.apk` from the v0.1.3 prerelease ab
 3. The app validates and copies the 11 required PRG/MOD files and optional `PINBALL.CFG` into private app storage; the supplied originals remain unchanged.
 4. Launch a table using the contextual touch controls, or attach a physical keyboard. Touch panels automatically hide while an external keyboard is active.
 
-Commercial files are not bundled. Only the validated canonical DOS layout is
-supported; `21STCENT/FANTASY` data is not compatible. The universal APK contains
+Commercial files are not bundled. The universal APK contains
 arm64-v8a and x86_64, is development-signed, and supports 16 KB page-size devices.
 See [Android usage](docs/android.md) and the [candidate preparation record](docs/release-v0.1.3.md).
 
-The supported installation provides these 11 required PRG/MOD runtime files:
+Four DOS installations are supported: the original retail release, the Power Pack
+`21STCENT/FANTASY` set, and both Deluxe CD `PFD/FANTASY` sets (including the GOG
+copy). Point the app at the folder holding the game files; the layout is detected
+automatically. See [runtime data](docs/runtime-data.md) for details.
+
+Each supported installation provides these 11 required PRG/MOD runtime files:
 
 ```text
 INTRO.PRG  INTRO.MOD  MOD2.MOD
