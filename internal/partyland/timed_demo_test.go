@@ -1,7 +1,6 @@
 package partyland
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -221,45 +220,22 @@ func TestTimedDemoPlayedSession(t *testing.T) {
 	t.Logf("played session: %d drains, QUIT at timer %d, score %s", drains, c, g.Score)
 }
 
-// Native multiplayer: players take turns like the full game, with no ball
-// limit; the demo ball counter advances once per round.
-func TestTimedDemoMultiplayerRotates(t *testing.T) {
+// Attract F1-F8 set PLAYERS, but DEMOVER_CHANGE_PLAYER never rotates PLAYER.
+func TestTimedDemoMultiplayerKeepsPlayerOne(t *testing.T) {
 	g := timedDemoFixture(t)
-	g.StartPlayers(3)
-	if g.PlayerCount() != 3 || g.playerPanel() != "SHOWPLAYERSTS" {
-		t.Fatal(g.PlayerCount(), g.playerPanel())
+	g.StartPlayers(4)
+	if g.PlayerCount() != 4 {
+		t.Fatal(g.PlayerCount())
 	}
-	ball := func() string {
-		b := g.Display.Content.Texts["BALLSTEXT"]
-		return string([]byte{b[4], b[5]})
-	}
-	g.Score = Number(1000)
-	var order []int
-	for i := 0; i < 7; i++ {
+	for i := 0; i < 12; i++ {
 		if !g.demoChangePlayer() {
 			t.Fatal("demo continuation rejected")
 		}
 		g.tasks = [50]func() bool{}
 		g.waitCounters = make(map[string]uint16)
-		order = append(order, g.Session.CurrentPlayer)
-		if p := g.Display.Content.Texts["PLAYERSTEXT"]; p[7] != byte(g.Session.CurrentPlayer)+'7' {
-			t.Fatalf("panel shows %q for player %d", p, g.Session.CurrentPlayer)
+		if g.Session.CurrentPlayer != 1 || g.BallNumber != 1 {
+			t.Fatal("player rotated", g.Session.CurrentPlayer)
 		}
-		if i == 1 && ball() != " 8" || i == 2 && ball() != " 9" {
-			t.Fatalf("round %d ball %q", i, ball())
-		}
-	}
-	if fmt.Sprint(order) != "[2 3 1 2 3 1 2]" || g.Phase == GameOver {
-		t.Fatal(order)
-	}
-	// Scores are saved per player.
-	if s := g.Session.Players[0].Score; s.Uint64() != 1000 || g.Score.Uint64() != 0 {
-		t.Fatal(s, g.Score)
-	}
-	single := timedDemoFixture(t)
-	single.StartPlayers(1)
-	if single.playerPanel() != "DEMO_SHOWPLAYERSTS" || single.firstPlayersPanel() != "DEMO_FIRST_NO_OF_PLAYERSTS" {
-		t.Fatal("single player keeps the demo panels")
 	}
 }
 
@@ -274,11 +250,7 @@ func TestTimedDemoPlayersPanel(t *testing.T) {
 		if string(got) == placeholder || got[8] != byte(n)+'7' {
 			t.Fatalf("%d players: %q", n, got)
 		}
-		want := "DEMO_FIRST_NO_OF_PLAYERSTS"
-		if n > 1 {
-			want = "FIRST_NO_OF_PLAYERSTS" // multiplayer shows PLAYER n, full-game layout
-		}
-		if !demoEvent(g, "MatrixStarted", want) {
+		if !demoEvent(g, "MatrixStarted", "DEMO_FIRST_NO_OF_PLAYERSTS") {
 			t.Fatal(g.Events)
 		}
 		g.Events = g.Events[:0]

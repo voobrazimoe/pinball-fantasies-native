@@ -78,17 +78,14 @@ func timedDemoPanels() map[string][]presentation.Command {
 }
 
 func (g *Game) firstPlayersPanel() string {
-	if g.timed != nil && g.Session.PlayerCount <= 1 {
+	if g.timed != nil {
 		return "DEMO_FIRST_NO_OF_PLAYERSTS"
 	}
 	return "FIRST_NO_OF_PLAYERSTS"
 }
 
-// Multiplayer is a native extension: the demo binary never rotates PLAYER.
-// A multiplayer demo uses the full game's PLAYER n / BALL m panel so the
-// players can see whose turn it is; single player keeps the demo panel.
 func (g *Game) playerPanel() string {
-	if g.timed != nil && g.Session.PlayerCount <= 1 {
+	if g.timed != nil {
 		return "DEMO_SHOWPLAYERSTS"
 	}
 	return "SHOWPLAYERSTS"
@@ -192,28 +189,17 @@ func (g *Game) demoChangePlayer() (handled bool) {
 	if g.timed == nil || g.Lights[51] || g.matchBall {
 		return false
 	}
-	g.savePlayer()
-	// Native multiplayer: rotate like the full game, without a ball limit.
-	// The displayed ball advances once per round, i.e. when player 1 is next.
-	s := &g.Session
-	if s.PlayerCount > 1 {
-		s.SelectionOpen = false
-		s.CurrentPlayer = s.CurrentPlayer%s.PlayerCount + 1
-		g.LoadPlayerState(s.Load())
-	}
-	if s.CurrentPlayer == 1 {
-		text := g.Display.MutableText("BALLSTEXT", 6)
-		text[5]++
-		if text[5] >= '7'+10 {
-			text[5] = '7'
-			if text[4] == '8' {
-				text[4]++
-			} else {
-				text[4] = '8'
-			}
+	text := g.Display.MutableText("BALLSTEXT", 6)
+	text[5]++
+	if text[5] >= '7'+10 {
+		text[5] = '7'
+		if text[4] == '8' {
+			text[4]++
+		} else {
+			text[4] = '8'
 		}
 	}
-	g.playerText()
+	g.savePlayer()
 	g.waitAt("NEW_BALL_TASK", 30, g.newBall)
 	return true
 }
@@ -233,10 +219,6 @@ func (g *Game) demoPlayerText(ballsText []byte) {
 		return
 	}
 	g.Display.Content.Texts["PLAYERSTEXT"] = append([]byte(nil), g.timed.playersText...)
-	if g.Session.PlayerCount > 1 {
-		// The full game's player label, glyph digit '7'+n.
-		g.Display.Content.Texts["PLAYERSTEXT"] = []byte{'P', 'L', 'A', 'Y', 'E', 'R', ' ', byte(g.Session.CurrentPlayer) + '7', 0}
-	}
 	if ballsText != nil {
 		g.Display.Content.Texts["BALLSTEXT"] = ballsText
 	}
