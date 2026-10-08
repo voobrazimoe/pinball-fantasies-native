@@ -26,6 +26,10 @@ RECORDS = {
     "EXPIRY_TEXT1": (DS + 7313, 99),         # scroll, 255 terminated
     "EXPIRY_TEXT2": (DS + 7412, 89),
 }
+# Demo-only INTRO records: SHOWTEXT pages (12 zero-terminated rows) and the
+# selector/options sidebar record (two 120-byte blocks of 12-column rows).
+INTRO_PAGES = {"WELCOME_PAGE": 0x580D, "AVAILABLE_PAGE": 0x5869}
+INTRO_SIDEBAR = (0x396D3, 240)
 
 
 def sha(b):
@@ -92,15 +96,24 @@ def main():
     for name, (at, n) in RECORDS.items():
         records[name] = {"source": at, "size": n, "sha256": sha(table[at:at + n])}
 
-    intro_regions = []
+    intro_regions, pictures = [], []
     for f in evidence["intro_forms"]:
         if sha(intro[f["offset"]:f["offset"] + f["size"]]) != f["sha256"]:
             sys.exit(f"INTRO {f['role']} differs")
         intro_regions.append({"offset": f["offset"], "size": f["size"], "purpose": "FORM " + f["role"], "sha256": f["sha256"]})
+        pictures.append({"offset": f["offset"], "kind": f["kind"].ljust(4), "width": f["width"], "height": f["height"], "planes": f["planes"]})
+    intro_records = {}
+    for name, at in INTRO_PAGES.items():
+        end = at
+        for _ in range(12):
+            end = intro.index(0, end) + 1
+        intro_records[name] = {"source": at, "size": end - at, "sha256": sha(intro[at:end])}
+    at, n = INTRO_SIDEBAR
+    intro_records["SIDEBAR"] = {"source": at, "size": n, "sha256": sha(intro[at:at + n])}
 
     out = {
         "profile": PROFILE,
-        "intro": {"regions": intro_regions},
+        "intro": {"regions": intro_regions, "pictures": pictures, "records": intro_records},
         "table1": {"decoded_size": decoded_size,
                    "copies": [{"destination": d, "source": s, "size": n} for d, s, n in merged],
                    "jingles": jingles, "reviewed": reviewed, "records": records},

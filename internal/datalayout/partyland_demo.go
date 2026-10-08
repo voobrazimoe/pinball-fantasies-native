@@ -23,7 +23,11 @@ type demoRecord struct {
 // Generated offline by tools/partyland_demo_layout.py from reviewed evidence.
 // It holds offsets, typed jingle values and identities, never original bytes.
 var partyLandDemo = func() (l struct {
-	Intro  struct{ Regions []Region }
+	Intro struct {
+		Regions  []Region
+		Pictures []Picture
+		Records  map[string]demoRecord
+	}
 	Table1 struct {
 		DecodedSize int `json:"decoded_size"`
 		Copies      []recordCopy
@@ -78,18 +82,48 @@ func partyLandDemoProfile(source bool) Profile {
 func validatePartyLandDemo(name string, data []byte) error {
 	switch name {
 	case "INTRO.PRG":
-		return validateProfile(name, data, Profile{Profile: PartyLandDemoProfile, Regions: partyLandDemo.Intro.Regions})
+		return validateProfile(name, data, partyLandDemoIntro())
 	case "TABLE1.PRG":
 		return validateProfile(name, data, partyLandDemoProfile(true))
 	}
 	return fmt.Errorf("%s: not part of the %s installation", name, PartyLandDemoProfile)
 }
 
-func translatePartyLandDemo(name string, data []byte) ([]byte, error) {
-	if name != "TABLE1.PRG" {
-		return nil, fmt.Errorf("no decoded %s presentation in the demo profile", name)
+// The demo INTRO is consumed in place: its pictures and text records have
+// their own reviewed positions, described by DecodedFrontendLayout.
+func partyLandDemoIntro() Profile {
+	p := Profile{Profile: PartyLandDemoProfile, Regions: append([]Region(nil), partyLandDemo.Intro.Regions...), Pictures: partyLandDemo.Intro.Pictures}
+	for name, r := range partyLandDemo.Intro.Records {
+		p.Regions = append(p.Regions, Region{Offset: r.Source, Size: r.Size, Purpose: "demo record " + name, SHA256: r.SHA256})
 	}
-	return translateRecords(partyLandDemoLinked(), data)
+	return p
+}
+
+func translatePartyLandDemo(name string, data []byte) ([]byte, error) {
+	switch name {
+	case "INTRO.PRG":
+		return append([]byte(nil), data...), nil
+	case "TABLE1.PRG":
+		return translateRecords(partyLandDemoLinked(), data)
+	}
+	return nil, fmt.Errorf("%s: not part of the %s installation", name, PartyLandDemoProfile)
+}
+
+// demoFrontendLayout reads the demo's own selector text: the welcome and
+// availability SHOWTEXT pages (12 rows each) and the sidebar/options record.
+func demoFrontendLayout(data []byte) FrontendLayout {
+	l := FrontendLayout{Pictures: append([]Picture(nil), partyLandDemo.Intro.Pictures...), StartupLowerY: 139}
+	r := partyLandDemo.Intro.Records["SIDEBAR"]
+	l.SidebarOffset = r.Source
+	for _, name := range []string{"WELCOME_PAGE", "AVAILABLE_PAGE"} {
+		r := partyLandDemo.Intro.Records[name]
+		var page []string
+		for _, row := range bytes.Split(data[r.Source:r.Source+r.Size-1], []byte{0}) {
+			page = append(page, string(row))
+		}
+		l.TextPages = append(l.TextPages, page)
+	}
+	return l
 }
 
 // DetectDemoInstallation accepts only the coherent demo pair. Retail and

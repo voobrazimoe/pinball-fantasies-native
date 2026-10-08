@@ -331,7 +331,7 @@ func (v *View) selectorFrame(m *Model) *image.RGBA {
 	} else {
 		lines := v.textPage(m)
 		y := 14
-		high := highTextPage(m.TextPage)
+		high := v.demoTextPages() == nil && highTextPage(m.TextPage)
 		font := v.Art.Font
 		level := 63
 		if m.TextTick < 45 {
@@ -387,7 +387,18 @@ func highTextPage(page int) bool {
 	return page == 1 || page == 2 || page == 5 || page == 6 || page == 9 || page == 10
 }
 
+// demoTextPages is the demo's own SHOWTEXT cycle, nil for full installations.
+func (v *View) demoTextPages() [][]string {
+	if v.Art == nil {
+		return nil
+	}
+	return v.Art.TextPages
+}
+
 func (v *View) textPage(m *Model) []string {
+	if pages := v.demoTextPages(); pages != nil {
+		return pages[(m.TextPage+len(pages)-1)%len(pages)]
+	}
 	if highTextPage(m.TextPage) {
 		var lines []string
 		names := []string{"PARTY LAND", "SPEED DEVILS", "BILLION DOLLAR", "STONES N BONES"}

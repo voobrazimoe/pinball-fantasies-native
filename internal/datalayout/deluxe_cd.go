@@ -84,16 +84,21 @@ func deluxeDecodedProfile(name string) Profile {
 type FrontendLayout struct {
 	Pictures      []Picture
 	StartupLowerY int
+	SidebarOffset int        // selector sidebar, then options sidebar, 120 bytes each
+	TextPages     [][]string // non-nil: this edition's own SHOWTEXT cycle
 }
 
 func DecodedFrontendLayout(data []byte) (FrontendLayout, error) {
+	if validateProfile("INTRO.PRG", data, partyLandDemoIntro()) == nil {
+		return demoFrontendLayout(data), nil
+	}
 	for _, p := range []Profile{profiles["INTRO.PRG"], deluxeDecodedProfile("INTRO.PRG")} {
 		if err := validateProfile("INTRO.PRG", data, p); err == nil {
 			lowerY := 139
 			if p.Profile == DeluxeCDProfile {
 				lowerY = 123
 			}
-			return FrontendLayout{Pictures: append([]Picture(nil), p.Pictures...), StartupLowerY: lowerY}, nil
+			return FrontendLayout{Pictures: append([]Picture(nil), p.Pictures...), StartupLowerY: lowerY, SidebarOffset: 233806}, nil
 		}
 	}
 	return FrontendLayout{}, fmt.Errorf("INTRO.PRG: unsupported decoded presentation layout")

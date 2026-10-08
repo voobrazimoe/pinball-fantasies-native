@@ -22,7 +22,8 @@ missing-file error. A demo/full hybrid is rejected by both detectors.
 
 Detection is layout-based, like the B/C/D editions:
 
-- `INTRO.PRG`: the 17 FORM records at their demo offsets, by SHA-256.
+- `INTRO.PRG`: the 17 FORM records at their demo offsets, the two SHOWTEXT
+  pages and the sidebar/options record, by SHA-256.
 - `TABLE1.PRG`: every canonical read-map consumer (1,632 regions and the four
   playfield FORMs) relocated to its demo offset, with the canonical identity
   hashes; the two typed jingle differences; the five reviewed code ranges
@@ -47,14 +48,14 @@ bytes, 255-terminated, glyph-map checked).
 | --- | --- |
 | Demo timer DS:34cd | `uint16`, table lifetime. Starts at 0 for a fresh table and is never reset by new ball or game. One increment per admitted ElectronicsCalculation: after UPDATE_COUNTERS, before areas/targets during play; once per sync while the ball is lost, including the draining sync. Pause, attract, QUIT and game over do not count. |
 | Equality at exactly 35998 | Increment, then exact compare. Sets sticky `expired`, source HOLDSTILL (native ball hold), plays `S_GAMEOVER2` (13,0,255) from the decoded record, then DO_MATRIX of the expiry entry as a fresh install. |
-| Expiry program 0x1ba17 | CLEAR4, SCROLL text 1, FLASHON 1, PRINT13_NUMBER score at 344, WAIT 100, FLASHOFF 1, SCROLL text 2, FADE 256, WAIT 100, QUIT 0. The shared interpreter runs everything except FADE and QUIT. FADE scales a VGA DAC snapshot taken when it starts, with audio volume steps every 16 visits; the DAC stays black through the final WAIT. QUIT(0) ends the program, as the DOS demo exits to DOS. |
+| Expiry program 0x1ba17 | CLEAR4, SCROLL text 1, FLASHON 1, PRINT13_NUMBER score at 344, WAIT 100, FLASHOFF 1, SCROLL text 2, FADE 256, WAIT 100, QUIT 0. The shared interpreter runs everything except FADE and QUIT. FADE scales a VGA DAC snapshot taken when it starts, with audio volume steps every 16 visits; the DAC stays black through the final WAIT. QUIT(0) returns to a fresh INTRO, as the DOS launcher does. |
 | Repeated equality | Natural `uint16` wraparound. Equality again at the next 35998 reinstalls expiry; an unequal counter never clears `expired`. |
 | `S_EMPTY` priority 0 | Decoded jingle record (A has priority 1). |
 | Expired scored drain | Effect 0x1a4a1 in place of LOSTBALL: cue `S_GAMEOVER2`, zero arithmetic, matrix = expiry entry. It installs only when admitted by the cue, INH_EFF and SPECIALMODE guards. Unscored drains still select PARTY_ON before the expired guard. |
 | DEMOVER_CHANGE_PLAYER | At `_CHANGE_PLAYER`: keeps the player, advances the displayed ball counter (1..9, 10..19, 20..29, then 10 again), saves the player and queues NEW_BALL_TASK wait 30. There is no ball limit and no canonical player/ball advance. |
 | Demo panels | The NODOT idle panel prints the duration label at 340 with the never-written players record (DS:1e8b). The NEW_BALL reset panel (0x1b88e) prints the label at 336 with the demo ball counter. |
 | NEW_BALL reset | Sets SPRING_VALID as in the reviewed demo reset. |
-| Pause / abort | P suspends updates: timer, expired, matrix and session are unchanged, and audio is silent. Esc asks to quit; Y quits; any other key resumes. |
+| Pause / abort | P suspends updates: timer, expired, matrix and session are unchanged, and audio is silent. Esc asks to quit; Y returns to the selector; any other key resumes. |
 | High scores | Volatile factory values; no HI load or save. |
 
 Cross-checks against the research candidate (`demodev`, private: demo and A):
@@ -86,11 +87,32 @@ These paths run the full-game Party Land rules unchanged:
   hold.
 - The fade snapshots the live DAC at FADE. The research candidate snapshots it
   at load time, so lit lamps differ.
-- Settings: the accepted Legacy reference (high mode, low angle, soft scroll).
-  The demo's own options page is not reproduced.
-- Not reproduced: the INTRO selector, attract, advertising cards, options,
-  multiplayer (F1-F8), cheats and the launcher's closing message. The demo
-  enters Party Land directly.
+- Options: the native options page and persisted native settings (balls,
+  angle, scrolling, music, resolution). The demo options page also lists a
+  colour-mode row, which is not reproduced; the ball count is shown but the
+  demo continuation never reads it.
+- Not reproduced: multiplayer (F1-F8 in the chute), cheats and the launcher's
+  closing message.
+
+## INTRO, selector and options
+
+The demo starts with its own INTRO, through the shared native front end:
+
+- Startup sequence and music from the demo `INTRO.PRG`/`INTRO.MOD`. The
+  pictures are consumed in place at their reviewed demo offsets.
+- Selector pairs with the demo's cards: Party Land, and the Speed Devils,
+  Billion Dollar Gameshow and Stones 'N Bones advertising cards with
+  NOT AVAILABLE across them. F2-F4 do nothing; TABLE2-4 have no factory.
+- Sidebar text from the demo record (`F1 - PARTY LAND`, `F5 - OPTIONS`,
+  `ESC - QUIT`, then the options help), read from the user's file.
+- SHOWTEXT cycle of the demo's two pages, welcome and availability, read from
+  the user's file. There is no high-score or credits page in the demo cycle.
+- F1 loads Party Land's attract; any start key starts one player.
+- High scores are volatile factory values: no HI load or save.
+- In play, P pauses and Esc asks to quit, with Y returning to the selector, as in
+  the full game. The linked QUIT(0) after expiry returns to a fresh INTRO, as
+  the DOS launcher runs INTRO again. Each table entry is a new table lifetime
+  (timer 0, not expired).
 
 Unpaused termination is not guaranteed in general (DMO0: universal liveness
 UNKNOWN). A session ends by QUIT, by the player quitting, or through a

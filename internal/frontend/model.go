@@ -117,6 +117,9 @@ type Model struct {
 	ReturnMode                           Mode
 	PauseDelay                           int
 	audioMode                            Mode
+	// Demo is the official 10-minute demo INTRO: Party Land only, single
+	// player, its own two SHOWTEXT pages, and QUIT returning to INTRO.
+	Demo bool
 }
 
 func New(store Store, factory Factory) (*Model, error) {
@@ -169,6 +172,15 @@ func (m *Model) selector() {
 	m.SidebarTick = 0
 }
 func (m *Model) start() error { return m.startPlayers(1) }
+
+// restartIntro is a fresh INTRO process after the demo's QUIT.
+func (m *Model) restartIntro() {
+	m.End = Completed
+	m.Session, m.sessionSynced = nil, false
+	m.Mode, m.Counter = Startup, 540
+	m.Segment, m.SegmentTick, m.IntroClock = 0, 0, 0
+	m.Page, m.PreviousPage, m.TextPage, m.Reveal, m.SidebarTick = 0, 0, 0, 0, 0
+}
 func (m *Model) startPlayers(count int) error {
 	s, e := m.tableFactory()(m.Scores[m.Selected-1][0].Digits)
 	if e != nil {
@@ -218,7 +230,7 @@ func (m *Model) startPlayers(count int) error {
 	m.scoreQueue = nil
 	m.highscorePlayed = false
 	m.scorePlayer = 1
-	m.selectionOpen, m.selectionDelay = true, 15
+	m.selectionOpen, m.selectionDelay = !m.Demo, 15
 	m.Mode = Playing
 	m.End = Active
 	return nil
@@ -359,6 +371,9 @@ func (m *Model) Update(in Input) error {
 				m.openOptions()
 				break
 			}
+			if m.Demo && k >= F2 && k <= F4 {
+				break // the demo selector has no branches to the unavailable tables
+			}
 			if k >= F1 && k <= F4 {
 				if e := m.loadTable(int(k-F1) + 1); e != nil {
 					return e
@@ -413,7 +428,7 @@ func (m *Model) Update(in Input) error {
 					}
 				}
 				count := 1
-				if k != Enter {
+				if k != Enter && !m.Demo {
 					count = int(k-F1) + 1
 				}
 				if e := m.startPlayers(count); e != nil {
@@ -552,6 +567,11 @@ func (m *Model) Update(in Input) error {
 			return e
 		}
 		matrixTestTrace(m)
+		if g, ok := m.Session.(interface{ DemoFinished() bool }); ok && g.DemoFinished() {
+			// Linked QUIT(0): TABLE1 exits and the launcher runs INTRO again.
+			m.restartIntro()
+			return nil
+		}
 		if d, done := m.Session.Result(); done {
 			m.Final = d
 			m.End = Completed
@@ -627,7 +647,12 @@ func (m *Model) advanceSelector(enter bool) {
 	m.Page ^= 1
 	// INTRO/TEXTLISTA has ten entries after its dynamic HITEXT slot.
 	// TEXTPEK starts at slot1 and wraps at the following zero terminator.
-	m.TextPage = m.TextPage%10 + 1
+	// The demo list has two entries: welcome and availability.
+	if m.Demo {
+		m.TextPage = m.TextPage%2 + 1
+	} else {
+		m.TextPage = m.TextPage%10 + 1
+	}
 	if enter {
 		m.Mode = Selector
 		m.Counter = 540
