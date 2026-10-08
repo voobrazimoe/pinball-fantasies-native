@@ -31,6 +31,18 @@ public final class ImportInstrumentation extends Instrumentation {
                     && touch.getVisibility()==android.view.View.VISIBLE);
             shell.present(true,false,true,menu,touch);
             check(touch.getVisibility()==android.view.View.GONE);
+            check(shell.demoButton==null);
+            FirstRunShell choice = new FirstRunShell(getTargetContext(), () -> {}, () -> {});
+            choice.present(false,false,false,menu,touch);
+            check(choice.button.isEnabled() && choice.demoButton.isEnabled()
+                    && choice.demoButton.getText().toString().equals("Play 10-minute demo"));
+            choice.startingDemo = true;
+            choice.present(false,true,false,menu,touch);
+            check(!choice.button.isEnabled() && !choice.demoButton.isEnabled()
+                    && choice.demoButton.getText().toString().equals("Starting demo…")
+                    && choice.button.getText().toString().equals("Import DOS folder"));
+            try { check(getTargetContext().getAssets().list("demo").length == 6); }
+            catch (IOException failure) { throw new AssertionError(failure); }
         });
     }
     private void testOverlay() {

@@ -97,20 +97,32 @@ BOOL pf_storage_prepare_at(NSString *base,NSString *resources,NSString **data,NS
     NSString *bundled=[resources stringByAppendingPathComponent:@"Data"];
     if ([fm fileExistsAtPath:bundled])
         return pf_import_assets(bundled,*data,pf_validate_assets,error);
+    /* Public builds carry the official 10-minute demo. Playing it never
+       counts as an import, so the choice returns until the full game is added. */
+    NSString *demo=[resources stringByAppendingPathComponent:@"Demo"];
+    BOOL hasDemo=[fm fileExistsAtPath:[demo stringByAppendingPathComponent:@"TABLE1.PRG"]];
     while (YES) {
         NSAlert *explanation=[NSAlert new]; explanation.messageText=@"Original game files are required";
-        explanation.informativeText=@"Select the folder containing your original DOS Pinball Fantasies INTRO.PRG, INTRO.MOD, MOD2.MOD and TABLE1–4 PRG/MOD files, or the official 10-minute Party Land demo (INTRO, MOD2 and TABLE1 files only). Validated files will be copied to Application Support. Game data is not included.";
-        [explanation addButtonWithTitle:@"Choose Files…"]; [explanation addButtonWithTitle:@"Quit"];
-        if ([explanation runModal]!=NSAlertFirstButtonReturn) return NO;
+        explanation.informativeText=hasDemo
+            ? @"Import the full game from the folder containing your original DOS Pinball Fantasies INTRO.PRG, INTRO.MOD, MOD2.MOD and TABLE1–4 PRG/MOD files, or play the official 10-minute Party Land demo included with this app. Imported files are validated and copied to Application Support."
+            : @"Select the folder containing your original DOS Pinball Fantasies INTRO.PRG, INTRO.MOD, MOD2.MOD and TABLE1–4 PRG/MOD files, or the official 10-minute Party Land demo (INTRO, MOD2 and TABLE1 files only). Validated files will be copied to Application Support. Game data is not included.";
+        [explanation addButtonWithTitle:hasDemo?@"Import Full Game…":@"Choose Files…"];
+        if (hasDemo) [explanation addButtonWithTitle:@"Play Demo"];
+        [explanation addButtonWithTitle:@"Quit"];
+        NSModalResponse choice=[explanation runModal];
+        if (hasDemo && choice==NSAlertSecondButtonReturn) { *data=demo; return YES; }
+        if (choice!=NSAlertFirstButtonReturn) return NO;
         NSOpenPanel *panel=[NSOpenPanel openPanel]; panel.canChooseDirectories=YES;
         panel.canChooseFiles=YES; panel.allowsMultipleSelection=NO;
         panel.message=@"Choose the original game folder or any required file inside it";
-        if ([panel runModal]!=NSModalResponseOK) return NO;
+        if ([panel runModal]!=NSModalResponseOK) { if (hasDemo) continue; return NO; }
         NSNumber *directory=nil;
         [panel.URL getResourceValue:&directory forKey:NSURLIsDirectoryKey error:NULL];
         NSString *source=directory.boolValue?panel.URL.path:panel.URL.path.stringByDeletingLastPathComponent;
         NSError *importError=nil;
-        if (pf_import_assets(source,*data,pf_validate_assets,&importError)) return YES;
+        if (hasDemo && ![pf_installation_assets(source) containsObject:@"TABLE2.PRG"])
+            importError=failure(@"This folder holds the 10-minute demo, which is already included. Choose the full game folder with INTRO.PRG and TABLE1–4.");
+        else if (pf_import_assets(source,*data,pf_validate_assets,&importError)) return YES;
         NSAlert *bad=[NSAlert new]; bad.messageText=@"These files could not be imported";
         bad.informativeText=importError.localizedDescription ?: @"Required original files were not validated";
         [bad runModal];

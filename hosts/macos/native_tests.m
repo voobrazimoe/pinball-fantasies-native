@@ -191,7 +191,10 @@ static void demoStorageTests(void) {
     assert([[@"test" dataUsingEncoding:NSUTF8StringEncoding] writeToFile:[source stringByAppendingPathComponent:@"TABLE3.PRG"] atomically:YES]);
     assert([pf_installation_assets(source) isEqualToArray:pf_required_assets()]);
     [fm removeItemAtPath:root error:NULL];
-    puts("PASS demo-shaped import selects the five demo runtime roles");
+    /* The demo shipped in Resources/Demo must load in the shared engine. */
+    NSString *bundled=[fm.currentDirectoryPath stringByAppendingPathComponent:@"internal/demodata/assets/demo"];
+    assert(pf_validate_assets(bundled,&error));
+    puts("PASS demo-shaped import selects the five demo runtime roles; bundled demo validates");
 }
 static void storageTests(void) {
     NSFileManager *fm=NSFileManager.defaultManager; NSError *error=nil;

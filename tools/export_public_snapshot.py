@@ -40,7 +40,8 @@ for name, digest in files.items():
     assert not path.is_absolute() and '..' not in path.parts
     assert path.parts[0] not in {'reference','release','bin','userdata'}, name
     assert not any(part.startswith('.') and part not in ('.gitignore', '.github') for part in path.parts), name
-    assert name == 'go.mod' or path.suffix.lower() not in {'.prg','.mod','.hi','.cfg','.exe','.com','.wav','.pcm','.appimage','.pyc','.deb','.patch','.diff'}, name
+    # The bundled 10-minute demo is the only original data in public source.
+    assert name == 'go.mod' or name.startswith('internal/demodata/assets/demo/') or path.suffix.lower() not in {'.prg','.mod','.hi','.cfg','.exe','.com','.wav','.pcm','.appimage','.pyc','.deb','.patch','.diff'}, name
     mode, kind, oid = tree[name]
     assert kind == 'blob' and mode in ('100644', '100755'), name
     data = subprocess.check_output(['git', 'cat-file', 'blob', oid], cwd=root)

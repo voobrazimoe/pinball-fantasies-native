@@ -40,6 +40,9 @@ type Runtime struct {
 
 var runtimeNamesRequired = []string{"INTRO.PRG", "INTRO.MOD", "MOD2.MOD", "TABLE1.PRG", "TABLE1.MOD", "TABLE2.PRG", "TABLE2.MOD", "TABLE3.PRG", "TABLE3.MOD", "TABLE4.PRG", "TABLE4.MOD"}
 
+// FullNamesRequired lists the files a full four-table installation supplies.
+func FullNamesRequired() []string { return append([]string(nil), runtimeNamesRequired...) }
+
 func Load(dataDir string, store Store) (*Runtime, error) {
 	// Library callers get installation compatibility without user-config writes.
 	return LoadConfigured(dataDir, store, nil)

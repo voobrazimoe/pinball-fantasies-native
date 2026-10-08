@@ -5,8 +5,14 @@ p=argparse.ArgumentParser(); p.add_argument('app',type=pathlib.Path); p.add_argu
 root=pathlib.Path(__file__).resolve().parent.parent
 allowed={'Contents/Info.plist','Contents/MacOS/pinballfantasies','Contents/Resources/LICENSE.txt',
          'Contents/Resources/pf-icon.icns','Contents/Resources/Go-version.txt','Contents/Resources/Go-LICENSE.txt','Contents/_CodeSignature/CodeResources'}
+sys.path.insert(0,str(root/'tools'))
+from bundled_demo import DEMO
+allowed|={'Contents/Resources/Demo/'+name for name in DEMO}
 files={str(f.relative_to(a.app)):f for f in a.app.rglob('*') if f.is_file()}
 assert set(files)==allowed,(set(files)-allowed,allowed-set(files))
+demo={name[len('Contents/Resources/Demo/'):]:path for name,path in files.items() if name.startswith('Contents/Resources/Demo/')}
+for name,path in demo.items():
+    assert hashlib.sha256(path.read_bytes()).hexdigest()==DEMO[name],name
 assert not any(f.is_symlink() for f in a.app.rglob('*'))
 info=plistlib.loads(files['Contents/Info.plist'].read_bytes())
 assert info['CFBundleExecutable']=='pinballfantasies' and info['CFBundlePackageType']=='APPL'
@@ -18,6 +24,7 @@ assert files['Contents/Resources/LICENSE.txt'].read_bytes()==(root/'LICENSE').re
 originals=json.loads((root/'analysis/game-inventory.json').read_text())
 hashes={record['sha256'] for record in originals}
 for name,path in files.items():
+    if name.startswith('Contents/Resources/Demo/'): continue
     assert hashlib.sha256(path.read_bytes()).hexdigest() not in hashes,name
 if a.originals:
     blocks=set()
@@ -26,6 +33,7 @@ if a.originals:
             data=source.read_bytes()
             blocks.update(data[i:i+4096] for i in range(0,len(data)-4095,4096) if len(set(data[i:i+4096]))>16)
     for name,path in files.items():
+        if name.startswith('Contents/Resources/Demo/'): continue
         assert not any(block in path.read_bytes() for block in blocks),name
     print(f'PASS {len(blocks)} nontrivial original 4KiB blocks absent from public bundle')
-print('PASS macOS public bundle structure, exact file allowlist, no original file hashes/payload paths')
+print('PASS macOS public bundle structure, exact file allowlist, bundled demo identities, no other original file hashes/payload paths')

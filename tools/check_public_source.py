@@ -122,3 +122,14 @@ for seed in alt['seeds'].values():
     assert len(seed['initials'])==4 and all(re.fullmatch('[A-Z *]{3}',s) for s in seed['initials'])
     assert re.fullmatch('[0-9a-f]{64}',seed['sha256'])
 print('PASS: alt CD metadata contains INTRO addresses/geometry and typed factory seed constraints only; no duplicated TABLE map')
+
+# Public builds ship the official 10-minute demo and no other original data.
+import subprocess, sys
+sys.path.insert(0,str(root/'tools'))
+from bundled_demo import DEMO,demo_bytes
+demo_bytes()
+tracked=subprocess.run(['git','ls-files'],cwd=root,capture_output=True,text=True).stdout.splitlines()
+original=[n for n in tracked if Path(n).name!='go.mod' and re.search(r'\.(?:prg|mod|hi|cfg)$',n,re.I) or Path(n).name.upper()=='PINBALL.EXE']
+if tracked:
+    assert sorted(original)==sorted('internal/demodata/assets/demo/'+n for n in DEMO),original
+print('PASS: the bundled 10-minute demo is intact and is the only original data in source')

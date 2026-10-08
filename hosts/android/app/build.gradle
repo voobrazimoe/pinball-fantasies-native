@@ -50,7 +50,8 @@ android {
     // CMake links the generated library; explicitly package both ABI outputs.
     sourceSets {
         main.jniLibs.srcDirs = ['../../../bin/android']
-        if (personalAssets != null) main.assets.srcDirs = [personalAssets]
+        // Public APKs carry the official 10-minute demo as assets/demo/*.
+        main.assets.srcDirs = personalAssets != null ? [personalAssets] : ['../../../internal/demodata/assets']
     }
 
     buildFeatures {
