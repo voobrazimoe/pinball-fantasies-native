@@ -221,6 +221,9 @@ func TestEverySourceScrollBoundaryAndInheritedPhase(t *testing.T) {
 								want.Dots[y*160+x] = memory[x%2][168+y*168+x/2]
 							}
 						}
+						if live.ScrollCompletes(left) != done {
+							t.Fatal("scroll preflight differs from source terminator", tick, initial, left)
+						}
 						got := live.StepScroll(&left)
 						if got != done || live.Dots != want.Dots || live.scrollOffset != offset || int(live.scrollPhase) != phase {
 							t.Fatalf("phase %d sync %d scroll state differs", initial, tick)

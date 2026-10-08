@@ -75,7 +75,7 @@ func (r *Runner) LoseFocus() error {
 }
 func (r *Runner) pauseForFocus(close bool) error {
 	r.Runtime.PCM = nil
-	return r.Runtime.Model.Update(frontend.Input{FocusLost: true, Close: close})
+	return r.Runtime.FocusLost(close)
 }
 
 func (r *Runner) Resume() {

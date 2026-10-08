@@ -36,3 +36,9 @@ func (d *Display) scrollStores() {
 		}
 	}
 }
+
+// ScrollCompletes reports the SI+20 terminator test on either subcall, before
+// any stores. Fallible adapters use it to preflight NEXT_A without advancing.
+func (d *Display) ScrollCompletes(left uint16) bool {
+	return left == 0 || (left == 1 && d.scrollPhase == 1)
+}

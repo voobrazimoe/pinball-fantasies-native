@@ -69,7 +69,16 @@ type silentJingle struct {
 	elapsed                                                     uint32 // 1/3550 second: 50 units per video sync, 71 per tracker tick.
 	cue                                                         uint32
 }
+
+// matrixConsumer is an isolated extension owned by a source-program adapter.
+// Ordinary table programs leave it nil.
+type matrixConsumer interface {
+	dispatch(matrixCommand) bool
+	step(string, *uint16) bool
+}
+
 type matrixState struct {
+	consumer                matrixConsumer
 	sourceProgram           bool
 	active                  bool
 	next                    int
@@ -415,6 +424,9 @@ func (g *Game) matrixDispatch() {
 			g.light(51, true)
 			g.emit("HighScoreExtraBall", "_DOBEATEN", 0)
 		default:
+			if m.consumer != nil && m.consumer.dispatch(c) {
+				return
+			}
 			if !strings.HasPrefix(c.Op, "_PRINT") && c.Op != "_NUMBER" && c.Op != "_FLASHON" && c.Op != "_FLASHOFF" && c.Op != "_MATRIXLGT" && c.Op != "_PARTYON" && c.Op != "_PARTYONN" && c.Op != "_PARTYOFF" {
 				panic("unported matrix command " + c.Op)
 			}
@@ -540,7 +552,9 @@ func (g *Game) matrixTick() {
 			m.countTimer = -10
 		}
 	default:
-		m.remaining--
+		if m.consumer == nil || !m.consumer.step(m.op, &m.remaining) {
+			m.remaining--
+		}
 		done = m.remaining == 0
 	}
 	if done {

@@ -43,7 +43,8 @@ class Resolver:
             return self.preserved[key]
         if key in active or not self.base <= entry < self.limit:
             return False
-        regs=('ax','cx','dx','bx','sp','bp','si','di')
+        general=('ax','cx','dx','bx','sp','bp','si','di')
+        regs=general+('ds','es')
         initial=tuple('input' if n==requested else None for n in regs)
         todo=[(entry,initial,())];seen=set();returned=False
         while todo:
@@ -62,11 +63,11 @@ class Resolver:
             if x.mnemonic in ('enter','leave','iret'):
                 self.preserved[key]=False;return False
             if x.mnemonic in ('pushaw','pushal'):
-                stack=stack+tuple(v[n] for n in regs)
+                stack=stack+tuple(v[n] for n in general)
             elif x.mnemonic in ('popaw','popal'):
                 if len(stack)<8:self.preserved[key]=False;return False
-                restored=dict(zip(regs,stack[-8:]));stack=stack[:-8]
-                for n in regs:
+                restored=dict(zip(general,stack[-8:]));stack=stack[:-8]
+                for n in general:
                     if n!='sp':v[n]=restored[n]
             elif x.mnemonic=='push':
                 value=v.get(x.reg_name(ops[0].reg)) if ops[0].type==self.x86.X86_OP_REG else None
@@ -84,11 +85,11 @@ class Resolver:
                         v[n]=None
             elif x.mnemonic=='mov' and ops[0].type==self.x86.X86_OP_REG:
                 name=x.reg_name(ops[0].reg)
-                name=name[1:] if name.startswith('e') else name
+                name=name[1:] if name in ('eax','ebx','ecx','edx','esi','edi','ebp','esp') else name
                 if name in v:
                     if name=='sp':self.preserved[key]=False;return False
                     source=x.reg_name(ops[1].reg) if ops[1].type==self.x86.X86_OP_REG else ''
-                    source=source[1:] if source.startswith('e') else source
+                    source=source[1:] if source in ('eax','ebx','ecx','edx','esi','edi','ebp','esp') else source
                     v[name]=v.get(source)
                 elif name in ('al','ah','bl','bh','cl','ch','dl','dh'):
                     v[name[0]+'x']=None
@@ -98,7 +99,7 @@ class Resolver:
                 unused,writes=x.regs_access()
                 for r in writes:
                     name=x.reg_name(r)
-                    name=name[1:] if name.startswith('e') else name
+                    name=name[1:] if name in ('eax','ebx','ecx','edx','esi','edi','ebp','esp') else name
                     if name=='sp':self.preserved[key]=False;return False
                     if name in v:v[name]=None
                     elif name in ('al','ah','bl','bh','cl','ch','dl','dh'):v[name[0]+'x']=None
@@ -156,14 +157,15 @@ class Resolver:
             else:
                 self.producers[m.disp].append((at, None, 'nonliteral field writer'))
 
-    def reaching(self, at, reg, budget=256):
+    def reaching(self, at, reg, budget=256, recurrence_edges=()):
         """Backward CFG slice, with explicit call/stack/load boundaries.
 
         Values are constants or ('field', DS word). No call is assumed to
         preserve a register. This intentionally under-resolves unsupported
         definitions instead of promoting a plausible literal to completeness.
         """
-        todo, visited, values, defs, unknown = list(self.pred[at]), set(), set(), set(), set()
+        todo, visited, values, defs, unknown = [p for p in self.pred[at]
+            if (p, at) not in recurrence_edges], set(), set(), set(), set()
         while todo:
             p = todo.pop()
             if (p, reg) in visited:
@@ -195,7 +197,7 @@ class Resolver:
             parents = self.pred[p]
             if not parents:
                 unknown.add('entry register definition at '+hex(p))
-            todo.extend(parents)
+            todo.extend(p0 for p0 in parents if (p0,p) not in recurrence_edges)
         return values, sorted(defs), sorted(unknown)
 
     def field(self, disp):
@@ -372,8 +374,8 @@ class Resolver:
         op = x.operands[0]
         targets, defs, errors, recipe, tables = set(), [], [], 'unsupported indirect operand', []
         if x.mnemonic in ('lcall', 'ljmp'):
-            return dict(source=at, domain='far', status='UNKNOWN', targets=[], definitions=[],
-                        recipe='segment/runtime API binding', unknown=['far callback segment/target domain'])
+            import audit_10min_demo_control as control
+            return control.far_operand(self, at)
         if op.type == self.x86.X86_OP_MEM:
             m = op.mem
             if not m.base and not m.index and not m.segment:
@@ -417,18 +419,12 @@ class Resolver:
                 targets.update(r['target']-self.base for r in rows)
                 tables.append(dict(start=self.ds+0x383c,end=end,rows=rows))
                 defs=[0x3894,0x389f,0x38a8];recipe='bounded word + dollar-terminated cheat records'
-            elif reg == 'ax' and at in (0x6095,0x6151):
-                sites = (0x6064,) if at == 0x6095 else (0x6104,0x6111,0x611e)
-                recipe = 'rectangle records: four bounds + near handler, zero sentinel'
-                for p in sites:
-                    q = self.seen.get(p)
-                    v = self.immediate(q,'si') if q else None
-                    if v is None:
-                        errors.append('area table base producer not verified at '+hex(p));continue
-                    rows,end=self.table(v,10,8)
-                    targets.update(r['target']-self.base for r in rows)
-                    defs.append(p);tables.append(dict(start=self.ds+v,end=end,rows=rows))
-                errors.append('area index/DS-alias completeness not fully closed')
+            elif reg == 'ax':
+                import audit_10min_demo_control as control
+                area=control.area_operand(self,at)
+                targets.update(area['offsets']);defs.extend(area['definitions'])
+                tables.extend(area['tables']);errors.extend(area['unknown'])
+                recipe=area['recipe']
             elif reg == 'dx' and at in (0x7263,0x729a):
                 start=0x724f if at==0x7263 else 0x7286
                 chain=[];p=start
@@ -504,6 +500,8 @@ def audit(data, canonical, historical):
     import audit_10min_demo_programs as programs
     r.handlers, identities = programs.identities(table, Path(historical))
     result=r.run()
+    import audit_10min_demo_control as control
+    control.extend_evidence(r,result,Path(data))
     result.update(status='DMO0 NOT CLOSED. DMO1 NOT STARTED.',table_entry=entry,main_cs_end=limit,
                   scope='TABLE1 conservative target closure; INTRO/SDR semantic admission gates remain separate')
     result['command_identity_derivation'] = identities
@@ -515,7 +513,10 @@ def audit(data, canonical, historical):
 
 
 def require_closed(result):
-    graph.require(not result['unknown_domain_count'] and not result['open_scope_gates'],
+    graph.require(not result['unknown_domain_count']
+                  and all(d['status']=='BOUNDED' for d in result['domains'])
+                  and all(d['status']=='BOUNDED' for d in result['related_code2']['domains'])
+                  and not result['open_scope_gates'],
                   'DMO0 unresolved target/semantic scopes')
 
 
@@ -528,7 +529,14 @@ if __name__=='__main__':
     a=p.parse_args();graph.require(all((a.data,a.canonical,a.historical)),'private paths required')
     result=audit(a.data,a.canonical,a.historical)
     a.output.write_text(json.dumps(result,indent=2)+'\n')
-    print('fixed point:',result['fixed_point'],'UNKNOWN TABLE1 domains:',result['unknown_domain_count'])
+    print('TABLE1 indirect sites:',len(result['domains']))
+    print('bounded:',len(result['domains'])-result['unknown_domain_count'])
+    print('unknown:',result['unknown_domain_count'])
+    c=result['related_code2']
+    print('related CODE2 indirect sites:',len(c['domains']),
+          'bounded:',sum(d['status']=='BOUNDED' for d in c['domains']),
+          'unknown:',sum(d['status']=='UNKNOWN' for d in c['domains']))
+    print(result['status'])
     if not a.allow_open:
         try: require_closed(result)
         except ValueError: raise SystemExit(2)

@@ -2,6 +2,12 @@ DMO0 NOT CLOSED. DMO1 NOT STARTED.
 
 # Party Land 10-minute DOS demo: DMO0 research gate
 
+Latest 2026-10-07 research snapshot:
+[native audio / gameplay callback boundary](runtime-layout-demo-10min-audio-boundary.md)
+and [current control-domain snapshot](runtime-layout-demo-10min-control-domains.md).
+The new semantic-boundary verdict is NOT_PROVED; the historical whole-DOS gate
+below remains separate and unchanged.
+
 Date: 2026-10-06. Production base: `306d11a0c479c7ac5ee6e245f3f72eacbc665abd`.
 This continuation starts from research `2a40c3a55d130fa324dda1ceb2fcea40ba0913e1`.
 
@@ -699,3 +705,30 @@ descriptors remain identical to research HEAD and the production base.
 No executable chunks, images or decoded MOD audio
 were exported by this pass; SDR decoded bytes remain in memory. Existing
 untracked `.DS_Store` is unrelated and untouched. No push, tag or release.
+
+### Concrete first-equality collision pass
+
+The saved drain-35877 native reference now joins to its actual live task/wait
+handoff and the accepted zero-aggregate demo suffix. See
+[runtime-layout-demo-10min-first-equality-collision.md](runtime-layout-demo-10min-first-equality-collision.md).
+NEW_BALL_TASK is inserted into slot 0 after scan 35967 with shared age zero;
+it fires after expiry installation on scan 35998 with PARTYFLASH=VISAKEYS=false,
+replacing expiry with SHOWPLAYERSTS. NEW_BALL_THRESHOLD_PROVENANCE = PROVED;
+FIRST_EQUALITY_COLLISION_REACHABLE; ATOMIC_EXPIRY_MODEL = DISPROVED.
+EXPIRY_INTERLEAVING = NOT_PROVED: eventual termination remains a separate pass.
+The CLOSE1 extra DS:0x00d1 store is MUSICOK, not VISAKEYS; the latter's false
+value is reconstructed from initial NEW_BALL/reset. DMO0 remains NOT CLOSED;
+DMO1 remains NOT STARTED. No production support or publication follows.
+
+### DURINGFLASH first-equality research
+
+The latest narrow report is
+[runtime-layout-demo-10min-first-equality-duringflash.md](runtime-layout-demo-10min-first-equality-duringflash.md).
+`FIRST_EQUALITY_DURINGFLASH_REACHABLE`: fresh capture35886 → BEFOREFLASH35971
+→ DURINGFLASH35998, explicit source HOLDSTILL clear, same-calculation late
+movement, scored drain36173 restarting expiry, QUIT37212.
+`EXPIRY_INTERLEAVING = NOT_PROVED`; smallest selected independent dependency is
+first-equality admission/exclusion of the genuine arcade WAIT_FOR_SPIN_TASK
+producer and its priority-clear/reward suffix. The five proved firing classes
+do not establish an exhaustive pending-task census.
+`DMO0 NOT CLOSED. DMO1 NOT STARTED.`

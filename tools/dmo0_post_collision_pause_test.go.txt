@@ -1,0 +1,38 @@
+// Actual native frontend input applied to the reconstructed post-collision Game.
+package partyland_test
+import (
+ "encoding/json"
+ "os"
+ "reflect"
+ "testing"
+ "pinballfantasies/internal/frontend"
+ "pinballfantasies/internal/partyland"
+)
+func TestResearchPostCollisionPauseCycle(t *testing.T) {
+ partyland.ResearchPostConfigure()
+ g:=partyland.ResearchPostCollisionStart(t)
+ m:=&frontend.Model{Mode:frontend.Playing,Selected:1,Session:g}
+ before:=partyland.ResearchPostSnapshot(g)
+ if err:=m.Update(frontend.Input{Keys:[]frontend.Key{frontend.P}});err!=nil {t.Fatal(err)}
+ if m.Mode!=frontend.Paused||!reflect.DeepEqual(before,partyland.ResearchPostSnapshot(g)){t.Fatal("pause entry changed gameplay")}
+ tick:=m.Tick
+ // Two real empty-input transitions plus the structurally closed native rule.
+ // Paused has no switch-body on an empty key list and cannot invoke Session.
+ for i:=0;i<2;i++ {
+  if err:=m.Update(frontend.Input{});err!=nil {t.Fatal(err)}
+  if m.Mode!=frontend.Paused||m.End!=0||!reflect.DeepEqual(before,partyland.ResearchPostSnapshot(g)){t.Fatal("pause self-loop broken")}
+ }
+ result:=map[string]any{"input_prefix":[]string{"P","empty","empty"},"calculation":g.Tick,
+ "gameplay_state_equal":true,"closed_transition":true,"no_exit":true,
+ "host_tick_before_empty":tick,"host_tick_after_empty":m.Tick,
+ "cycle_rule":"Mode=Paused; empty Keys; Close=false; FocusLost=false -> Mode=Paused; all session state unchanged; only Model.Tick increments modulo uint64",
+ "full_cycle_length_host_updates":"18446744073709551616",
+ "proof":"frontend.Model.Update: key loop empty, mode stable, outer mode switch has no Paused arm. Tick is not a guard in this branch. Induction closes the gameplay self-loop; uint64 Tick gives full-state recurrence.",
+ "excludes":"No claim of infinite unpaused ball trajectory or forced no-input gameplay survival."}
+ if err:=m.Update(frontend.Input{Keys:[]frontend.Key{frontend.Escape}});err!=nil {t.Fatal(err)}
+ if m.Mode!=frontend.QuitQuestion {t.Fatal("paused Esc")}
+ if err:=m.Update(frontend.Input{Keys:[]frontend.Key{frontend.Key(21)}});err!=nil {t.Fatal(err)} // DOS Y
+ if m.Mode!=frontend.Selector||m.Session!=nil||m.End!=frontend.Aborted {t.Fatal("alternate table exit")}
+ result["alternate_exit"]=map[string]any{"input":[]string{"P","Esc","Y"},"mode":"Selector","session_unloaded":true,"end":"Aborted"}
+ raw,_:=json.Marshal(result);if err:=os.WriteFile(os.Getenv("PF_POST_PAUSE_OUTPUT"),raw,0600);err!=nil {t.Fatal(err)}
+}

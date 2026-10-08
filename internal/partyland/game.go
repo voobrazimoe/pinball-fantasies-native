@@ -344,6 +344,12 @@ func (g *Game) flashTick() {
 	}
 }
 func (g *Game) beforeTargets() {
+	g.updateCounters()
+	g.checkAreas()
+}
+
+// updateCounters is the UPDATE_COUNTERS prefix, before table electronics.
+func (g *Game) updateCounters() {
 	g.Random++
 	dec(&g.SkillTime)
 	dec(&g.LoopTime)
@@ -366,7 +372,6 @@ func (g *Game) beforeTargets() {
 			g.flash(14, 8, 0, false)
 		}
 	}
-	g.checkAreas()
 }
 func (g *Game) afterTargets(input physics.Inputs) {
 	g.tiltControl(input)

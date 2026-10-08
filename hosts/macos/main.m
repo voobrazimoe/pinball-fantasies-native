@@ -4,6 +4,11 @@
 #import "native_input.h"
 #include <stdio.h>
 static const char *pacingPath;
+#ifdef PF_DEMODEV
+static const char *demoPath, *canonicalPath, *demoLogPath;
+extern uint64_t pf_engine_create_demo(char *,char *,char *,int64_t,char *,uint32_t);
+extern int32_t pf_engine_demo_diagnostic(uint64_t,char *,uint32_t);
+#endif
 static BOOL diagnosticsEnabled(void) {
     const char *value=getenv("PF_DIAGNOSTICS");
     return value && strcmp(value,"1")==0;
@@ -46,6 +51,9 @@ static void inputEvent(void *context,PFHostEvent event,int32_t a,int32_t b) {
     BOOL _inputAdvanced;
     unsigned _draws, _events, _frames;
     uint32_t _mode;
+#ifdef PF_DEMODEV
+    BOOL _demoDiagnosticSeen;
+#endif
 }
 - (int64_t)now { return pf_clock_ns(mach_absolute_time(),_epoch,_timebase.numer,_timebase.denom); }
 - (void)fail:(NSString *)message {
@@ -76,6 +84,11 @@ static void inputEvent(void *context,PFHostEvent event,int32_t a,int32_t b) {
     pf_input_init(&_input,inputEvent,(__bridge void *)self);
     pf_input_swap_shift(&_input,[NSUserDefaults.standardUserDefaults boolForKey:@"SwapShiftKeys"]);
     pf_audio_init(&_audio);
+#ifdef PF_DEMODEV
+    char failure[1024]={0};
+    _engine=pf_engine_create_demo((char *)demoPath,(char *)canonicalPath,(char *)demoLogPath,
+                                 [self now],failure,sizeof(failure));
+#else
     NSString *data=nil,*state=nil; NSError *error=nil;
     if (!pf_storage_prepare(&data,&state,&error)) {
         if (error) [self fail:error.localizedDescription]; else [NSApp terminate:nil];
@@ -84,6 +97,7 @@ static void inputEvent(void *context,PFHostEvent event,int32_t a,int32_t b) {
     char failure[1024]={0};
     _engine=pf_engine_create((char *)data.fileSystemRepresentation,(char *)state.fileSystemRepresentation,
                              [self now],failure,sizeof(failure));
+#endif
     if (!_engine) { [self fail:[NSString stringWithUTF8String:failure]]; return; }
     [self check:pf_engine_suspend(_engine)];
     NSRect usable=NSScreen.mainScreen.visibleFrame;
@@ -91,7 +105,12 @@ static void inputEvent(void *context,PFHostEvent event,int32_t a,int32_t b) {
     _window=[[NSWindow alloc] initWithContentRect:NSMakeRect(0,0,size.width,size.height)
         styleMask:NSWindowStyleMaskTitled|NSWindowStyleMaskClosable|NSWindowStyleMaskMiniaturizable|NSWindowStyleMaskResizable
         backing:NSBackingStoreBuffered defer:NO];
-    _window.title=@"Pinball Fantasies"; _window.delegate=self; _window.releasedWhenClosed=NO;
+#ifdef PF_DEMODEV
+    _window.title=@"Pinball Fantasies — EXPERIMENTAL 10-minute demo (P pause; Esc exit)";
+#else
+    _window.title=@"Pinball Fantasies";
+#endif
+    _window.delegate=self; _window.releasedWhenClosed=NO;
     _window.collectionBehavior=NSWindowCollectionBehaviorFullScreenPrimary;
     _window.contentMinSize=NSMakeSize(320,240); _window.acceptsMouseMovedEvents=YES;
     _view=[[PFFrameView alloc] initWithFrame:NSMakeRect(0,0,size.width,size.height)];
@@ -188,6 +207,20 @@ static void inputEvent(void *context,PFHostEvent event,int32_t a,int32_t b) {
             _frameTicks=ticks; _haveFrame=YES; _frames++;
             if (_pacing) _frameTime=fmax(_frameTime,([self now]-start)/1e6);
         }
+#ifdef PF_DEMODEV
+        if (!_demoDiagnosticSeen) {
+            char diagnostic[8192]={0};
+            [self check:pf_engine_demo_diagnostic(_engine,diagnostic,sizeof(diagnostic))];
+            if (diagnostic[0]) {
+                _demoDiagnosticSeen=YES; pf_audio_pause(&_audio);
+                _window.title=@"Experimental demo stopped — unsupported transition (Esc closes)";
+                NSAlert *alert=[NSAlert new];
+                alert.messageText=@"Experimental demo stopped safely";
+                alert.informativeText=[NSString stringWithFormat:@"This gameplay transition is not implemented. The session is frozen. Close the window or press Escape.\nLog: %s\n\n%s",demoLogPath,diagnostic];
+                [alert addButtonWithTitle:@"Return to stopped session"]; [alert runModal];
+            }
+        }
+#endif
         [self reportPacing];
     } @finally { _stepping=NO; }
 }
@@ -321,6 +354,19 @@ int main(int argc,const char **argv) {
         BOOL smoke=argc==2 && strcmp(argv[1],"--ui-smoke")==0;
         pacingPath=getenv("PF_PACING_LOG");
         if (argc==3 && strcmp(argv[1],"--pacing-log")==0) pacingPath=argv[2];
+#ifdef PF_DEMODEV
+        if (!smoke) {
+            for (int i=1;i<argc;i++) {
+                if (strcmp(argv[i],"--experimental-10min-demo")==0 && i+1<argc) demoPath=argv[++i];
+                else if (strcmp(argv[i],"--canonical-data-dir")==0 && i+1<argc) canonicalPath=argv[++i];
+                else if (strcmp(argv[i],"--demo-log")==0 && i+1<argc) demoLogPath=argv[++i];
+                else { fprintf(stderr,"Unknown or incomplete experimental argument: %s\n",argv[i]); return 2; }
+            }
+            if (!demoPath || !canonicalPath || !demoLogPath) {
+                fprintf(stderr,"Usage: pinballfantasies --experimental-10min-demo DIR --canonical-data-dir DIR --demo-log FILE\n"); return 2;
+            }
+        }
+#endif
         NSApplication *app=NSApplication.sharedApplication;
         [app setActivationPolicy:NSApplicationActivationPolicyRegular];
         if (smoke) {
