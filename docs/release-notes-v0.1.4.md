@@ -10,8 +10,8 @@ Prerelease — more original DOS installations work, on every platform.
   picture on every table. Deluxe CD sets keep their own startup artwork and
   factory high-score initials.
 - The official 10-minute Party Land DOS demo is playable from a folder holding
-  only its five files. It starts straight on the table; the demo's own intro,
-  table select and options screens will follow in a later update.
+  only its five files, with its own intro, table select, options and closing
+  text.
 
 Your own legally obtained DOS files are still required: 11 PRG/MOD files, plus
 optional `PINBALL.CFG`. Public builds contain no commercial game data.
