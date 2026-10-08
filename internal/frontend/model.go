@@ -120,7 +120,8 @@ type Model struct {
 	PauseDelay                           int
 	audioMode                            Mode
 	// Demo is the official 10-minute demo INTRO: Party Land only, its own
-	// two SHOWTEXT pages, and QUIT returning to INTRO. ClosingText is the
+	// two SHOWTEXT pages, one player started directly, and QUIT returning
+	// to INTRO. ClosingText is the
 	// launcher's exit text shown after Esc in the selector, when supplied.
 	Demo        bool
 	ClosingText []string
@@ -385,6 +386,13 @@ func (m *Model) Update(in Input) error {
 			if k >= F1 && k <= F4 {
 				if e := m.loadTable(int(k-F1) + 1); e != nil {
 					return e
+				}
+				if m.Demo && m.Mode == TableAttract {
+					// Demo TABLE1 init stores F1 as the start key (mov [3813],3b
+					// at 0x3a74): a one-player game starts with no attract wait.
+					if e := m.startPlayers(1); e != nil {
+						return e
+					}
 				}
 				break
 			}

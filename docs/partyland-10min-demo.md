@@ -105,14 +105,15 @@ The demo starts with its own INTRO, through the shared native front end:
   `ESC - QUIT`, then the options help), read from the user's file.
 - SHOWTEXT cycle of the demo's two pages, welcome and availability, read from
   the user's file. There is no high-score or credits page in the demo cycle.
-- F1 loads Party Land's attract. Attract start keys F1-F8 (or Enter) set
-  PLAYERS as in the demo's attract start (`0x64cf`). The demo continuation
-  never rotates PLAYER, so player 1 keeps the ball; only a canonical
-  shoot-again or match fallback can change it. The demo omits the chute
-  start-player and chute quit routes, so F1-F8 and Esc in the chute do
-  nothing.
-- The retained attract-only cheat gate accepts the thirteen original cheats
-  (for example EARTHQUAKE disables tilt).
+- F1 starts a one-player Party Land game at once. The demo's TABLE1 init
+  stores F1 as the start key (`mov byte [3813],3b` at file `0x3a74`, absent
+  from retail A), so there is no attract wait and no player-count choice.
+  F keys are read only in attract (`[34e2]` gate at `0x3712`), which the demo
+  reaches only after a canonical game-over fallback. In play, F1-F8 and Esc
+  in the chute do nothing (the demo omits the chute start-player and quit
+  routes), and every ball stays with player 1.
+- The attract-only cheat gate is retained but, with no attract phase before
+  play, cheats are effectively unreachable, as in the DOS demo.
 - Esc in the selector runs the launcher's zero-table-selection exit: its
   closing text (from the user's `PINBALL.EXE`, record `0x43f`, hash-checked)
   in a 640x400 text screen, until Esc. Without a matching launcher, Esc quits
