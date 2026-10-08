@@ -34,7 +34,7 @@ func (g *Game) StartPlayers(count int) {
 	g.Session.Initialize(count, g.SavePlayerState())
 	g.playerText()
 	// LATE_RASTER_INTERRUPT_DEMO dispatches this for every F1..F8 count.
-	g.beginMatrix("FIRST_NO_OF_PLAYERSTS")
+	g.beginMatrix(g.firstPlayersPanel())
 	g.sound("S_ADDPLAYER2")
 }
 func (g *Game) SelectPlayers(count int) {

@@ -53,7 +53,7 @@ bytes, 255-terminated, glyph-map checked).
 | `S_EMPTY` priority 0 | Decoded jingle record (A has priority 1). |
 | Expired scored drain | Effect 0x1a4a1 in place of LOSTBALL: cue `S_GAMEOVER2`, zero arithmetic, matrix = expiry entry. It installs only when admitted by the cue, INH_EFF and SPECIALMODE guards. Unscored drains still select PARTY_ON before the expired guard. |
 | DEMOVER_CHANGE_PLAYER | At `_CHANGE_PLAYER`: keeps the player, advances the displayed ball counter (1..9, 10..19, 20..29, then 10 again), saves the player and queues NEW_BALL_TASK wait 30. There is no ball limit and no canonical player/ball advance. |
-| Demo panels | The NODOT idle panel prints the duration label at 340 with the never-written players record (DS:1e8b). The NEW_BALL reset panel (0x1b88e) prints the label at 336 with the demo ball counter. |
+| Demo panels | The demo SHOWPLAYERSTS (DS:1ade, file 0x1b88e) prints the duration label at 336 with the demo ball counter; NODOT (`mov bx,1ade` at 0x56ef) and the NEW_BALL reset both install it. FIRST_NO_OF_PLAYERSTS (0x1b89e) prints the label at 336, the zero score and the players record (DS:1e8b), which the attract start fills with the count. An earlier research note gave NODOT the DS:1e8b operand; the linked call shows DS:1ade. |
 | NEW_BALL reset | Sets SPRING_VALID as in the reviewed demo reset. |
 | Pause / abort | P suspends updates: timer, expired, matrix and session are unchanged, and audio is silent. Esc asks to quit; Y returns to the selector; any other key resumes. |
 | High scores | Volatile factory values; no HI load or save. |

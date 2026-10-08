@@ -238,3 +238,25 @@ func TestTimedDemoMultiplayerKeepsPlayerOne(t *testing.T) {
 		}
 	}
 }
+
+// The idle panel's players record shows the started count, not the loaded
+// placeholder; a fresh table keeps the placeholder until the attract start.
+func TestTimedDemoPlayersPanel(t *testing.T) {
+	g := timedDemoFixture(t)
+	placeholder := string(g.Display.Content.Texts["NO_OF_PLAYERS_TEXT"])
+	for _, n := range []int{1, 3} {
+		g.StartPlayers(n)
+		got := g.Display.Content.Texts["NO_OF_PLAYERS_TEXT"]
+		if string(got) == placeholder || got[8] != byte(n)+'7' {
+			t.Fatalf("%d players: %q", n, got)
+		}
+		if !demoEvent(g, "MatrixStarted", "DEMO_FIRST_NO_OF_PLAYERSTS") {
+			t.Fatal(g.Events)
+		}
+		g.Events = g.Events[:0]
+		g.playerText()
+		if g.Display.Content.Texts["NO_OF_PLAYERS_TEXT"][8] != byte(n)+'7' {
+			t.Fatal("demo panel restored the placeholder")
+		}
+	}
+}
