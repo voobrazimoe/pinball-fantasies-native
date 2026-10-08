@@ -136,10 +136,14 @@ jobs:
         run: |
           APK='hosts/android/app/build/outputs/apk/debug/app-debug.apk'
           test -f "$APK"
-          if unzip -Z1 "$APK" | grep -Eqi '(^|/)(INTRO\.PRG|INTRO\.MOD|MOD2\.MOD|TABLE[1-4]\.(PRG|MOD|HI)|PINBALL\.CFG)$|^assets/personal-data/'; then
+          # The official 10-minute demo under assets/demo/ is the only original data allowed.
+          if unzip -Z1 "$APK" | grep -v '^assets/demo/' | grep -Eqi '(^|/)(INTRO\.PRG|INTRO\.MOD|MOD2\.MOD|TABLE[1-4]\.(PRG|MOD|HI)|PINBALL\.CFG)$|^assets/personal-data/'; then
             echo 'commercial DOS payload found in public Android APK' >&2
             exit 1
           fi
+          rm -rf "${RUNNER_TEMP}/apk-demo" && mkdir -p "${RUNNER_TEMP}/apk-demo"
+          unzip -q "$APK" 'assets/demo/*' -d "${RUNNER_TEMP}/apk-demo"
+          diff -r internal/demodata/assets/demo "${RUNNER_TEMP}/apk-demo/assets/demo"
           "${ANDROID_HOME}/build-tools/36.0.0/zipalign" -c -P 16 4 "$APK"
           rm -rf "${RUNNER_TEMP}/a1-apk"
           mkdir -p "${RUNNER_TEMP}/a1-apk"

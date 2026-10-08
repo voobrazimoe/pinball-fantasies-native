@@ -32,7 +32,7 @@ public final class PinballActivity extends GameActivity {
 
     private static final int IMPORT_TREE = 2;
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
-    private DataImport importer;
+    private DataImport importer, demo;
     private long session;
     private Button importButton;
     private FirstRunShell firstRun;
@@ -96,12 +96,43 @@ public final class PinballActivity extends GameActivity {
         runOnUiThread(() -> {
             if (!closed) {
                 importBusy = false;
+                if (firstRun != null) firstRun.startingDemo = false;
                 syncAudio();
                 updateImportUi();
                 if (event.endsWith("REJECTED"))
                     Toast.makeText(this, ImportMessages.failure(message), Toast.LENGTH_LONG).show();
                 else if (event.equals("A2_IMPORT_CANCELLED"))
                     Toast.makeText(this, "Import cancelled", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+    private DataImport.Source assetSource(String directory) throws IOException {
+        String[] names = getAssets().list(directory);
+        if (names == null || names.length == 0) return null;
+        return new DataImport.Source() {
+            public Map<String, String> entries() {
+                Map<String, String> entries = new LinkedHashMap<>();
+                for (String name : names) entries.put(name, directory + "/" + name);
+                return entries;
+            }
+            public InputStream open(String id) throws IOException { return getAssets().open(id); }
+        };
+    }
+    /** The bundled demo runs from its own private copy, never as the imported game,
+        so the choice returns on the next launch until the full game is imported. */
+    private void requestDemo() {
+        if (!importButton.isEnabled()) return;
+        importBusy = true;
+        firstRun.startingDemo = true;
+        updateImportUi();
+        diagnostic("A2_DEMO_REQUESTED");
+        worker.execute(() -> {
+            try {
+                demo.recover();
+                demo.bootstrap(assetSource("demo"));
+                status("A2_DEMO_READY", "Bundled demo ready");
+            } catch (IOException | RuntimeException failure) {
+                status("A2_DEMO_REJECTED", failure.toString());
             }
         });
     }
@@ -226,7 +257,16 @@ public final class PinballActivity extends GameActivity {
                     public void stop() throws IOException { engineCall(2, null, null); }
                     public void bootstrap(File data, File state) throws IOException { engineCall(1, data, state); }
                 });
-        firstRun = new FirstRunShell(this, this::requestImport);
+        demo = new DataImport(new File(getNoBackupFilesDir(), "Demo"), new File(getFilesDir(), "State"),
+                new DataImport.Engine() {
+                    public void validate(File data, File state) throws IOException { engineCall(0, data, state); }
+                    public void stop() throws IOException { engineCall(2, null, null); }
+                    public void bootstrap(File data, File state) throws IOException { engineCall(1, data, state); }
+                });
+        boolean hasDemo;
+        try { String[] names = getAssets().list("demo"); hasDemo = names != null && names.length > 0; }
+        catch (IOException failure) { hasDemo = false; }
+        firstRun = new FirstRunShell(this, this::requestImport, hasDemo ? this::requestDemo : null);
         importButton = firstRun.button;
         interaction.addView(firstRun,new FrameLayout.LayoutParams(-1,-1));
         updateImportUi();
@@ -234,16 +274,7 @@ public final class PinballActivity extends GameActivity {
         worker.execute(() -> {
             try {
                 importer.recover();
-                String[] bundled = getAssets().list("personal-data");
-                DataImport.Source embedded = bundled == null || bundled.length == 0 ? null : new DataImport.Source() {
-                    public Map<String, String> entries() {
-                        Map<String, String> entries = new LinkedHashMap<>();
-                        for (String name : bundled) entries.put(name, "personal-data/" + name);
-                        return entries;
-                    }
-                    public InputStream open(String id) throws IOException { return getAssets().open(id); }
-                };
-                importer.bootstrap(embedded);
+                importer.bootstrap(assetSource("personal-data"));
                 status(importer.data().exists() ? "A2_DATA_READY" : "A2_SHELL_NO_DATA",
                         importer.data().exists() ? "Real engine ready" : "Select your original DOS folder to import");
             } catch (IOException | RuntimeException failure) {

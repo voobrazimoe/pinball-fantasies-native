@@ -20,11 +20,15 @@ jobs:
       TAG: ${{ inputs.tag }}
     steps:
       - uses: actions/checkout@v4
-      - name: Refuse an existing tag or release
+      - name: Refuse an existing tag or published release
         run: |
           test -f "docs/release-notes-${TAG}.md"
           if git ls-remote --exit-code --tags origin "refs/tags/${TAG}"; then echo "tag ${TAG} exists"; exit 1; fi
-          if gh release view "${TAG}" >/dev/null 2>&1; then echo "release ${TAG} exists"; exit 1; fi
+          # An unpublished draft for this tag is replaced; a published release never is.
+          if draft=$(gh release view "${TAG}" --json isDraft --jq .isDraft 2>/dev/null); then
+            if [ "$draft" != true ]; then echo "release ${TAG} exists"; exit 1; fi
+            gh release delete "${TAG}" --yes
+          fi
       - name: Download packages built from this exact commit
         run: |
           set -eu

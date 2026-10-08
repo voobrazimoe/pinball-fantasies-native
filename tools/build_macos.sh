@@ -28,6 +28,9 @@ if ! git diff --quiet HEAD -- hosts/macos tools/build_macos.sh; then build_revis
 /usr/libexec/PlistBuddy -c "Add :PFHostBuild string $build_revision" "$app/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Add :PFHostArchitecture string $target" "$app/Contents/Info.plist"
 cp art/app-icon/pf-icon.icns "$app/Contents/Resources/pf-icon.icns"
+# The official 10-minute demo is offered at first launch beside importing the full game.
+mkdir -p "$app/Contents/Resources/Demo"
+cp internal/demodata/assets/demo/* "$app/Contents/Resources/Demo/"
 cp LICENSE "$app/Contents/Resources/LICENSE.txt"
 cp "$(./tools/go.sh env GOROOT)/LICENSE" "$app/Contents/Resources/Go-LICENSE.txt"
 ./tools/go.sh env GOVERSION > "$app/Contents/Resources/Go-version.txt"

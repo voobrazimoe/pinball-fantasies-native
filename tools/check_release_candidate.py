@@ -20,12 +20,19 @@ ROOT=Path(__file__).resolve().parent.parent
 VERSION,VERSION_CODE='0.1.4','4'
 sys.path.insert(0,str(ROOT/'tools'))
 from check_app_icons import check_exe
+from bundled_demo import DEMO,demo_bytes
 from dissect.squashfs import SquashFS
 
 NAMES=['pinballfantasies.exe','PinballFantasies-x86_64.AppImage',
        'PinballFantasies-arm64.zip','PinballFantasies-x86_64.zip','PinballFantasies-android.apk']
 GATES={'Android host','Android A0','Asset-free source','macOS native hosts','Desktop release candidate artifacts'}
 FORBIDDEN=re.compile(r'\.(?:prg|mod|cfg|hi)$',re.I)
+
+
+def bundled_demo(name):
+    """The shipped 10-minute demo is the only original data a package may carry."""
+    path=PurePosixPath(name)
+    return path.name in DEMO and path.parent.name in ('demo','Demo')
 
 
 def verify(directory,source_sha,evidence,sdk,originals=None):
@@ -36,15 +43,22 @@ def verify(directory,source_sha,evidence,sdk,originals=None):
     assert all(r['sha']==source_sha and r['status']=='completed' and r['conclusion']=='success' for r in runs),'CI gate not green at candidate SHA'
     inventory=json.loads((ROOT/'analysis/game-inventory.json').read_text())
     commercial_hashes={r['sha256'] for r in inventory}
+    demo=demo_bytes()
     blocks=set()
     if originals:
         for path in originals.iterdir():
             if path.suffix.upper() in ('.PRG','.MOD'):
                 data=path.read_bytes()
                 blocks.update(data[i:i+4096] for i in range(0,len(data)-4095,4096) if len(set(data[i:i+4096]))>16)
+        # Retail blocks that the bundled demo shares are expected in every package.
+        blocks={b for b in blocks if not any(b in d for d in demo.values())}
     inspected=0
     def scan(name,data):
         nonlocal inspected
+        if bundled_demo(name):
+            assert demo[PurePosixPath(name).name]==data,('altered bundled demo',name)
+            inspected+=1
+            return
         assert hashlib.sha256(data).hexdigest() not in commercial_hashes,('commercial file',name)
         assert not any(block in data for block in blocks),('commercial payload',name)
         assert not re.search(rb'/Users/mess(?:/|\x00)|/home/mess(?:/|\x00)|m[e]ss@mini',data),('private build path',name)
@@ -52,7 +66,7 @@ def verify(directory,source_sha,evidence,sdk,originals=None):
     def safe_path(name):
         path=PurePosixPath(name)
         assert not path.is_absolute() and '..' not in path.parts,name
-        assert not FORBIDDEN.search(name),('commercial filename',name)
+        assert bundled_demo(name) or not FORBIDDEN.search(name),('commercial filename',name)
         assert not any(p in {'personal-data','.personal-assets'} for p in path.parts),name
     for name in subprocess.check_output(['git','ls-files'],cwd=ROOT,text=True).splitlines():
         if name!='go.mod': safe_path(name)

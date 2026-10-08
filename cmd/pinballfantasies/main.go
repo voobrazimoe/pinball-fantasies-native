@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"image"
@@ -35,7 +36,12 @@ func run() error {
 	if err := platform.InitDiagnostics(*configDir); err != nil {
 		return err
 	}
-	resolvedData, cleanupData, e := platform.PrepareDataDir(*data)
+	prepare := platform.PrepareDataDir
+	if *output == "" && !*pf1 && !*pf2 && !*pf3 && !*pf4 && !*pf7 && !*pf9 && !*pf10 {
+		// The live frontend offers importing the full game or the bundled demo.
+		prepare = platform.ChooseDataDir
+	}
+	resolvedData, cleanupData, e := prepare(*data)
 	if e != nil {
 		return e
 	}
@@ -161,7 +167,7 @@ func run() error {
 func main() {
 	defer platform.RecoverFatal()
 
-	if err := run(); err != nil {
+	if err := run(); err != nil && !errors.Is(err, platform.ErrQuit) {
 		platform.ReportFatal(err)
 		os.Exit(1)
 	}

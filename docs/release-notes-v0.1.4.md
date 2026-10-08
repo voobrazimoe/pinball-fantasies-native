@@ -11,12 +11,13 @@ Prerelease — more original DOS installations work, on every platform.
   artwork and factory high-score initials, and Power Pack and Deluxe CD sets
   keep their original music-cue priority, so a few cues can play differently
   from the retail release.
-- The official 10-minute Party Land DOS demo is playable from a folder holding
-  only its five files, with its own intro, table select, options and closing
-  text.
+- The official 10-minute Party Land DOS demo now comes with every build, with
+  its own intro, table select, options and closing text.
+- On every platform, the first screen offers a choice until the full game is
+  installed: import the full game from your DOS folder, or play the demo.
 
-Your own legally obtained DOS files are still required: 11 PRG/MOD files, plus
-optional `PINBALL.CFG`. Public builds contain no commercial game data.
+The full game still needs your own legally obtained DOS files: 11 PRG/MOD files,
+plus optional `PINBALL.CFG`. Apart from the demo, builds contain no game data.
 
 Packages: Windows x86_64 EXE, Linux x86_64 AppImage, macOS ARM64 and Intel
 (13 or later; ad-hoc signed, not notarized) and a universal Android APK

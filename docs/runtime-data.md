@@ -1,6 +1,6 @@
 # Runtime data boundary
 
-The native port requires data from a supported DOS installation of Pinball Fantasies. Public source and public release binaries do not contain that commercial data.
+The full native port requires data from a supported DOS installation of Pinball Fantasies. Public source and public release binaries contain none of that data; they carry only the official 10-minute Party Land demo (`internal/demodata/assets/demo`: its five runtime files plus the 2 KB `PINBALL.EXE` launcher, read only for its closing text and never executed). Until a full game is imported, every host offers importing it or playing that demo.
 
 ## Required files
 
@@ -44,7 +44,7 @@ On Windows/Linux, optional legacy `TABLE*.HI` files may be read as score seeds i
 
 ## Personal builds
 
-The local-only personal builder embeds the eleven compatible game-data files above and an optional CFG settings seed into the resulting EXE/AppImage or macOS app. Personal macOS bundles automatically import their Resources/Data contents into Application Support on first launch, preserving an existing valid import and native state. Those artifacts therefore contain the user's commercial game data and must not be distributed as project releases. Public GitHub release binaries are always asset-free.
+The local-only personal builder embeds the eleven compatible game-data files above and an optional CFG settings seed into the resulting EXE/AppImage or macOS app. Personal macOS bundles automatically import their Resources/Data contents into Application Support on first launch, preserving an existing valid import and native state. Those artifacts therefore contain the user's commercial game data and must not be distributed as project releases. Public GitHub release binaries carry no data beyond the bundled demo.
 
 ## Fonts and presentation
 

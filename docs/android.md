@@ -18,7 +18,9 @@ Choose the folder containing the 11 PRG/MOD files of any supported DOS
 installation listed in the README (retail, Power Pack `21STCENT/FANTASY`, or a
 Deluxe CD/GOG `PFD/FANTASY` set); `PINBALL.CFG` is optional. Validated copies go
 to private app storage, while the source files remain unchanged. Public APKs
-contain no commercial data. The current candidate is a development-signed
+contain no game data except the official 10-minute demo (`assets/demo/`), which
+**Play 10-minute demo** copies to `getNoBackupFilesDir()/Demo/Data/` and runs
+without counting as an import, so the choice returns until the full game is imported. The current candidate is a development-signed
 universal APK (arm64-v8a + x86_64), not the local-only personal APK.
 See [v0.1.3 preparation](release-v0.1.3.md).
 

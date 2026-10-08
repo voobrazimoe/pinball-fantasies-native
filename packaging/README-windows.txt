@@ -4,7 +4,12 @@ Put your legally obtained original game files beside pinballfantasies.exe:
 INTRO.PRG, TABLE1.PRG through TABLE4.PRG, INTRO.MOD, MOD2.MOD,
 TABLE1.MOD through TABLE4.MOD. PINBALL.CFG is an optional legacy settings seed;
 missing or malformed settings use native defaults. TABLE1.HI through TABLE4.HI are optional legacy score seeds;
-without them, native factory defaults are used. No original game assets are included.
+without them, native factory defaults are used. The official 10-minute Party Land
+demo is included; no other original game assets are.
+
+Without game files beside the program, the first launch offers a choice:
+Import game... copies a chosen full game folder into userdata/Data, and
+Play demo runs the included demo. The choice returns until a game is imported.
 
 Double-click pinballfantasies.exe. No installation or extra DLL is required.
 Alt+Enter switches between a window and borderless desktop fullscreen.

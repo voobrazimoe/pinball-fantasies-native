@@ -4,7 +4,7 @@
 
 First public beta of a native, source-guided reimplementation of the DOS version of **Pinball Fantasies** for modern Windows, Linux, macOS and Android.
 
-> **Important:** public builds contain no commercial Pinball Fantasies game data. You need your own legally obtained DOS copy of the game.
+> **Important:** public builds include only the official 10-minute Party Land demo. To play the full game you need your own legally obtained DOS copy.
 
 ## Quick start
 
@@ -17,9 +17,11 @@ Download the published [v0.1.3 prerelease](https://github.com/voobrazimoe/pinbal
 - [Android ARM64 + x86_64: PinballFantasies-android.apk](https://github.com/voobrazimoe/pinball-fantasies-native/releases/download/v0.1.3/PinballFantasies-android.apk)
 - [SHA256 checksums](https://github.com/voobrazimoe/pinball-fantasies-native/releases/download/v0.1.3/SHA256SUMS.txt)
 
-For macOS 13 or later, download the ZIP for your Mac, extract it and launch the app. Select your original DOS game folder in the native import flow; files are validated and copied into Application Support. Public Mac bundles are ad-hoc signed and not notarized. See [macOS build and usage](docs/macos.md) for details.
+Every build starts by offering a choice until the full game is installed: **import the full game** from your original DOS folder, or **play the bundled 10-minute demo**. Imported files are validated and copied into the app's own storage; the choice no longer appears once the full game is imported.
 
-On Windows/Linux, keep the original DOS data beside the executable, or point the port to it explicitly:
+For macOS 13 or later, download the ZIP for your Mac, extract it and launch the app. Choose **Import Full Game…** and select your original DOS game folder; files are validated and copied into Application Support. Public Mac bundles are ad-hoc signed and not notarized. See [macOS build and usage](docs/macos.md) for details.
+
+On Windows/Linux, **Import game…** copies the chosen folder into `userdata/Data` beside the executable (Linux uses the desktop's `zenity` or `kdialog` folder chooser). You can also keep the original DOS data beside the executable, or point the port to it explicitly; both skip the choice:
 
 ```text
 pinballfantasies.exe -data-dir "D:\Games\Pinball Fantasies"
@@ -35,11 +37,11 @@ chmod +x PinballFantasies-x86_64.AppImage
 Download the public `PinballFantasies-android.apk` from the v0.1.3 prerelease above:
 
 1. Install the APK and open Pinball Fantasies (Android 8.1 or later).
-2. Tap **Import DOS folder** and choose the folder containing the supported original DOS files listed below.
+2. Tap **Import DOS folder** and choose the folder containing the supported original DOS files listed below, or tap **Play 10-minute demo**.
 3. The app validates and copies the 11 required PRG/MOD files and optional `PINBALL.CFG` into private app storage; the supplied originals remain unchanged.
 4. Launch a table using the contextual touch controls, or attach a physical keyboard. Touch panels automatically hide while an external keyboard is active.
 
-Commercial files are not bundled. The universal APK contains
+Apart from the 10-minute demo, no game files are bundled. The universal APK contains
 arm64-v8a and x86_64, is development-signed, and supports 16 KB page-size devices.
 See [Android usage](docs/android.md) and the [candidate preparation record](docs/release-v0.1.3.md).
 
@@ -58,11 +60,11 @@ TABLE3.PRG TABLE3.MOD
 TABLE4.PRG TABLE4.MOD
 ```
 
-The official **10-minute Party Land DOS demo** is also supported: supply a
-folder with only its `INTRO.PRG`, `INTRO.MOD`, `MOD2.MOD`, `TABLE1.PRG` and
-`TABLE1.MOD`, and the app runs the demo's own intro, table selector (Party Land
-is the only playable table) and options; a game ends when the demo timer
-expires. See [the demo notes](docs/partyland-10min-demo.md) for what
+The official **10-minute Party Land DOS demo** ships with every build. It runs
+the demo's own intro, table selector (Party Land is the only playable table),
+options and closing text; a game ends when the demo timer expires. A folder with
+only the demo's `INTRO.PRG`, `INTRO.MOD`, `MOD2.MOD`, `TABLE1.PRG` and
+`TABLE1.MOD` also works with `-data-dir`. See [the demo notes](docs/partyland-10min-demo.md) for what
 is proved and what follows the full-game rules.
 
 `PINBALL.CFG` is an optional legacy settings seed. Missing or malformed settings use native defaults; writable PFNC settings live in native state. Runtime accepts the supported consumed-data layout; exact whole-file hashes are reserved for research and parity fixtures.
