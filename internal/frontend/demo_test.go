@@ -112,30 +112,12 @@ func TestPrivateDemoRuntimeLifecycle(t *testing.T) {
 	if m.Mode != Selector {
 		t.Fatal("options did not return", m.Mode)
 	}
-	demoKeys(t, r, F1)
-	if m.Mode != TableAttract || m.Selected != 1 {
+	demoKeys(t, r, F1) // demo TABLE1 starts one player at once
+	if m.Mode != Playing || m.Selected != 1 {
 		t.Fatal(m.Mode)
 	}
-	demoFrames(t, r, 50)
-	// The attract cheat gate is retained: EARTHQUAKE disables tilt.
-	for _, c := range "EARTHQUAKE" {
-		for k := Key(0); k < 60; k++ {
-			if Initial(k) == byte(c) {
-				demoKeys(t, r, k)
-				break
-			}
-		}
-	}
-	if !m.cheatTiltDisabled {
-		t.Fatal("attract cheat not accepted")
-	}
-	demoFrames(t, r, 50)
-	demoKeys(t, r, F4) // the attract start keys select PLAYERS
-	if m.Mode != Playing {
-		t.Fatal(m.Mode)
-	}
-	if g, ok := m.Session.(interface{ PlayerCount() int }); !ok || g.PlayerCount() != 4 {
-		t.Fatal("attract F4 must start four players")
+	if g, ok := m.Session.(interface{ PlayerCount() int }); !ok || g.PlayerCount() != 1 {
+		t.Fatal("the demo starts a single player")
 	}
 	if m.selectionOpen {
 		t.Fatal("the demo omits the chute start-player route")
@@ -143,7 +125,11 @@ func TestPrivateDemoRuntimeLifecycle(t *testing.T) {
 	if c := demoTimer(t, r); c != 0 {
 		t.Fatal("table attract counted", c)
 	}
-	demoFrames(t, r, 199)
+	demoFrames(t, r, 197)
+	demoKeys(t, r, F2, F8) // F keys do nothing in play
+	if g := m.Session.(interface{ PlayerCount() int }); g.PlayerCount() != 1 {
+		t.Fatal("F keys changed the player count")
+	}
 	demoKeys(t, r, Escape) // the demo omits the chute quit route
 	if m.Mode != Playing {
 		t.Fatal("chute Escape left play", m.Mode)
@@ -174,7 +160,7 @@ func TestPrivateDemoRuntimeQuitRestartsIntro(t *testing.T) {
 		t.Fatal(err)
 	}
 	m := r.Model
-	demoKeys(t, r, Space, F1, F1)
+	demoKeys(t, r, Space, F1)
 	if m.Mode != Playing {
 		t.Fatal(m.Mode)
 	}
@@ -187,7 +173,7 @@ func TestPrivateDemoRuntimeQuitRestartsIntro(t *testing.T) {
 		t.Fatal(m.Mode)
 	}
 	demoFrames(t, r, 30)
-	demoKeys(t, r, Space, F1, F1)
+	demoKeys(t, r, Space, F1)
 	if m.Mode != Playing || demoTimer(t, r) != 0 {
 		t.Fatal("next table entry is not a fresh lifetime")
 	}

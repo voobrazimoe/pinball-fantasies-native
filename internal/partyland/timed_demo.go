@@ -35,7 +35,7 @@ type timedDemo struct {
 	volume      uint16    // AL=6 volume request, stepped every sixteen visits
 	dac         [768]byte // VGA DAC snapshot (6-bit units) when FADE starts
 	playersText []byte
-	playersNo   []byte // DS:1e8b, never written: the demo has no player selection
+	playersNo   []byte // DS:1e8b as loaded; the attract start writes the count
 }
 
 // Linked expiry stream at 0x1ba17. CLEAR/SCROLL/FLASH/PRINT/WAIT use the
@@ -56,9 +56,9 @@ func timedDemoExpiryProgram() []presentation.Command {
 
 const timedDemoExpiryLabel = "DEMO_EXPIRYTS"
 
-// The demo has two typed panel streams where the full game has one
-// SHOWPLAYERSTS: NODOT's idle panel (operand DS:1e8b, the unwritten players
-// record) and the NEW_BALL reset panel at 0x1b88e (demo ball counter).
+// The demo's SHOWPLAYERSTS (DS:1ade, file 0x1b88e) prints the duration label
+// at 336 and the demo ball counter. NODOT (file 0x56ef) and the NEW_BALL reset
+// both install it. FIRST_NO_OF_PLAYERSTS (0x1b89e) shows the players record.
 func timedDemoPanels() map[string][]presentation.Command {
 	panel := func(at int, second string) []presentation.Command {
 		return []presentation.Command{{Op: "_CLEAR4"},
@@ -66,19 +66,29 @@ func timedDemoPanels() map[string][]presentation.Command {
 			{Op: "_PRINT5", Args: []string{second, "1684"}, Nums: map[int]int{1: 1684}}, {Op: "0"}}
 	}
 	return map[string][]presentation.Command{
-		"DEMO_IDLE_PANELTS":  panel(340, "NO_OF_PLAYERS_TEXT"),
-		"DEMO_RESET_PANELTS": panel(336, "BALLSTEXT"),
+		"DEMO_SHOWPLAYERSTS": panel(336, "BALLSTEXT"),
+		// FIRST_NO_OF_PLAYERSTS 0x1b89e: the full-game stream with the
+		// duration label at 336.
+		"DEMO_FIRST_NO_OF_PLAYERSTS": {{Op: "_CLEAR4"},
+			{Op: "_PRINT5", Args: []string{"PLAYERSTEXT", ""}, Nums: map[int]int{1: 336}},
+			{Op: "_PRINT13", Args: []string{"NOLLA", ""}, Nums: map[int]int{1: 412}},
+			{Op: "_PRINT5", Args: []string{"NO_OF_PLAYERS_TEXT", "1684"}, Nums: map[int]int{1: 1684}},
+			{Op: "_WAIT_GAME_ON", Args: []string{"?"}}, {Op: "0"}},
 	}
 }
 
-func (g *Game) playerPanel(reset bool) string {
-	switch {
-	case g.timed == nil:
-		return "SHOWPLAYERSTS"
-	case reset:
-		return "DEMO_RESET_PANELTS"
+func (g *Game) firstPlayersPanel() string {
+	if g.timed != nil {
+		return "DEMO_FIRST_NO_OF_PLAYERSTS"
 	}
-	return "DEMO_IDLE_PANELTS"
+	return "FIRST_NO_OF_PLAYERSTS"
+}
+
+func (g *Game) playerPanel() string {
+	if g.timed != nil {
+		return "DEMO_SHOWPLAYERSTS"
+	}
+	return "SHOWPLAYERSTS"
 }
 
 // NewDemo creates a fresh table lifetime: timer zero, expired false.
@@ -96,7 +106,7 @@ func NewDemo(table *physics.Table, data []byte, in DemoInputs) *Game {
 	commands := append([]presentation.Command(nil), c.Commands...)
 	programs := timedDemoPanels()
 	programs[timedDemoExpiryLabel] = timedDemoExpiryProgram()
-	for _, label := range []string{timedDemoExpiryLabel, "DEMO_IDLE_PANELTS", "DEMO_RESET_PANELTS"} {
+	for _, label := range []string{timedDemoExpiryLabel, "DEMO_SHOWPLAYERSTS", "DEMO_FIRST_NO_OF_PLAYERSTS"} {
 		labels[label] = len(commands)
 		commands = append(commands, programs[label]...)
 	}
@@ -104,6 +114,9 @@ func NewDemo(table *physics.Table, data []byte, in DemoInputs) *Game {
 	c.Texts["DEMO_EXPIRY_TEXT1"] = append([]byte(nil), in.ExpiryTexts[0]...)
 	c.Texts["DEMO_EXPIRY_TEXT2"] = append([]byte(nil), in.ExpiryTexts[1]...)
 	g.playerText()
+	// A fresh table process has not run the attract start yet: the players
+	// record keeps its loaded placeholder until StartPlayers writes PLAYERS.
+	c.Texts["NO_OF_PLAYERS_TEXT"] = append([]byte(nil), d.playersNo...)
 	return g
 }
 
@@ -206,7 +219,6 @@ func (g *Game) demoPlayerText(ballsText []byte) {
 		return
 	}
 	g.Display.Content.Texts["PLAYERSTEXT"] = append([]byte(nil), g.timed.playersText...)
-	g.Display.Content.Texts["NO_OF_PLAYERS_TEXT"] = append([]byte(nil), g.timed.playersNo...)
 	if ballsText != nil {
 		g.Display.Content.Texts["BALLSTEXT"] = ballsText
 	}

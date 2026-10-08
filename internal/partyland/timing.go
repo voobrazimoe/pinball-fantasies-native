@@ -460,7 +460,7 @@ func (g *Game) matrixTick() {
 	if !m.active {
 		panel := g.Display.TakeIdlePanel(g.inChute)
 		if panel {
-			g.startMatrix(g.playerPanel(false), false) // NODOT calls DO_SPEC_MATRIX.
+			g.startMatrix(g.playerPanel(), false) // NODOT calls DO_SPEC_MATRIX.
 		}
 		if g.Phase == Playing && g.checkHighScore() {
 			g.beginMatrix("BEATENTS")

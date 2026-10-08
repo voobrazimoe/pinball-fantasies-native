@@ -66,7 +66,7 @@ func (g *Game) newBall() {
 	g.Physics.TargetRaster = -1
 	g.playerText()
 	if !g.partyFlash {
-		g.beginMatrix(g.playerPanel(true)) // WHEN_NEW_BALL_RESET calls DO_MATRIX.
+		g.beginMatrix(g.playerPanel()) // WHEN_NEW_BALL_RESET calls DO_MATRIX.
 	}
 	g.emit("NewBall", "NEW_BALL", uint64(g.BallNumber))
 	g.waitAt("SOUNDNEWBALL", 50, func() { g.sound("SNEWBALL") })

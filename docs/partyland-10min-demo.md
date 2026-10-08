@@ -53,7 +53,7 @@ bytes, 255-terminated, glyph-map checked).
 | `S_EMPTY` priority 0 | Decoded jingle record (A has priority 1). |
 | Expired scored drain | Effect 0x1a4a1 in place of LOSTBALL: cue `S_GAMEOVER2`, zero arithmetic, matrix = expiry entry. It installs only when admitted by the cue, INH_EFF and SPECIALMODE guards. Unscored drains still select PARTY_ON before the expired guard. |
 | DEMOVER_CHANGE_PLAYER | At `_CHANGE_PLAYER`: keeps the player, advances the displayed ball counter (1..9, 10..19, 20..29, then 10 again), saves the player and queues NEW_BALL_TASK wait 30. There is no ball limit and no canonical player/ball advance. |
-| Demo panels | The NODOT idle panel prints the duration label at 340 with the never-written players record (DS:1e8b). The NEW_BALL reset panel (0x1b88e) prints the label at 336 with the demo ball counter. |
+| Demo panels | The demo SHOWPLAYERSTS (DS:1ade, file 0x1b88e) prints the duration label at 336 with the demo ball counter; NODOT (`mov bx,1ade` at 0x56ef) and the NEW_BALL reset both install it. FIRST_NO_OF_PLAYERSTS (0x1b89e) prints the label at 336, the zero score and the players record (DS:1e8b), which the attract start fills with the count. An earlier research note gave NODOT the DS:1e8b operand; the linked call shows DS:1ade. |
 | NEW_BALL reset | Sets SPRING_VALID as in the reviewed demo reset. |
 | Pause / abort | P suspends updates: timer, expired, matrix and session are unchanged, and audio is silent. Esc asks to quit; Y returns to the selector; any other key resumes. |
 | High scores | Volatile factory values; no HI load or save. |
@@ -105,14 +105,15 @@ The demo starts with its own INTRO, through the shared native front end:
   `ESC - QUIT`, then the options help), read from the user's file.
 - SHOWTEXT cycle of the demo's two pages, welcome and availability, read from
   the user's file. There is no high-score or credits page in the demo cycle.
-- F1 loads Party Land's attract. Attract start keys F1-F8 (or Enter) set
-  PLAYERS as in the demo's attract start (`0x64cf`). The demo continuation
-  never rotates PLAYER, so player 1 keeps the ball; only a canonical
-  shoot-again or match fallback can change it. The demo omits the chute
-  start-player and chute quit routes, so F1-F8 and Esc in the chute do
-  nothing.
-- The retained attract-only cheat gate accepts the thirteen original cheats
-  (for example EARTHQUAKE disables tilt).
+- F1 starts a one-player Party Land game at once. The demo's TABLE1 init
+  stores F1 as the start key (`mov byte [3813],3b` at file `0x3a74`, absent
+  from retail A), so there is no attract wait and no player-count choice.
+  F keys are read only in attract (`[34e2]` gate at `0x3712`), which the demo
+  reaches only after a canonical game-over fallback. In play, F1-F8 and Esc
+  in the chute do nothing (the demo omits the chute start-player and quit
+  routes), and every ball stays with player 1.
+- The attract-only cheat gate is retained but, with no attract phase before
+  play, cheats are effectively unreachable, as in the DOS demo.
 - Esc in the selector runs the launcher's zero-table-selection exit: its
   closing text (from the user's `PINBALL.EXE`, record `0x43f`, hash-checked)
   in a 640x400 text screen, until Esc. Without a matching launcher, Esc quits
