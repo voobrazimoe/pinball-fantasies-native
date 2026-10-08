@@ -26,7 +26,7 @@ func (g *Game) beatHighScore() bool {
 }
 func (g *Game) Result() (Decimal, bool) { return g.Score, g.Phase == GameOver }
 func (g *Game) InChute() bool           { return g.Physics.SpringValid }
-func (g *Game) PCM() []byte             { return g.AudioPCM }
+func (g *Game) PCM() []byte             { return g.demoPCM(g.AudioPCM) }
 func (g *Game) Cue(label string)        { g.Audio.Priority = 0; g.playJingle(label) }
 
 // PresentationAudioSync advances only the native music clock in attract/entry;

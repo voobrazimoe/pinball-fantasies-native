@@ -52,6 +52,9 @@ func LoadConfigured(dataDir string, store Store, configStore *settings.Store) (*
 	for _, name := range runtimeNamesRequired {
 		data, err := os.ReadFile(filepath.Join(dataDir, name))
 		if err != nil {
+			if missingFullInstallation(err) && demoFolder(dataDir) {
+				return loadDemo(dataDir)
+			}
 			return nil, err
 		}
 		inputs[name] = data

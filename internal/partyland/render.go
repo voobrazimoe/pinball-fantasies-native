@@ -26,6 +26,9 @@ func (g *Game) applyLamp(p *[768]byte, n int, on bool) {
 // Matrix command timing belongs to the gameplay scheduler.
 func (g *Game) Frame() *image.RGBA {
 	p := presentation.MatrixPaletteMode(g.Palette(), g.Physics.ReferenceMode, 242)
+	if fade, ok := g.demoFadePalette(); ok {
+		p = fade
+	}
 	d := *g.Display
 	return presentation.ComposeNative(g.Physics.FramePalette(p), &d, p, 96, 242, g.Physics.PresentationSettings(), g.Physics.ScreenOffset)
 }

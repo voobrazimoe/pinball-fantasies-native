@@ -367,6 +367,9 @@ func (g *Game) matrixDispatch() {
 			if g.HoldBonus {
 				g.Bonus = m.held
 			}
+			if g.demoChangePlayer() {
+				continue
+			}
 			m.active = false
 			if g.changeBall() {
 				m.active = true
@@ -457,7 +460,7 @@ func (g *Game) matrixTick() {
 	if !m.active {
 		panel := g.Display.TakeIdlePanel(g.inChute)
 		if panel {
-			g.startMatrix("SHOWPLAYERSTS", false) // NODOT calls DO_SPEC_MATRIX.
+			g.startMatrix(g.playerPanel(false), false) // NODOT calls DO_SPEC_MATRIX.
 		}
 		if g.Phase == Playing && g.checkHighScore() {
 			g.beginMatrix("BEATENTS")

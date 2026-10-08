@@ -165,6 +165,33 @@ static BOOL acceptTestFiles(NSString *data,NSError **error) {
     }
     return YES;
 }
+static BOOL acceptDemoTestFiles(NSString *data,NSError **error) {
+    (void)error;
+    for (NSString *name in pf_demo_assets()) {
+        NSData *bytes=[NSData dataWithContentsOfFile:[data stringByAppendingPathComponent:name]];
+        if (bytes.length!=4) return NO;
+    }
+    return YES;
+}
+static void demoStorageTests(void) {
+    NSFileManager *fm=NSFileManager.defaultManager; NSError *error=nil;
+    NSString *root=[NSTemporaryDirectory() stringByAppendingPathComponent:NSUUID.UUID.UUIDString];
+    NSString *source=[root stringByAppendingPathComponent:@"pinbfan"];
+    NSString *data=[root stringByAppendingPathComponent:@"Data"];
+    assert([fm createDirectoryAtPath:source withIntermediateDirectories:YES attributes:nil error:&error]);
+    for (NSString *name in [pf_demo_assets() arrayByAddingObject:@"PINBALL.EXE"]) assert([[@"test" dataUsingEncoding:NSUTF8StringEncoding]
+        writeToFile:[source stringByAppendingPathComponent:name] atomically:YES]);
+    assert([pf_installation_assets(source) isEqualToArray:pf_demo_assets()]);
+    assert(pf_import_assets(source,data,acceptDemoTestFiles,&error));
+    assert([fm contentsOfDirectoryAtPath:data error:&error].count==5);
+    assert([fm removeItemAtPath:[source stringByAppendingPathComponent:@"MOD2.MOD"] error:&error]);
+    assert(!pf_import_assets(source,data,acceptDemoTestFiles,&error));
+    assert([fm contentsOfDirectoryAtPath:data error:NULL].count==5);
+    assert([[@"test" dataUsingEncoding:NSUTF8StringEncoding] writeToFile:[source stringByAppendingPathComponent:@"TABLE3.PRG"] atomically:YES]);
+    assert([pf_installation_assets(source) isEqualToArray:pf_required_assets()]);
+    [fm removeItemAtPath:root error:NULL];
+    puts("PASS demo-shaped import selects the five demo runtime roles");
+}
 static void storageTests(void) {
     NSFileManager *fm=NSFileManager.defaultManager; NSError *error=nil;
     NSString *root=[NSTemporaryDirectory() stringByAppendingPathComponent:NSUUID.UUID.UUIDString];
@@ -395,7 +422,7 @@ static void compatibilityImportTests(NSString *originals) {
 
 int main(int argc,const char **argv) {
     @autoreleasepool {
-        abiTests(); modifierTests(); audioTests(); storageTests(); frameTests();
+        abiTests(); modifierTests(); audioTests(); storageTests(); demoStorageTests(); frameTests();
         if (argc==2) { NSString *originals=[NSString stringWithUTF8String:argv[1]]; compatibilityImportTests(originals); bundledStorageTests(originals); journey(originals); }
         else puts("UNVERIFIED original-backed four-table macOS journey: external originals not supplied");
     }
