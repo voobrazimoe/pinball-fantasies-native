@@ -105,12 +105,15 @@ The demo starts with its own INTRO, through the shared native front end:
   `ESC - QUIT`, then the options help), read from the user's file.
 - SHOWTEXT cycle of the demo's two pages, welcome and availability, read from
   the user's file. There is no high-score or credits page in the demo cycle.
-- F1 loads Party Land's attract. Attract start keys F1-F8 (or Enter) set
-  PLAYERS as in the demo's attract start (`0x64cf`). The demo continuation
-  never rotates PLAYER, so player 1 keeps the ball; only a canonical
-  shoot-again or match fallback can change it. The demo omits the chute
-  start-player and chute quit routes, so F1-F8 and Esc in the chute do
-  nothing.
+- F1 loads Party Land's attract. Attract start keys F1-F8 (or Enter) set the
+  number of players, and F1-F8/Enter in the chute change it, as in the full
+  game. Esc in the chute does nothing (the demo omits that quit route).
+- **Native multiplayer (intentional extension):** the demo binary never
+  rotates PLAYER (`_DEMOVER_CHANGE_PLAYER` keeps player 1). Here players take
+  turns like the full game after each scored drain, still without a ball
+  limit; the demo ball counter advances once per round. Multiplayer games
+  show the full game's PLAYER n / BALL m panels so the turn is visible;
+  single-player games keep the demo's duration-label panels.
 - The retained attract-only cheat gate accepts the thirteen original cheats
   (for example EARTHQUAKE disables tilt).
 - Esc in the selector runs the launcher's zero-table-selection exit: its

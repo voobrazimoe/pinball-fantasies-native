@@ -234,7 +234,7 @@ func (m *Model) startPlayers(count int) error {
 	m.scoreQueue = nil
 	m.highscorePlayed = false
 	m.scorePlayer = 1
-	m.selectionOpen, m.selectionDelay = !m.Demo, 15
+	m.selectionOpen, m.selectionDelay = true, 15
 	m.Mode = Playing
 	m.End = Active
 	return nil

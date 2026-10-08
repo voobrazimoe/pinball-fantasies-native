@@ -137,8 +137,8 @@ func TestPrivateDemoRuntimeLifecycle(t *testing.T) {
 	if g, ok := m.Session.(interface{ PlayerCount() int }); !ok || g.PlayerCount() != 4 {
 		t.Fatal("attract F4 must start four players")
 	}
-	if m.selectionOpen {
-		t.Fatal("the demo omits the chute start-player route")
+	if !m.selectionOpen {
+		t.Fatal("players can be changed from the chute, as in the full game")
 	}
 	if c := demoTimer(t, r); c != 0 {
 		t.Fatal("table attract counted", c)
