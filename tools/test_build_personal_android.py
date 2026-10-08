@@ -147,7 +147,8 @@ class BuilderTest(unittest.TestCase):
 
     def test_gradle_opt_in_contract(self):
         config = (ROOT/'hosts/android/app/build.gradle').read_text()
-        self.assertIn("if (personalAssets != null) main.assets.srcDirs = [personalAssets]", config)
+        # Personal assets replace the public demo assets; they never merge with them.
+        self.assertIn("main.assets.srcDirs = personalAssets != null ? [personalAssets] : ['../../../internal/demodata/assets']", config)
         self.assertIn('layout.buildDirectory.set(file(personalOutput))', config)
         self.assertFalse((ROOT/'hosts/android/app/src/main/assets/personal-data').exists())
 
