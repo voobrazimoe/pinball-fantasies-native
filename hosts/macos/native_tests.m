@@ -183,10 +183,11 @@ static void demoStorageTests(void) {
         writeToFile:[source stringByAppendingPathComponent:name] atomically:YES]);
     assert([pf_installation_assets(source) isEqualToArray:pf_demo_assets()]);
     assert(pf_import_assets(source,data,acceptDemoTestFiles,&error));
-    assert([fm contentsOfDirectoryAtPath:data error:&error].count==5);
+    assert([fm contentsOfDirectoryAtPath:data error:&error].count==6); /* five roles + launcher text */
+    assert([fm fileExistsAtPath:[data stringByAppendingPathComponent:@"PINBALL.EXE"]]);
     assert([fm removeItemAtPath:[source stringByAppendingPathComponent:@"MOD2.MOD"] error:&error]);
     assert(!pf_import_assets(source,data,acceptDemoTestFiles,&error));
-    assert([fm contentsOfDirectoryAtPath:data error:NULL].count==5);
+    assert([fm contentsOfDirectoryAtPath:data error:NULL].count==6);
     assert([[@"test" dataUsingEncoding:NSUTF8StringEncoding] writeToFile:[source stringByAppendingPathComponent:@"TABLE3.PRG"] atomically:YES]);
     assert([pf_installation_assets(source) isEqualToArray:pf_required_assets()]);
     [fm removeItemAtPath:root error:NULL];

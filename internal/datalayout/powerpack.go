@@ -119,5 +119,10 @@ func ValidateDecoded(name string, data []byte) error {
 			return nil
 		}
 	}
+	if name == "INTRO.PRG" {
+		if err := validateProfile(name, data, partyLandDemoIntro()); err == nil {
+			return nil
+		}
+	}
 	return validateProfile(name, data, deluxeAltDecodedProfile(name))
 }

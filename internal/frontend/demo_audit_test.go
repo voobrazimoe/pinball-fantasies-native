@@ -66,12 +66,9 @@ func TestPrivate10MinuteDemoAdmissionBoundary(t *testing.T) {
 			}
 		}
 	}
-	if _, e := datalayout.PreparePRGForProfile(datalayout.PartyLandDemoProfile, "INTRO.PRG", inputs["INTRO.PRG"]); e == nil {
-		t.Fatal("demo INTRO has no decoded presentation")
-	}
 	r, e := Load(dir, nil)
-	if e != nil || r.ProfileID != DemoProfileID || r.View != nil {
-		t.Fatal("five-file demo must enter Party Land directly", e)
+	if e != nil || r.ProfileID != DemoProfileID || !r.Model.Demo || r.Model.Mode != Startup {
+		t.Fatal("five-file demo must start its own INTRO", e)
 	}
 	roles := []string{"INTRO.PRG", "TABLE1.PRG", "TABLE2.PRG", "TABLE3.PRG", "TABLE4.PRG"}
 	for _, env := range []string{"PF_RUNTIME_DATA", "PF_POWERPACK_DATA", "PF_DELUXE_CD_ALT_DATA", "PF_DELUXE_CD_DATA"} {

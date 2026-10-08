@@ -26,6 +26,8 @@ const (
 	Initials
 	EntryWait
 	Quit
+	// Closing is the demo launcher's exit text after INTRO quits (Esc).
+	Closing
 )
 
 type Reason uint8
@@ -117,6 +119,11 @@ type Model struct {
 	ReturnMode                           Mode
 	PauseDelay                           int
 	audioMode                            Mode
+	// Demo is the official 10-minute demo INTRO: Party Land only, its own
+	// two SHOWTEXT pages, and QUIT returning to INTRO. ClosingText is the
+	// launcher's exit text shown after Esc in the selector, when supplied.
+	Demo        bool
+	ClosingText []string
 }
 
 func New(store Store, factory Factory) (*Model, error) {
@@ -169,6 +176,15 @@ func (m *Model) selector() {
 	m.SidebarTick = 0
 }
 func (m *Model) start() error { return m.startPlayers(1) }
+
+// restartIntro is a fresh INTRO process after the demo's QUIT.
+func (m *Model) restartIntro() {
+	m.End = Completed
+	m.Session, m.sessionSynced = nil, false
+	m.Mode, m.Counter = Startup, 540
+	m.Segment, m.SegmentTick, m.IntroClock = 0, 0, 0
+	m.Page, m.PreviousPage, m.TextPage, m.Reveal, m.SidebarTick = 0, 0, 0, 0, 0
+}
 func (m *Model) startPlayers(count int) error {
 	s, e := m.tableFactory()(m.Scores[m.Selected-1][0].Digits)
 	if e != nil {
@@ -218,7 +234,7 @@ func (m *Model) startPlayers(count int) error {
 	m.scoreQueue = nil
 	m.highscorePlayed = false
 	m.scorePlayer = 1
-	m.selectionOpen, m.selectionDelay = true, 15
+	m.selectionOpen, m.selectionDelay = !m.Demo, 15
 	m.Mode = Playing
 	m.End = Active
 	return nil
@@ -343,6 +359,10 @@ func (m *Model) Update(in Input) error {
 				if e := m.saveSettings(); e != nil {
 					return e
 				}
+				if len(m.ClosingText) > 0 {
+					m.Mode = Closing // the launcher prints its text, then waits for Esc
+					return nil
+				}
 				m.Mode = Quit
 				m.End = ProgramQuit
 				return nil
@@ -358,6 +378,9 @@ func (m *Model) Update(in Input) error {
 				}
 				m.openOptions()
 				break
+			}
+			if m.Demo && k >= F2 && k <= F4 {
+				break // the demo selector has no branches to the unavailable tables
 			}
 			if k >= F1 && k <= F4 {
 				if e := m.loadTable(int(k-F1) + 1); e != nil {
@@ -379,6 +402,12 @@ func (m *Model) Update(in Input) error {
 				} else {
 					m.advanceSelector(k == Enter)
 				}
+			}
+		case Closing:
+			if k == Escape {
+				m.Mode = Quit
+				m.End = ProgramQuit
+				return nil
 			}
 		case Options:
 			if m.OptionTick < 45 || m.OptionsLeaving {
@@ -448,7 +477,7 @@ func (m *Model) Update(in Input) error {
 			}
 			if k == P && m.PauseDelay == 0 {
 				m.Mode = Paused
-			} else if k == Escape && m.SessionReady() {
+			} else if k == Escape && m.SessionReady() && !m.Demo { // the demo omits the chute quit route
 				m.End = Aborted
 				m.attract()
 			}
@@ -552,6 +581,11 @@ func (m *Model) Update(in Input) error {
 			return e
 		}
 		matrixTestTrace(m)
+		if g, ok := m.Session.(interface{ DemoFinished() bool }); ok && g.DemoFinished() {
+			// Linked QUIT(0): TABLE1 exits and the launcher runs INTRO again.
+			m.restartIntro()
+			return nil
+		}
 		if d, done := m.Session.Result(); done {
 			m.Final = d
 			m.End = Completed
@@ -627,7 +661,12 @@ func (m *Model) advanceSelector(enter bool) {
 	m.Page ^= 1
 	// INTRO/TEXTLISTA has ten entries after its dynamic HITEXT slot.
 	// TEXTPEK starts at slot1 and wraps at the following zero terminator.
-	m.TextPage = m.TextPage%10 + 1
+	// The demo list has two entries: welcome and availability.
+	if m.Demo {
+		m.TextPage = m.TextPage%2 + 1
+	} else {
+		m.TextPage = m.TextPage%10 + 1
+	}
 	if enter {
 		m.Mode = Selector
 		m.Counter = 540
@@ -664,7 +703,7 @@ func (m *Model) advanceStartup() {
 }
 
 func (m Mode) String() string {
-	names := [...]string{"startup", "selector", "selector text", "options", "table attract", "playing", "paused", "quit question", "game over", "initials", "entry wait", "quit"}
+	names := [...]string{"startup", "selector", "selector text", "options", "table attract", "playing", "paused", "quit question", "game over", "initials", "entry wait", "quit", "closing"}
 	if int(m) >= len(names) {
 		return "unknown"
 	}

@@ -104,7 +104,154 @@
     "purpose": "FORM HighMono",
     "sha256": "083c110f932e68bb4e3f11674423ad07c7a9a298671303aa5e68ff7717d89a87"
    }
-  ]
+  ],
+  "pictures": [
+   {
+    "offset": 117712,
+    "kind": "ILBM",
+    "width": 640,
+    "height": 256,
+    "planes": 4
+   },
+   {
+    "offset": 27696,
+    "kind": "ILBM",
+    "width": 640,
+    "height": 28,
+    "planes": 4
+   },
+   {
+    "offset": 35776,
+    "kind": "ILBM",
+    "width": 640,
+    "height": 29,
+    "planes": 4
+   },
+   {
+    "offset": 132336,
+    "kind": "ILBM",
+    "width": 640,
+    "height": 95,
+    "planes": 4
+   },
+   {
+    "offset": 150288,
+    "kind": "ILBM",
+    "width": 640,
+    "height": 200,
+    "planes": 4
+   },
+   {
+    "offset": 170256,
+    "kind": "ILBM",
+    "width": 640,
+    "height": 200,
+    "planes": 4
+   },
+   {
+    "offset": 189120,
+    "kind": "ILBM",
+    "width": 640,
+    "height": 200,
+    "planes": 4
+   },
+   {
+    "offset": 245104,
+    "kind": "PBM ",
+    "width": 320,
+    "height": 256,
+    "planes": 8
+   },
+   {
+    "offset": 274864,
+    "kind": "PBM ",
+    "width": 320,
+    "height": 256,
+    "planes": 8
+   },
+   {
+    "offset": 290448,
+    "kind": "PBM ",
+    "width": 320,
+    "height": 130,
+    "planes": 8
+   },
+   {
+    "offset": 319488,
+    "kind": "PBM ",
+    "width": 320,
+    "height": 126,
+    "planes": 8
+   },
+   {
+    "offset": 73952,
+    "kind": "PBM ",
+    "width": 320,
+    "height": 110,
+    "planes": 8
+   },
+   {
+    "offset": 98272,
+    "kind": "PBM ",
+    "width": 320,
+    "height": 130,
+    "planes": 8
+   },
+   {
+    "offset": 69408,
+    "kind": "PBM ",
+    "width": 320,
+    "height": 200,
+    "planes": 8
+   },
+   {
+    "offset": 42256,
+    "kind": "ILBM",
+    "width": 640,
+    "height": 178,
+    "planes": 4
+   },
+   {
+    "offset": 217952,
+    "kind": "ILBM",
+    "width": 640,
+    "height": 200,
+    "planes": 4
+   },
+   {
+    "offset": 211424,
+    "kind": "ILBM",
+    "width": 640,
+    "height": 200,
+    "planes": 4
+   }
+  ],
+  "records": {
+   "WELCOME_PAGE": {
+    "source": 22541,
+    "size": 87,
+    "sha256": "d309990e286c64837d6bd99b372312161bfce4309c5a5487bb49722c1cddc3f2"
+   },
+   "AVAILABLE_PAGE": {
+    "source": 22633,
+    "size": 116,
+    "sha256": "76c32579a26af31b0cc03bf3793bd53d27a7d688fa6cfab235c4e3fd663c985a"
+   },
+   "SIDEBAR": {
+    "source": 235219,
+    "size": 240,
+    "sha256": "c32ee617ef153860f9a41ecd910e1fe6ed700d602f224ee0099f11248dd9fdd8"
+   }
+  }
+ },
+ "launcher": {
+  "records": {
+   "CLOSING_MESSAGE": {
+    "source": 1087,
+    "size": 307,
+    "sha256": "ae0d0cf12d15c2fc2f4e3db5d36c7cacc8d73e5c823fed7798da9e1d1d638f0c"
+   }
+  }
  },
  "table1": {
   "decoded_size": 536822,

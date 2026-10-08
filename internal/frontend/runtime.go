@@ -53,7 +53,7 @@ func LoadConfigured(dataDir string, store Store, configStore *settings.Store) (*
 		data, err := os.ReadFile(filepath.Join(dataDir, name))
 		if err != nil {
 			if missingFullInstallation(err) && demoFolder(dataDir) {
-				return loadDemo(dataDir)
+				return loadDemo(dataDir, configStore)
 			}
 			return nil, err
 		}
@@ -285,8 +285,8 @@ func (r *Runtime) Update(in Input) error {
 		return e
 	}
 	m := r.Model
-	if m.Suspended() || m.Mode == Quit {
-		return nil
+	if m.Suspended() || m.Mode == Quit || m.Mode == Closing {
+		return nil // the launcher's text screen is silent
 	}
 	if m.sessionSynced {
 		r.PCM = m.Session.PCM()
@@ -307,6 +307,9 @@ func (r *Runtime) Update(in Input) error {
 	}
 	if before >= TableAttract && m.Mode == Selector {
 		r.Player = audio.New(r.Menu)
+	}
+	if before >= TableAttract && m.Mode == Startup {
+		r.Player = audio.New(r.Intro) // demo QUIT: the launcher restarts INTRO
 	}
 	r.PCM = r.Player.Render(audio.Rate / 60)
 	return nil

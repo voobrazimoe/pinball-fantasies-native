@@ -114,6 +114,8 @@ The extended suite's missing reference inputs are NOT AVAILABLE, not application
 
 Four real baseline failures are TestNativeGameshowLifecycleAndPersistence, TestNativeSpeedDevilsLifecycleAndPersistence and TestNativeStonesLifecycleAndPersistence (`native content`), plus TestPF6SessionKeepsGameplayOracle (score000002311040, ball2, ticks1200). All four were rerun against a clean `git archive` of cdf6084 with the same A/source inputs and produced identical failures/messages. They remain unresolved pre-existing assertions outside this layout phase. They are not labelled PASS. The new D and A/B regression tests pass.
 
+Resolved afterwards: all four read the mutable `PINBALL.CFG` from the checkout, and the tree used here held the default record `00 00 01 00 00 00` instead of the installation record `01 01 02 01 01 00`. NORMAL resolution shortens the table frame below the 350 rows the three lifecycle tests assert, and HIGH angle changes the PF6 replay score to 2311040. No engine change was needed: the tests now stage the pinned originals in a temporary directory with the installation record, so they pass with any local, absent or default CFG and still skip without originals.
+
 The first broad Python discovery attempt used system Python without PIL and imported an ABI CLI script without its required argument. The final unittest run used the bundled Python libraries; the ABI script ran separately with the built shared library. Gradle's sandbox file-lock socket was blocked; the authorized offline build succeeded with automatic sandbox approval. No new network dependency was fetched.
 
 ## Reproduction

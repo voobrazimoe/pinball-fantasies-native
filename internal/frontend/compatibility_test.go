@@ -40,6 +40,23 @@ func originalInstallation(t *testing.T) string {
 	}
 	return dir
 }
+
+// installationSettings is the PINBALL.CFG record written by the original
+// installer (analysis/pf11-settings-fixtures.json "installation"): HIGH
+// resolution and LOW angle. Lifecycle and replay oracles were captured with it.
+var installationSettings = []byte{1, 1, 2, 1, 1, 0}
+
+// stageInstallationSettings stages the pinned originals with the installation
+// settings record, so a locally saved PINBALL.CFG cannot change the frame
+// height or physics under fixture-backed tests.
+func stageInstallationSettings(t *testing.T) string {
+	t.Helper()
+	dir := stageInstallation(t, originalInstallation(t))
+	if err := os.WriteFile(filepath.Join(dir, "PINBALL.CFG"), installationSettings, 0600); err != nil {
+		t.Fatal(err)
+	}
+	return dir
+}
 func stageInstallation(t *testing.T, source string) string {
 	t.Helper()
 	dir := t.TempDir()

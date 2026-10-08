@@ -15,6 +15,7 @@ type FrontendPicture struct {
 }
 type FrontendArt struct {
 	SidebarInfo, OptionsInfo string
+	TextPages                [][]string // demo SHOWTEXT pages; nil uses the retail cycle
 	Logo, Font, MonoFont     *FrontendPicture
 	Tables                   [4]*FrontendPicture
 	Startup                  [8]*FrontendPicture
@@ -40,7 +41,8 @@ func DecodeFrontend(data []byte) (*FrontendArt, error) {
 		pics[i] = p
 	}
 	a := &FrontendArt{Logo: pics[0], Font: pics[1], MonoFont: pics[2], StartupLowerY: layout.StartupLowerY,
-		SidebarInfo: string(data[233806:233926]), OptionsInfo: string(data[233926:234046])}
+		SidebarInfo: string(data[layout.SidebarOffset : layout.SidebarOffset+120]), OptionsInfo: string(data[layout.SidebarOffset+120 : layout.SidebarOffset+240]),
+		TextPages: layout.TextPages}
 	copy(a.Tables[:], pics[3:7])
 	copy(a.Startup[:], pics[7:15])
 	// INTRO's linked UNPKLBM chunky branch (3b365..3b375) constructs the

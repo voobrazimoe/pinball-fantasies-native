@@ -3,7 +3,7 @@ package io.github.voobrazimoe.pinballfantasies;
 // One framework-free mapper. Mode numbers are the ABI's authoritative modes.
 final class SemanticUi {
     static final int STARTUP=0, SELECTOR=1, SELECTOR_TEXT=2, OPTIONS=3, ATTRACT=4,
-            PLAYING=5, PAUSED=6, QUESTION=7, GAME_END=8, INITIALS=9, ENTRY_WAIT=10, QUIT=11;
+            PLAYING=5, PAUSED=6, QUESTION=7, GAME_END=8, INITIALS=9, ENTRY_WAIT=10, QUIT=11, CLOSING=12;
     static final String[] TABLES={"Party Land","Speed Devils","Billion Dollar Gameshow","Stones 'N Bones","Options"};
     int mode=-1, table, flags, players=1;
     boolean update(int mode,int table,int flags) {

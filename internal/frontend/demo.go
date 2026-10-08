@@ -3,16 +3,17 @@ package frontend
 import (
 	"errors"
 	"fmt"
-	"image"
 	"io/fs"
 	"os"
 	"path/filepath"
 
+	"pinballfantasies/internal/assets"
 	"pinballfantasies/internal/audio"
 	"pinballfantasies/internal/datalayout"
 	"pinballfantasies/internal/partyland"
 	"pinballfantasies/internal/physics"
 	"pinballfantasies/internal/settings"
+	"pinballfantasies/internal/tablelogic"
 )
 
 // DemoNamesRequired is the official 10-minute demo's runtime fingerprint.
@@ -22,9 +23,10 @@ var DemoNamesRequired = []string{"INTRO.PRG", "INTRO.MOD", "MOD2.MOD", "TABLE1.P
 // DemoProfileID marks a runtime loaded from the official 10-minute demo.
 const DemoProfileID = datalayout.PartyLandDemoProfile
 
-// loadDemo enters Party Land directly. The demo INTRO selector/attract is not
-// reproduced: TABLE2-4 are absent and its advertising cards are not tables.
-func loadDemo(dataDir string) (*Runtime, error) {
+// loadDemo runs the demo's own INTRO: startup, selector with its NOT
+// AVAILABLE advertising cards, text pages and options. Party Land is the only
+// table; TABLE2-4 have no factory. High scores are volatile factory values.
+func loadDemo(dataDir string, configStore *settings.Store) (*Runtime, error) {
 	inputs := make(map[string][]byte)
 	for _, name := range DemoNamesRequired {
 		data, err := os.ReadFile(filepath.Join(dataDir, name))
@@ -34,6 +36,14 @@ func loadDemo(dataDir string) (*Runtime, error) {
 		inputs[name] = data
 	}
 	id, err := datalayout.DetectDemoInstallation(inputs["INTRO.PRG"], inputs["TABLE1.PRG"])
+	if err != nil {
+		return nil, err
+	}
+	introData, err := datalayout.PreparePRGForProfile(id, "INTRO.PRG", inputs["INTRO.PRG"])
+	if err != nil {
+		return nil, err
+	}
+	art, err := assets.DecodeFrontend(introData)
 	if err != nil {
 		return nil, err
 	}
@@ -53,27 +63,58 @@ func loadDemo(dataDir string) (*Runtime, error) {
 	if err != nil {
 		return nil, fmt.Errorf("TABLE1.MOD: %w", err)
 	}
-	// Role-specific decoders keep the five-file installation coherent.
-	if _, err = audio.DecodeIntro(inputs["INTRO.MOD"]); err != nil {
+	intro, err := audio.DecodeIntro(inputs["INTRO.MOD"])
+	if err != nil {
 		return nil, fmt.Errorf("INTRO.MOD: %w", err)
 	}
-	if _, err = audio.DecodeMenu(inputs["MOD2.MOD"]); err != nil {
+	menu, err := audio.DecodeMenu(inputs["MOD2.MOD"])
+	if err != nil {
 		return nil, fmt.Errorf("MOD2.MOD: %w", err)
 	}
-	s := &demoSession{newGame: func() *partyland.Game {
+	config := settings.Defaults()
+	if configStore != nil {
+		config, err = configStore.Load()
+	} else {
+		config, err = (settings.Store{Directory: dataDir}).Load()
+	}
+	if err != nil {
+		return nil, err
+	}
+	var defaults [4]Scores
+	for i := range defaults {
+		defaults[i] = Defaults(i + 1)
+	}
+	initials, err := datalayout.FactoryInitials("TABLE1.PRG", data)
+	if err != nil {
+		return nil, err
+	}
+	for rank := range defaults[0] {
+		defaults[0][rank].Name = initials[rank]
+	}
+	var model *Model
+	factory := func(top tablelogic.Decimal) (Session, error) {
+		// Every table entry is a fresh table lifetime: timer 0, not expired.
 		g := partyland.NewDemo(table, data, partyland.DemoInputs{PlayersText: records.PlayersText, ExpiryTexts: records.ExpiryTexts})
-		// The proved reference uses the accepted Legacy native settings.
-		g.Configure(settings.Legacy())
-		// High scores are volatile factory values: no HI load/save is proved.
-		g.SetHighScore(Defaults(1)[0].Digits)
+		g.Configure(model.SessionConfig())
+		g.SetHighScore(top)
 		g.AttachAudio(module)
-		return g
-	}}
-	r := &Runtime{ProfileID: id, Model: &Model{Mode: Playing, Selected: 1}}
-	s.runtime = r
-	s.start()
-	r.session = s
-	return r, nil
+		return g, nil
+	}
+	// No HI load/save is proved for the demo: scores live for this run only.
+	model, err = newWithDefaults(nil, factory, defaults)
+	if err != nil {
+		return nil, err
+	}
+	model.Demo = true
+	// The launcher is not a runtime role; its closing text is shown when supplied.
+	if launcher, err := os.ReadFile(filepath.Join(dataDir, "PINBALL.EXE")); err == nil {
+		if text, err := datalayout.DemoClosingMessage(launcher); err == nil {
+			model.ClosingText = text
+		}
+	}
+	model.Settings = config
+	model.SettingsStore = configStore
+	return &Runtime{ProfileID: id, Model: model, View: NewView(art, data), Intro: intro, Menu: menu, Player: audio.New(intro)}, nil
 }
 
 // A folder without any of TABLE2-4.PRG is offered to the demo detector; a
@@ -87,112 +128,3 @@ func demoFolder(dataDir string) bool {
 	}
 	return true
 }
-
-// demoSession is the native lifecycle around one table lifetime: P pauses
-// (timer, expired flag and matrix are untouched), Esc asks to quit, Y quits.
-// The demo's linked QUIT ends the program as the DOS demo exits to DOS.
-type demoSession struct {
-	runtime *Runtime
-	game    *partyland.Game
-	newGame func() *partyland.Game
-}
-
-func (s *demoSession) start() {
-	s.game = s.newGame()
-	m := s.runtime.Model
-	m.Session, m.Mode, m.Selected, m.PauseDelay = s.game, Playing, 1, 0
-}
-
-func (s *demoSession) FocusLost(close bool) error {
-	m := s.runtime.Model
-	s.runtime.PCM = nil
-	if close {
-		m.Mode = Quit
-	} else if m.Mode == Playing {
-		m.Mode = Paused
-	}
-	return nil
-}
-
-func (s *demoSession) Update(in Input) error {
-	r, m := s.runtime, s.runtime.Model
-	if in.Close {
-		m.Mode = Quit
-		return nil
-	}
-	if in.FocusLost {
-		return s.FocusLost(false)
-	}
-	for _, k := range in.Keys {
-		before := m.Mode
-		switch m.Mode {
-		case Playing:
-			switch {
-			case k == P && m.PauseDelay == 0:
-				m.Mode = Paused
-			case k == Escape:
-				m.ReturnMode, m.Mode = Playing, QuitQuestion
-			case k == 50:
-				s.game.ToggleMusic()
-			}
-		case Paused:
-			if k == Escape {
-				m.ReturnMode, m.Mode = Playing, QuitQuestion
-			} else {
-				m.Mode, m.PauseDelay = Playing, 30
-			}
-		case QuitQuestion:
-			if Initial(k) == 'Y' {
-				m.End = Aborted
-				m.Mode = Quit
-			} else {
-				m.Mode, m.PauseDelay = m.ReturnMode, 30
-			}
-		}
-		if m.Mode != before {
-			return nil // transition keys never reach the table
-		}
-	}
-	if m.Mode != Playing {
-		return nil
-	}
-	if m.PauseDelay > 0 {
-		m.PauseDelay--
-	}
-	if err := s.game.Sync(in.controls()); err != nil {
-		return err
-	}
-	r.PCM = s.game.PCM()
-	if s.game.DemoFinished() {
-		m.End = ProgramQuit
-		m.Mode = Quit
-	} else if _, over := s.game.Result(); over {
-		// Only a canonical fallback (match/extra-ball tail) can end the game.
-		m.End = Completed
-		m.Mode = Quit
-	}
-	return nil
-}
-
-func (s *demoSession) Frame(full bool) *image.RGBA {
-	p := s.game.Physics
-	previous := p.PresentationFullTable
-	p.PresentationFullTable = full
-	defer func() { p.PresentationFullTable = previous }()
-	frame := s.game.Frame()
-	if s.runtime.Model.Suspended() {
-		// Native pause/quit feedback; the table state is not touched.
-		out := image.NewRGBA(frame.Rect)
-		for i, v := range frame.Pix {
-			if i%4 == 3 {
-				out.Pix[i] = v
-			} else {
-				out.Pix[i] = v / 2
-			}
-		}
-		return out
-	}
-	return frame
-}
-
-func (s *demoSession) Diagnostic() string { return "" }

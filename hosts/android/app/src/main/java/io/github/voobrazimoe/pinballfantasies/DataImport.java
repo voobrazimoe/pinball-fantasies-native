@@ -41,7 +41,7 @@ final class DataImport {
     static String canonical(String name) {
         if (name == null) return null;
         String upper = name.toUpperCase(Locale.ROOT);
-        return REQUIRED.contains(upper) || "PINBALL.CFG".equals(upper) ? upper : null;
+        return REQUIRED.contains(upper) || "PINBALL.CFG".equals(upper) || "PINBALL.EXE".equals(upper) ? upper : null;
     }
     static Map<String, String> select(Map<String, String> entries) throws IOException {
         Map<String, String> selected = new LinkedHashMap<>();
@@ -52,6 +52,8 @@ final class DataImport {
         }
         for (String name : requiredFor(selected))
             if (!selected.containsKey(name)) throw new IOException("Missing required file: " + name);
+        // The demo launcher only supplies the closing text; full installations ignore it.
+        if (requiredFor(selected) != DEMO) selected.remove("PINBALL.EXE");
         return selected;
     }
     File data() { return new File(root, "Data"); }
