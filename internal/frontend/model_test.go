@@ -463,8 +463,7 @@ func TestNativeGameOverAndRestart(t *testing.T) {
 }
 
 func TestPF6SessionKeepsGameplayOracle(t *testing.T) {
-	testinputs.Require(t, "../../INTRO.PRG", "../../INTRO.MOD", "../../MOD2.MOD", "../../TABLE1.PRG", "../../TABLE1.MOD", "../../TABLE2.PRG", "../../TABLE2.MOD", "../../TABLE3.PRG", "../../TABLE3.MOD", "../../TABLE4.PRG", "../../TABLE4.MOD", "../../PINBALL.CFG")
-	r, e := Load("../..", nil)
+	r, e := Load(stageInstallationSettings(t), nil)
 	if e != nil {
 		t.Fatal(e)
 	}

@@ -7,14 +7,13 @@ import (
 	"path/filepath"
 	"pinballfantasies/internal/stones"
 	"pinballfantasies/internal/tablelogic"
-	"pinballfantasies/internal/testinputs"
 	"testing"
 )
 
 func TestNativeStonesLifecycleAndPersistence(t *testing.T) {
 	dir := t.TempDir()
-	testinputs.Require(t, "../../INTRO.PRG", "../../INTRO.MOD", "../../MOD2.MOD", "../../TABLE1.PRG", "../../TABLE1.MOD", "../../TABLE2.PRG", "../../TABLE2.MOD", "../../TABLE3.PRG", "../../TABLE3.MOD", "../../TABLE4.PRG", "../../TABLE4.MOD", "../../PINBALL.CFG")
-	r, e := Load("../..", FileStore{Directory: dir, SeedDirectory: "../.."})
+	data := stageInstallationSettings(t)
+	r, e := Load(data, FileStore{Directory: dir, SeedDirectory: data})
 	if e != nil {
 		t.Fatal(e)
 	}
