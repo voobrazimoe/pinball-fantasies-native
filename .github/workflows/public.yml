@@ -55,6 +55,9 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libsdl2-dev
       - if: runner.os == 'Linux'
         run: echo "CGO_CFLAGS=$(pkg-config --cflags sdl2)" >> "$GITHUB_ENV"
+      - if: runner.os == 'Linux'
+        name: SDL virtual gamepad event bridge
+        run: python3 tools/test_sdl_gamepad.py
       - run: python tools/check_public_source.py
       - if: runner.os == 'macOS'
         name: Prove native Apple Silicon

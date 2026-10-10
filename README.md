@@ -112,6 +112,12 @@ Inside a loaded table:
 
 On macOS, `Z` / `/` and Left / Right Arrow are alternate left/right flipper controls. If your Mac reports Shift sides reversed, enable **View → Swap Left/Right Shift**; the correction persists across launches and affects only Shift.
 
+Gamepads are supported through SDL2 on Linux, XInput on Windows,
+GameController on macOS and Android controller events: shoulders/triggers operate the flippers,
+X charges/releases the plunger, Y nudges, and Start pauses. See
+[gamepad controls and two Steam Deck layouts](docs/gamepads-steam-deck.md) for
+menu controls, Steam Input setup and remaining physical-device checks.
+
 Before the first launch, `F1`–`F8` can replace the player count and `Enter` can add a player up to eight. After the first launch the count is fixed for that game. Players rotate each ball round; extra balls stay with the player who earned them. Each player retains their own score and table state. The matrix presents the incoming player and ball immediately at handoff, before launch.
 
 After an eight-player game, the original attract-mode behavior ignores `Enter`; use `F1`–`F8` to start the next game.

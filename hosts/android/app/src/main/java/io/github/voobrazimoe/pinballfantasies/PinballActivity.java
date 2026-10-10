@@ -43,6 +43,8 @@ public final class PinballActivity extends GameActivity {
     private ControlMenu menu;
     private ControlOverlay overlay;
     private HardwareKeyboard keyboard;
+    private AndroidGamepad gamepad;
+    private boolean gamepadEngineReady;
     private final int[] viewport=new int[8];
     static native void nativeViewport(int[] bounds);
     private final android.os.Handler uiHandler=new android.os.Handler(android.os.Looper.getMainLooper());
@@ -83,11 +85,14 @@ public final class PinballActivity extends GameActivity {
                 data == null ? null : data.getAbsolutePath().getBytes(StandardCharsets.UTF_8),
                 state == null ? null : state.getAbsolutePath().getBytes(StandardCharsets.UTF_8));
         if (failure != null) throw new IOException(failure);
+        if (operation != 0) runOnUiThread(() -> {gamepadEngineReady=false;updateImportUi();});
         if (operation == 2) runOnUiThread(() -> { if (!closed) audio.eligible(false); });
     }
     private void updateImportUi() {
         if (firstRun == null) return;
         boolean loaded = nativeHasEngine(session);
+        if(loaded && !gamepadEngineReady && gamepad!=null) gamepad.synchronize();
+        gamepadEngineReady=loaded;
         firstRun.present(loaded, importBusy, keyboardPresent, menu, overlay);
         controls.enabled = resumed && focused && loaded;
     }
@@ -190,6 +195,7 @@ public final class PinballActivity extends GameActivity {
     }
     @Override
     protected void onDestroy() {
+        if (gamepad != null) gamepad.close();
         if (keyboard != null) keyboard.close();
         if (audio != null) audio.close();
         closed = true;
@@ -217,6 +223,7 @@ public final class PinballActivity extends GameActivity {
         android.os.Handler inputHandler = new android.os.Handler(getMainLooper());
         controls = new Controls((kind,a,b) -> nativeInput(session,kind,a,b),
                 (milliseconds,release) -> inputHandler.postDelayed(release,milliseconds));
+        gamepad = new AndroidGamepad(this,(kind,a,b) -> nativeInput(session,kind,a,b));
         getOnBackPressedDispatcher().addCallback(this,new androidx.activity.OnBackPressedCallback(true) {
             @Override public void handleOnBackPressed() { if (!menu.dismiss()) controls.tap(1); }
         });
@@ -314,8 +321,10 @@ public final class PinballActivity extends GameActivity {
     @Override public void onConfigurationChanged(android.content.res.Configuration configuration) {
         super.onConfigurationChanged(configuration);
         if(keyboard!=null) keyboard.refresh();
+        if(gamepad!=null) gamepad.refresh();
     }
     @Override public boolean dispatchKeyEvent(android.view.KeyEvent event) {
+        if (gamepad!=null && gamepad.key(event)) return true;
         // Consume only the make that dismisses our transient UI. Its matching
         // up has no Controls owner, so it cannot leak an Escape into the engine.
         if (menu!=null && event.getKeyCode()==android.view.KeyEvent.KEYCODE_BACK &&
@@ -325,6 +334,10 @@ public final class PinballActivity extends GameActivity {
                 controls.key(event.getKeyCode(),event.getAction()==android.view.KeyEvent.ACTION_DOWN,
                              event.getRepeatCount())) return true;
         return super.dispatchKeyEvent(event);
+    }
+    @Override public boolean dispatchGenericMotionEvent(android.view.MotionEvent event) {
+        if (gamepad!=null && gamepad.motion(event)) return true;
+        return super.dispatchGenericMotionEvent(event);
     }
     @Override public void onBackPressed() {
         if (controls!=null && !menu.dismiss()) controls.tap(1);

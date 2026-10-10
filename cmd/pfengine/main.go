@@ -119,6 +119,11 @@ func pf_engine_release(h C.uint64_t) C.int32_t {
 	return invoke(h, func(i *instance) C.int32_t { i.engine.Release(); return C.PF_OK })
 }
 
+//export pf_engine_gamepad
+func pf_engine_gamepad(h C.uint64_t, kind, a, b C.int32_t) C.int32_t {
+	return invoke(h, func(i *instance) C.int32_t { return result(i.engine.Gamepad(int(kind), int(a), int(b))) })
+}
+
 //export pf_engine_plunger_delta
 func pf_engine_plunger_delta(h C.uint64_t, d C.int32_t) C.int32_t {
 	return invoke(h, func(i *instance) C.int32_t { i.engine.PlungerDelta(int32(d)); return C.PF_OK })
@@ -192,6 +197,9 @@ func pf_engine_state(h C.uint64_t, tick *C.uint64_t, mode, table, flags *C.uint3
 		}
 		if s.MouseActive {
 			*flags |= 4
+		}
+		if s.Gamepad {
+			*flags |= 8
 		}
 		return C.PF_OK
 	})

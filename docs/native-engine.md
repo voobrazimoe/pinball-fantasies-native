@@ -6,14 +6,14 @@ that Runner, `frontend.Runtime`, and the existing table/presentation/audio code.
 The native macOS ARM64/x86_64 host is in `hosts/macos`; original-backed checks
 and owner physical-Mac acceptance are complete as recorded in
 [macOS validation](macos-validation.md). See [macOS build and usage](macos.md).
-Android is not implemented.
+The Android host uses the same serialized contract; see [Android host](android.md).
 
 ```text
 Go source engine / frontend.Runtime / source.Runner
     +-- direct Go desktop adapter -> Win32
     +-- direct Go desktop adapter -> SDL/Linux
     +-- internal/engine -> stable C ABI -> AppKit/macOS (ARM64/x86_64 native host; accepted)
-    +-- internal/engine -> stable C ABI -> Android native host (pending)
+    +-- internal/engine -> stable C ABI -> Android native host
 ```
 
 Build on a machine with Go and the target's C compiler/SDK:
@@ -31,6 +31,13 @@ destroy invalidates a handle permanently. Invalid handles return PF_INVALID,
 overlapping/reentrant calls return PF_BUSY, runtime failures return PF_ERROR.
 Destroy frees the instance even if settings persistence returns PF_ERROR.
 Create copies UTF-8 paths and returns a bounded error message on load failure.
+
+The optional `pf_engine_gamepad(handle, kind, a, b)` addition retains ABI 1.
+Kinds describe standard button edges, normalized triggers, a connection hold
+snapshot or disconnection; the exact contract is in `abi.h`. The shared Go
+mapper selects actions from the authoritative frontend mode. Controller holds
+combine with existing keyboard/touch holds, and lifecycle clears suppress
+background actions. Older hosts can continue using existing calls.
 
 ## Time and input
 
