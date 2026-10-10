@@ -1,9 +1,11 @@
 package platform
 
 import (
+	"image"
 	"os"
 	"pinballfantasies/internal/diagnostics"
 	"pinballfantasies/internal/frontend"
+	"pinballfantasies/internal/gamepad"
 	"pinballfantasies/internal/gameplay"
 	"pinballfantasies/internal/source"
 	"runtime"
@@ -11,12 +13,6 @@ import (
 )
 
 type PhysicsControls struct{ Left, Right, Down, Release, Tilt, MusicToggle bool }
-
-type hostEvent struct {
-	kind, key   int
-	mouseY      int
-	alt, repeat bool
-}
 
 // ShowFrontend drives deterministic 60 Hz INTRO and unchanged 71 Hz table syncs.
 func ShowFrontend(r *frontend.Runtime, duration time.Duration, device *AudioDevice) error {
@@ -45,9 +41,17 @@ func showFrontend(r *frontend.Runtime, duration time.Duration, device *AudioDevi
 			return e
 		}
 	}
+	pad := gamepad.New()
+	var padFrame *image.RGBA
 	present := func() error {
 		start := time.Now()
 		frame := runner.Frame()
+		m := r.Model
+		composed := gamepad.Overlay(padFrame, frame, pad, gamepad.Hints(m.Mode, !runner.Suspended && m.MousePlungerActive(), m.PlayerSelectionOpen(), m.Demo))
+		if composed != frame {
+			padFrame = composed
+		}
+		frame = composed
 		audit.mark("frame", start, host.presentation.IsFullscreen(), device)
 		if noPresent {
 			return nil
@@ -77,6 +81,8 @@ func showFrontend(r *frontend.Runtime, duration time.Duration, device *AudioDevi
 		}
 		host.MouseActive(mouseActive)
 		input := frontend.Input{}
+		padRelease := false
+		pad.Mode(r.Model.Mode)
 		for {
 			e := host.Event()
 			event := e.kind
@@ -98,12 +104,30 @@ func showFrontend(r *frontend.Runtime, duration time.Duration, device *AudioDevi
 			case 4:
 				keys.enterUp()
 			case 8:
+				pad.Focus(true)
 				runner.Resume()
+			case 9, 10:
+				var translated frontend.Input
+				if event == 9 {
+					translated = pad.Button(e.key, e.mouseY != 0)
+				} else {
+					translated = pad.Axis(e.key, e.mouseY)
+				}
+				input.Keys = append(input.Keys, translated.Keys...)
+				padRelease = padRelease || translated.Gameplay.Release
+			case 11:
+				pad.Disconnect()
+			case 12:
+				pad.Connect(e.key)
+			case 13:
+				pad.SetFamily(gamepad.Family(e.key))
 			case 6:
 				input.Gameplay.MouseY += e.mouseY
 			case 7:
 				input.Gameplay.MouseFire = true
 			case 5:
+				pad.Focus(false)
+				padRelease = false
 				keys.enterUp()
 				mouse.Clear()
 				runner.Submit(frontend.Input{FocusLost: true})
@@ -111,10 +135,13 @@ func showFrontend(r *frontend.Runtime, duration time.Duration, device *AudioDevi
 			}
 		}
 		held := host.Controls()
-		input.Gameplay.Left = held.Left
-		input.Gameplay.Right = held.Right
-		input.Gameplay.Down = held.Down
-		input.Gameplay.Tilt = held.Tilt
+		controller := pad.Controls()
+		input.Gameplay.Left = held.Left || controller.Left
+		input.Gameplay.Right = held.Right || controller.Right
+		input.Gameplay.Down = held.Down || controller.Down
+		input.Gameplay.Tilt = held.Tilt || controller.Tilt
+		// Launch only after every input source has released the plunger.
+		input.Gameplay.Release = (input.Gameplay.Release && !controller.Down) || (padRelease && !held.Down)
 		input.Gameplay.MouseY = mouse.Motion(input.Gameplay.MouseY)
 		runner.Submit(input)
 	}

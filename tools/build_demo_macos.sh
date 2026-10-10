@@ -19,8 +19,8 @@ cp hosts/macos/Info.plist "$app/Contents/Info.plist"
 cp art/app-icon/pf-icon.icns "$app/Contents/Resources/pf-icon.icns"
 cp LICENSE "$app/Contents/Resources/LICENSE.txt"
 "$CC" -DPF_DEMODEV -arch "$arch" -isysroot "$sdk" -mmacosx-version-min=13.0 -Wall -Wextra -Werror -O2 \
- -fobjc-arc -fblocks -framework AppKit -framework AudioToolbox -framework CoreAudio -framework IOKit -framework Security -framework CoreFoundation -framework CoreGraphics -framework QuartzCore \
- hosts/macos/main.m hosts/macos/frame_view.m hosts/macos/storage.m hosts/macos/audio_host.m hosts/macos/native_input.m hosts/macos/host_logic.c \
+ -fobjc-arc -fblocks -framework AppKit -framework AudioToolbox -framework CoreAudio -framework IOKit -framework Security -framework CoreFoundation -framework CoreGraphics -framework QuartzCore -framework GameController \
+ hosts/macos/main.m hosts/macos/gamepad.m hosts/macos/frame_view.m hosts/macos/storage.m hosts/macos/audio_host.m hosts/macos/native_input.m hosts/macos/host_logic.c \
  "$build/libpfengine.a" -o "$app/Contents/MacOS/pinballfantasies"
 xcrun strip -S "$app/Contents/MacOS/pinballfantasies"
 codesign --force --sign - "$app"

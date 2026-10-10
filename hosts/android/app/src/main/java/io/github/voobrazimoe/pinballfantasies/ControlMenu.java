@@ -127,7 +127,8 @@ final class ControlMenu extends FrameLayout {
                 for(int j=i;j<Math.min(i+2,actions.length);j++) {String label=actions[j]; button(r,label,()->action(label));}
             }
         }
-        sheet.setVisibility(selector==null && content.getChildCount()==0 ? GONE : VISIBLE);
+        sheet.setVisibility((state.controllerHints() && !opened && !advanced)
+                || (selector==null && content.getChildCount()==0) ? GONE : VISIBLE);
         place();
     }
     private void letters(LinearLayout content) {

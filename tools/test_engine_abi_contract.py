@@ -11,6 +11,7 @@ signatures={
  'destroy':([u64],i32),'suspend':([u64],i32),'resume':([u64,i64],i32),
  'set_presentation':([u64,i32],i32),
  'set_action':([u64,u32,i32],i32),'key':([u64,C.c_uint8],i32),
+ 'gamepad':([u64,i32,i32,i32],i32),
  'release':([u64],i32),'plunger_delta':([u64,i32],i32),'plunger_fire':([u64],i32),
  'advance':([u64,i64,C.c_void_p,C.c_void_p],i32),
  'frame':([u64,C.POINTER(C.c_void_p),C.POINTER(i32),C.POINTER(i32),C.POINTER(i32)],i32),
@@ -26,7 +27,7 @@ assert lib.pf_engine_create(b'/pf-absent-originals',b'/tmp',0,None,0)==0
 pixel=C.c_void_p(); w=i32(); h=i32(); stride=i32(); tick=u64(); mode=u32(); table=u32(); flags=u32()
 for handle in (0,2**64-1):
     calls={'destroy':(), 'suspend':(), 'resume':(0,), 'set_action':(0,1),
-           'key':(57,), 'set_presentation':(1,), 'release':(), 'plunger_delta':(8,), 'plunger_fire':(),
+           'key':(57,), 'gamepad':(0,0,1), 'set_presentation':(1,), 'release':(), 'plunger_delta':(8,), 'plunger_fire':(),
            'advance':(0,None,None), 'frame':(C.byref(pixel),C.byref(w),C.byref(h),C.byref(stride)),
            'state':(C.byref(tick),C.byref(mode),C.byref(table),C.byref(flags))}
     for name,args in calls.items():

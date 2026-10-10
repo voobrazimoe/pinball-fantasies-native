@@ -4,6 +4,8 @@
 #import "storage.h"
 #import "audio_host.h"
 #import "native_input.h"
+#import "gamepad.h"
+#import <GameController/GameController.h>
 #import <mach/mach_time.h>
 #include <assert.h>
 #include <stdio.h>
@@ -277,6 +279,7 @@ static void abiTests(void) {
     assert(pf_engine_destroy(0)==PF_INVALID);
     assert(pf_engine_suspend(0)==PF_INVALID); assert(pf_engine_resume(0,0)==PF_INVALID);
     assert(pf_engine_set_action(0,PF_LEFT,1)==PF_INVALID); assert(pf_engine_key(0,57)==PF_INVALID);
+    assert(pf_engine_gamepad(0,0,0,1)==PF_INVALID);
     assert(pf_engine_release(0)==PF_INVALID); assert(pf_engine_plunger_delta(0,8)==PF_INVALID);
     assert(pf_engine_plunger_fire(0)==PF_INVALID); assert(pf_engine_advance(0,0,NULL,NULL)==PF_INVALID);
     uint8_t *pixels; int32_t w,h,s; uint64_t ticks; uint32_t mode,table,flags;
@@ -424,9 +427,42 @@ static void compatibilityImportTests(NSString *originals) {
     puts("PASS shared macOS import compatibility: absent/modified CFG, unused PRG bytes, truncation rejection, prior import preserved");
 }
 
+static void gamepadTests(void) {
+    GCController *first=[GCController controllerWithExtendedGamepad];
+    GCController *second=[GCController controllerWithExtendedGamepad];
+    [first.extendedGamepad.buttonX setValue:1];
+    __block NSArray<GCController *> *inventory=@[first,second];
+    NSMutableArray *events=[NSMutableArray new];
+    PFGamepad *input=[[PFGamepad alloc] initWithSink:^(int32_t kind,int32_t a,int32_t b) {
+        [events addObject:@[@(kind),@(a),@(b)]];
+    } controllers:^{return inventory;}];
+    assert(([events containsObject:@[@2,@4,@0]]));
+    [first.extendedGamepad.buttonX setValue:0];
+    [first.extendedGamepad.leftTrigger setValue:1];
+    // Snapshot writes do not deliver physical-device events. Invoke Apple's
+    // installed callback with those real framework elements to test decoding.
+    first.extendedGamepad.valueChangedHandler(first.extendedGamepad,first.extendedGamepad.buttonX);
+    [NSRunLoop.currentRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:.05]];
+    assert(([events containsObject:@[@0,@2,@0]]));
+    assert(([events containsObject:@[@1,@4,@32767]]));
+    NSUInteger before=events.count;
+    [second.extendedGamepad.buttonY setValue:1];
+    [NSRunLoop.currentRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:.01]];
+    assert(events.count==before);
+    inventory=@[second];
+    [NSNotificationCenter.defaultCenter postNotificationName:GCControllerDidDisconnectNotification object:first];
+    assert(([events containsObject:@[@3,@0,@0]]));
+    assert(([events containsObject:@[@2,@8,@0]]));
+    [input close];before=events.count;
+    [second.extendedGamepad.buttonY setValue:0];
+    [NSRunLoop.currentRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:.01]];
+    assert(events.count==before);
+    puts("PASS GameController snapshot: connection history, buttons, trigger, device filtering, replacement and cleanup");
+}
+
 int main(int argc,const char **argv) {
     @autoreleasepool {
-        abiTests(); modifierTests(); audioTests(); storageTests(); demoStorageTests(); frameTests();
+        abiTests(); gamepadTests(); modifierTests(); audioTests(); storageTests(); demoStorageTests(); frameTests();
         if (argc==2) { NSString *originals=[NSString stringWithUTF8String:argv[1]]; compatibilityImportTests(originals); bundledStorageTests(originals); journey(originals); }
         else puts("UNVERIFIED original-backed four-table macOS journey: external originals not supplied");
     }

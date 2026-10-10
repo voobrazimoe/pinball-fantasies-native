@@ -41,6 +41,19 @@ int32_t pf_engine_suspend(uint64_t handle);
 int32_t pf_engine_resume(uint64_t handle, int64_t ns);
 int32_t pf_engine_set_action(uint64_t handle, uint32_t action, int32_t down);
 int32_t pf_engine_key(uint64_t handle, uint8_t logical_make);
+/* Optional additive ABI 1 gamepad input, serialized like other calls.
+ * kind 0: button a, down b (0/1). Buttons 0..14 use SDL standard positions:
+ * A B X Y Back Guide Start LStick RStick LShoulder RShoulder Up Down Left Right.
+ * Buttons 15/16 are digital left/right trigger aliases.
+ * kind 1: trigger axis a (4 left / 5 right), value b (0..32767).
+ * kind 2: connect; a is initial held-button mask (17 bits), b ignored.
+ * kind 3: disconnect; a/b ignored. Neither connection nor disconnect launches.
+ * kind 4: glyph family a (0 generic, 1 Xbox, 2 PlayStation, 3 Nintendo).
+ * kind 5: face button a (0..3), glyph b (0 default, 1 A, 2 B, 3 X, 4 Y,
+ * 5 cross, 6 circle, 7 square, 8 triangle); optional platform symbol mapping.
+ * Hosts send only one active controller. Background events maintain physical
+ * history while suspended; actions remain suppressed. Older hosts need not call. */
+int32_t pf_engine_gamepad(uint64_t handle, int32_t kind, int32_t a, int32_t b);
 int32_t pf_engine_release(uint64_t handle);
 int32_t pf_engine_plunger_delta(uint64_t handle, int32_t delta);
 /* Optional additive ABI 1 touch extension: clamped absolute 0..32 charge,
@@ -59,7 +72,8 @@ int32_t pf_engine_advance(uint64_t handle, int64_t ns, pf_pcm_sink sink, void *c
  * like all other calls. Older hosts need not call it; default is 0. */
 int32_t pf_engine_set_presentation(uint64_t handle, int32_t full_table);
 int32_t pf_engine_frame(uint64_t handle, uint8_t **pixels, int32_t *width, int32_t *height, int32_t *stride);
-/* flags: bit 0 suspended, bit 1 quit, bit 2 mouse plunger active. */
+/* flags: bit 0 suspended, bit 1 quit, bit 2 mouse plunger active,
+ * bit 3 controller connected (contextual hints rendered in host frame). */
 int32_t pf_engine_state(uint64_t handle, uint64_t *tick, uint32_t *mode, uint32_t *table, uint32_t *flags);
 #ifdef __cplusplus
 }

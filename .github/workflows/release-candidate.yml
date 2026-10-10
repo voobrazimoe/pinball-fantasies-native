@@ -2,7 +2,7 @@ name: Desktop release candidate artifacts
 on:
   workflow_dispatch:
   push:
-    branches: [main, android-host]
+    branches: [main, android-host, 'codex/**']
     paths:
       - .github/workflows/release-candidate.yml
       - art/app-icon/**
@@ -11,6 +11,11 @@ on:
       - tools/build_windows.sh
       - tools/build_appimage.py
       - internal/platform/pficon_windows_amd64.syso
+      - internal/platform/**
+      - internal/gamepad/**
+      - internal/engine/**
+      - internal/frontend/**
+      - cmd/pinballfantasies/**
       - docs/release-v0.1.3.md
 permissions:
   contents: read
@@ -39,6 +44,8 @@ jobs:
           python3 tools/check_public_source.py
           python3 tools/check_app_icons.py
           ./tools/go.sh test -p=1 -count=1 ./...
+      - name: SDL virtual gamepad event bridge
+        run: python3 tools/test_sdl_gamepad.py
       - name: Build fresh public Windows and Linux artifacts
         run: |
           ./tools/build_release.sh

@@ -103,7 +103,10 @@ extern "C" JNIEXPORT void JNICALL JNI_METHOD(nativeActive)(JNIEnv*, jclass, jlon
 }
 extern "C" JNIEXPORT void JNICALL JNI_METHOD(nativeInput)(JNIEnv*, jclass, jlong token, jint kind, jint a, jint b) {
  std::lock_guard<std::mutex> guard(lock);
- if (!opened || token != generation || !persistent || !active()) return;
+ if (!opened || token != generation || !persistent) return;
+ // Maintain controller physical history while suspended, without game actions.
+ if (kind>=6 && kind<=11) {pf_engine_gamepad(persistent,kind-6,a,b);return;}
+ if (!active()) return;
  switch (kind) {
  case 0: pf_engine_set_action(persistent, a, b); break;
  case 1: pf_engine_key(persistent, a); break;

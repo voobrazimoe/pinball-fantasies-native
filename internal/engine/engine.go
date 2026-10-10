@@ -5,6 +5,7 @@ import (
 	"errors"
 	"image"
 	"pinballfantasies/internal/frontend"
+	"pinballfantasies/internal/gamepad"
 	"pinballfantasies/internal/gameplay"
 	"pinballfantasies/internal/settings"
 	"pinballfantasies/internal/source"
@@ -27,6 +28,8 @@ type Engine struct {
 	now         time.Time
 	last        int64
 	held        gameplay.Controls
+	pad         *gamepad.Input
+	padFrame    *image.RGBA
 	mouse       gameplay.Mouse
 	delta       int
 	fire        bool
@@ -49,12 +52,13 @@ func Load(data, state string, ns int64) (*Engine, error) {
 // New wraps an existing authoritative runtime; desktop hosts can keep using
 // source.Runner directly. No second implementation of source scheduling exists.
 func New(rt *frontend.Runtime, ns int64) *Engine {
-	e := &Engine{now: time.Unix(0, ns), last: ns}
+	e := &Engine{now: time.Unix(0, ns), last: ns, pad: gamepad.New()}
 	e.runner = source.New(rt, func() time.Time { return e.now })
 	return e
 }
 func (e *Engine) submit(edge gameplay.Controls) {
-	edge.Left, edge.Right, edge.Down, edge.Tilt = e.held.Left, e.held.Right, e.held.Down, e.held.Tilt
+	held := e.controls()
+	edge.Left, edge.Right, edge.Down, edge.Tilt = held.Left, held.Right, held.Down, held.Tilt
 	e.runner.Submit(frontend.Input{Gameplay: edge})
 }
 func (e *Engine) SetAction(a Action, down bool) error {
@@ -64,6 +68,7 @@ func (e *Engine) SetAction(a Action, down bool) error {
 	if e.runner.Suspended {
 		return nil
 	}
+	e.controls() // Reconcile a screen change before examining controller holds.
 	var edge gameplay.Controls
 	switch a {
 	case Left:
@@ -71,7 +76,7 @@ func (e *Engine) SetAction(a Action, down bool) error {
 	case Right:
 		e.held.Right = down
 	case Spring:
-		edge.Release = e.held.Down && !down
+		edge.Release = e.held.Down && !down && !e.pad.Controls().Down
 		e.held.Down = down
 	case Tilt:
 		e.held.Tilt = down
@@ -83,9 +88,12 @@ func (e *Engine) SetAction(a Action, down bool) error {
 // Key is an original logical DOS make code, never a native OS keycode.
 // Hosts suppress OS repeats and submit each physical make once.
 func (e *Engine) Key(code uint8) {
-	e.runner.Submit(frontend.Input{Gameplay: e.held, Keys: []frontend.Key{frontend.Key(code)}})
+	e.runner.Submit(frontend.Input{Gameplay: e.controls(), Keys: []frontend.Key{frontend.Key(code)}})
 }
-func (e *Engine) Release() { e.submit(gameplay.Controls{Release: true}) }
+func (e *Engine) Release() {
+	e.controls()
+	e.submit(gameplay.Controls{Release: !e.pad.Controls().Down})
+}
 func (e *Engine) MouseActive() bool {
 	return !e.runner.Suspended && e.runner.Runtime.Model.MousePlungerActive()
 }
@@ -123,6 +131,7 @@ func (e *Engine) PlungerFire() {
 }
 func (e *Engine) clearMouse() { e.mouse.Clear(); e.delta = 0; e.fire = false; e.touchSet = false }
 func (e *Engine) Suspend() error {
+	e.pad.Focus(false)
 	e.held = gameplay.Controls{}
 	e.clearMouse()
 	return e.runner.LoseFocus()
@@ -140,6 +149,7 @@ func (e *Engine) Resume(ns int64) error {
 		return err
 	}
 	if e.runner.Suspended {
+		e.pad.Focus(true)
 		e.held = gameplay.Controls{}
 		e.clearMouse()
 		e.runner.Resume()
@@ -163,18 +173,27 @@ func (e *Engine) Advance(ns int64, pcm func([]byte) error) error {
 
 // Frame borrows the runtime framebuffer. Valid until the next mutating engine
 // operation or Frame call. The caller must not write it or use it concurrently.
-func (e *Engine) Frame() *image.RGBA { return e.runner.Runtime.FramePresentation(e.fullTable) }
+func (e *Engine) Frame() *image.RGBA {
+	m := e.runner.Runtime.Model
+	frame := e.runner.Runtime.FramePresentation(e.fullTable)
+	result := gamepad.Overlay(e.padFrame, frame, e.pad, gamepad.Hints(m.Mode, e.MouseActive(), m.PlayerSelectionOpen(), m.Demo))
+	if result != frame {
+		e.padFrame = result
+	}
+	return result
+}
 
 type State struct {
 	Tick                         uint64
 	Mode                         uint32
 	Table                        uint32
 	Suspended, Done, MouseActive bool
+	Gamepad                      bool
 }
 
 func (e *Engine) State() State {
 	m := e.runner.Runtime.Model
-	return State{Tick: e.runner.Ticks, Mode: uint32(m.Mode), Table: uint32(m.Selected), Suspended: e.runner.Suspended, Done: e.runner.Done, MouseActive: e.MouseActive()}
+	return State{Tick: e.runner.Ticks, Mode: uint32(m.Mode), Table: uint32(m.Selected), Suspended: e.runner.Suspended, Done: e.runner.Done, MouseActive: e.MouseActive(), Gamepad: e.pad.Connected()}
 }
 
 // Close completes the shared frontend shutdown, including settings persistence.

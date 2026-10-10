@@ -76,6 +76,7 @@ type hostWindow struct {
 	hwnd                                     uintptr
 	presentation                             WindowPresentation
 	input                                    windowsKeys
+	gamepad                                  windowsGamepad
 	focused                                  bool
 	mouseActive, mouseDown                   bool
 	inputLog                                 *os.File
@@ -156,6 +157,7 @@ func openHost(first *image.RGBA) (_ *hostWindow, err error) {
 		return nil, err
 	}
 	up("ShowWindow").Call(hwnd, 5)
+	h.pollGamepad()
 	diagnostics.Printf("Win32 window opened HWND=%#x; %s\n", hwnd, dpiPolicy)
 	return h, nil
 }
@@ -225,13 +227,7 @@ func windowProc(hwnd uintptr, msg uint32, w, l uintptr) uintptr {
 			h.mouseDown = false
 			h.input = windowsKeys{}
 			h.refreshInput("focus-loss", 0, 0, false)
-			keep := h.events[:0]
-			for _, e := range h.events {
-				if e.kind == 1 {
-					keep = append(keep, e)
-				}
-			}
-			h.events = append(keep, hostEvent{kind: 5})
+			h.events = focusLostEvents(h.events)
 			return 0
 
 		case 0x14: // WM_ERASEBKGND: the complete offscreen frame owns the background.
@@ -332,6 +328,7 @@ func (h *hostWindow) serviceSources() error {
 	return nil
 }
 func (h *hostWindow) Event() hostEvent {
+	h.pollGamepad()
 	if len(h.events) == 0 {
 		return hostEvent{}
 	}

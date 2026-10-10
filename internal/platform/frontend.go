@@ -6,6 +6,22 @@ package platform
 #cgo CFLAGS: -I${SRCDIR}/../../.tools/sdl2/usr/include/SDL2 -I${SRCDIR}/../../.tools/sdl2/usr/include/x86_64-linux-gnu
 #cgo LDFLAGS: -l:libSDL2-2.0.so.0
 #include <SDL.h>
+static int pf6_controller_init(void) {
+ SDL_SetHint(SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS,"1");
+ return SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER);
+}
+static int pf6_controller_family(SDL_GameController *controller) {
+ if(!controller) return 0;
+ switch(SDL_GameControllerGetType(controller)) {
+ case SDL_CONTROLLER_TYPE_XBOX360:case SDL_CONTROLLER_TYPE_XBOXONE:return 1;
+ case SDL_CONTROLLER_TYPE_PS3:case SDL_CONTROLLER_TYPE_PS4:return 2;
+#if SDL_VERSION_ATLEAST(2,0,14)
+ case SDL_CONTROLLER_TYPE_PS5:return 2;
+#endif
+ case SDL_CONTROLLER_TYPE_NINTENDO_SWITCH_PRO:return 3;
+ default:return 0;
+ }
+}
 static int pf6_key(SDL_Scancode k) {
  switch(k) {
  case SDL_SCANCODE_ESCAPE:return 1;case SDL_SCANCODE_RETURN:return 28;case SDL_SCANCODE_SPACE:return 57;
@@ -19,9 +35,37 @@ static int pf6_key(SDL_Scancode k) {
  // Other make codes must resume pause and answer quit prompts too.
  return 127;
 }
-static int pf6_event(int *key, int *alt, int *repeat, int *mouseY) {
+static int pf6_controller(SDL_GameController **controller, int *buttons) {
+ if (*controller) return 0;
+ for (int i=0;i<SDL_NumJoysticks();i++) {
+  if (!SDL_IsGameController(i)) continue;
+  *controller=SDL_GameControllerOpen(i);
+  if (!*controller) continue;
+  *buttons=0;
+  for(int b=0;b<15;b++) if(SDL_GameControllerGetButton(*controller,(SDL_GameControllerButton)b)) *buttons |= 1<<b;
+  if(SDL_GameControllerGetAxis(*controller,SDL_CONTROLLER_AXIS_TRIGGERLEFT)>12000) *buttons |= 1<<15;
+  if(SDL_GameControllerGetAxis(*controller,SDL_CONTROLLER_AXIS_TRIGGERRIGHT)>12000) *buttons |= 1<<16;
+  return 12;
+ }
+ return 0;
+}
+static int pf6_event(SDL_GameController **controller, int *key, int *alt, int *repeat, int *mouseY) {
+ if (pf6_controller(controller,key)) return 12;
  SDL_Event e;
  while(SDL_PollEvent(&e)) {
+  if(e.type==SDL_CONTROLLERDEVICEADDED) {if(pf6_controller(controller,key)) return 12;continue;}
+  if(*controller) {
+   SDL_JoystickID id=SDL_JoystickInstanceID(SDL_GameControllerGetJoystick(*controller));
+   if((e.type==SDL_CONTROLLERDEVICEREMOVED || e.type==SDL_CONTROLLERDEVICEREMAPPED) && e.cdevice.which==id) {
+    SDL_GameControllerClose(*controller);*controller=NULL;return 11;
+   }
+   if((e.type==SDL_CONTROLLERBUTTONDOWN || e.type==SDL_CONTROLLERBUTTONUP) && e.cbutton.which==id) {
+    *key=e.cbutton.button;*mouseY=e.cbutton.state==SDL_PRESSED;return 9;
+   }
+   if(e.type==SDL_CONTROLLERAXISMOTION && e.caxis.which==id) {
+    *key=e.caxis.axis;*mouseY=e.caxis.value;return 10;
+   }
+  }
   if(e.type==SDL_MOUSEMOTION) { *mouseY=e.motion.yrel; return 6; }
   if(e.type==SDL_MOUSEBUTTONDOWN && e.button.button==SDL_BUTTON_LEFT) return 7;
   if(e.type==SDL_WINDOWEVENT && e.window.event==SDL_WINDOWEVENT_FOCUS_GAINED) return 8;
@@ -47,12 +91,15 @@ import (
 )
 
 type hostWindow struct {
-	window       *C.SDL_Window
-	renderer     *C.SDL_Renderer
-	texture      *C.SDL_Texture
-	size         image.Point
-	presentation WindowPresentation
-	mouseActive  bool
+	window             *C.SDL_Window
+	renderer           *C.SDL_Renderer
+	texture            *C.SDL_Texture
+	size               image.Point
+	presentation       WindowPresentation
+	mouseActive        bool
+	controller         *C.SDL_GameController
+	controllerReady    bool
+	controllerMetadata bool
 }
 
 func openHost(first *image.RGBA) (_ *hostWindow, err error) {
@@ -97,11 +144,23 @@ func openHost(first *image.RGBA) (_ *hostWindow, err error) {
 	}
 
 	hst := &hostWindow{window: window, renderer: renderer}
+	// Continue receiving release events while unfocused. The logical adapter
+	// suppresses all actions until focus returns and controls are pressed again.
+	hst.controllerReady = C.pf6_controller_init() == 0
+	if !hst.controllerReady {
+		diagnostics.Printf("SDL controller unavailable: %s\n", C.GoString(C.SDL_GetError()))
+	}
 	hst.presentation.backend = sdlWindow{window}
 	diagnostics.Println("PF6 window opened; SDL driver:", C.GoString(C.SDL_GetCurrentVideoDriver()))
 	return hst, nil
 }
 func (h *hostWindow) Close() {
+	if h.controller != nil {
+		C.SDL_GameControllerClose(h.controller)
+	}
+	if h.controllerReady {
+		C.SDL_QuitSubSystem(C.SDL_INIT_GAMECONTROLLER)
+	}
 	if h.texture != nil {
 		C.SDL_DestroyTexture(h.texture)
 	}
@@ -138,9 +197,16 @@ func (h *hostWindow) Present(frame *image.RGBA) error {
 	return nil
 }
 func (h *hostWindow) Event() hostEvent {
+	if h.controllerMetadata {
+		h.controllerMetadata = false
+		return hostEvent{kind: 13, key: int(C.pf6_controller_family(h.controller))}
+	}
 	for {
 		var key, alt, repeat, mouseY C.int
-		kind := int(C.pf6_event(&key, &alt, &repeat, &mouseY))
+		kind := int(C.pf6_event(&h.controller, &key, &alt, &repeat, &mouseY))
+		if kind == 12 {
+			h.controllerMetadata = true
+		}
 		if (kind == 6 || kind == 7) && !h.mouseActive {
 			continue
 		}

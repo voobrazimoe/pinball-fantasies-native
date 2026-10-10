@@ -18,6 +18,10 @@ public final class GeometryTest {
             check(!g.nudge.overlaps(g.plunger));
             int[] snapshot={(int)v[2],(int)v[3],(int)v[4],(int)v[5],(int)w,(int)h,320,w<h?609:240};
             InteractionGeometry.Rect actual=InteractionGeometry.viewport(snapshot,w,h);
+            InteractionGeometry pull=new InteractionGeometry(w,h,24,48,36,48,d,actual,snapshot[7]);
+            check(pull.plunger.top>=pull.frame.top+pull.frame.height()*33/snapshot[7]);
+            check(!pull.plunger.overlaps(pull.leftGuard) && !pull.plunger.overlaps(pull.rightGuard));
+            check(pull.plunger.width()>0 && pull.plunger.height()>0);
             check(actual.left==vp.left && actual.bottom==vp.bottom);
             InteractionGeometry.Rect menu=InteractionGeometry.mobileMenu(g.safe,actual,snapshot[7],d);
             check(menu.top>=actual.top+actual.height()*33/snapshot[7]);

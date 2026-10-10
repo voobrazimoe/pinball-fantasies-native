@@ -648,6 +648,17 @@ func (m *Model) Update(in Input) error {
 	return nil
 }
 
+// PlayerSelectionOpen reports the initial player-count selection window.
+func (m *Model) PlayerSelectionOpen() bool {
+	if !m.selectionOpen || m.Demo || m.selectionDelay != 0 {
+		return false
+	}
+	if s, ok := m.Session.(interface{ PlayerCount() int }); ok {
+		return s.PlayerCount() < 8
+	}
+	return true
+}
+
 // SessionReady is the narrow lifecycle capability for Escape in the chute.
 func (m *Model) SessionReady() bool {
 	s, ok := m.Session.(interface{ InChute() bool })

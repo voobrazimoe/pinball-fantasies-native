@@ -25,6 +25,7 @@ int32_t pf_engine_key(uint64_t,uint8_t) { Call c; assert(!suspended); return PF_
 int32_t pf_engine_release(uint64_t) { Call c; assert(!suspended); return PF_OK; }
 int32_t pf_engine_plunger_delta(uint64_t,int32_t) { Call c; assert(!suspended); return PF_OK; }
 int32_t pf_engine_plunger_target(uint64_t,int32_t) { Call c; assert(!suspended); return PF_OK; }
+int32_t pf_engine_gamepad(uint64_t,int32_t,int32_t,int32_t) { Call c; return PF_OK; }
 int32_t pf_engine_state(uint64_t,uint64_t* tick,uint32_t* mode,uint32_t* table,uint32_t* flags) { Call c; *tick=sourceTicks; *mode=PF_MODE_PLAYING; *table=2; *flags=4; return PF_OK; }
 int32_t pf_engine_plunger_fire(uint64_t) { Call c; assert(!suspended); return PF_OK; }
 int32_t pf_engine_set_presentation(uint64_t,int32_t) { Call c; return PF_OK; }
@@ -71,6 +72,10 @@ int main() {
     assert(!androidEngineFrame(false,pixels,w,h,&advanced) && advanced==-1);
     JNI_METHOD(nativeInput)(nullptr,nullptr,token,0,0,1);
     assert(calls==before && suspends==1);
+    JNI_METHOD(nativeInput)(nullptr,nullptr,token,6,2,0);
+    assert(calls==before+1); // Controller releases maintain physical history while inactive.
+    JNI_METHOD(nativeInput)(nullptr,nullptr,token-1,6,2,0);
+    assert(calls==before+1); // Stale Activity cannot mutate that history.
     JNI_METHOD(nativeActive)(nullptr,nullptr,token,true,true);
     androidAudioBuffer().render(audio,1); assert(audio[0]==0 && audio[1]==0);
     assert(androidEngineFrame(true,pixels,w,h));

@@ -16,6 +16,10 @@ public final class SemanticUiTest {
             check(ui.gameplay()==(mode==5) && ui.plunger()==(mode==5));
             for(String action:ui.actions()) check(!action.matches("F[1-8]|Enter|Esc|P|M|Y|N"));
         }
+        for(int mode=0;mode<12;mode++) {
+            ui.update(mode,1,8);check(ui.controllerHints()==(mode!=SemanticUi.INITIALS));
+            ui.update(mode,1,0);check(!ui.controllerHints());
+        }
         for(int i=0;i<5;i++) check(ui.code(SemanticUi.TABLES[i])==59+i);
         ui.update(4,1,0);
         List<Integer> makes=new ArrayList<>();

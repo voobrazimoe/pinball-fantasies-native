@@ -20,7 +20,7 @@ final class ControlOverlay extends View {
     ControlOverlay(Context context, Controls controls) {
         super(context); this.controls=controls;
         controls.changed=this::invalidate;
-        setContentDescription("Game controls: outlined lower corners flippers; upper central playfield tap nudge; Pull corridor downward drag plunger");
+        setContentDescription("Game controls: lower corners flippers; central playfield tap nudge; blue rectangle: drag down, then release to launch the ball");
     }
     void safeArea(int left, int top, int right, int bottom) {
         safeLeft=left; safeTop=top; safeRight=right; safeBottom=bottom;
@@ -29,7 +29,7 @@ final class ControlOverlay extends View {
     private void updateGeometry() {
         controls.geometry(getWidth(),getHeight(),safeLeft,safeTop,safeRight,safeBottom,
                 ViewConfiguration.get(getContext()).getScaledTouchSlop(),ViewConfiguration.getLongPressTimeout(),
-                getResources().getDisplayMetrics().density,frameBounds());
+                getResources().getDisplayMetrics().density,frameBounds(),viewport[7]);
         invalidate();
     }
     private InteractionGeometry.Rect frameBounds() {
@@ -57,7 +57,18 @@ final class ControlOverlay extends View {
         }
         if (controls.plungerAvailable) {
             InteractionGeometry.Rect r=controls.layout.plunger;
-            canvas.drawText("Pull ↓",r.cx(),r.cy()-(paint.ascent()+paint.descent())/2,paint);
+            float d=getResources().getDisplayMetrics().density;
+            paint.setStyle(Paint.Style.FILL); paint.setColor(0x5541b6dc);
+            canvas.drawRoundRect(r.left,r.top,r.right,r.bottom,8*d,8*d,paint);
+            paint.setStyle(Paint.Style.STROKE); paint.setStrokeWidth(2*d);paint.setColor(0xbba3e4fa);
+            canvas.drawRoundRect(r.left+d,r.top+d,r.right-d,r.bottom-d,8*d,8*d,paint);
+            paint.setStyle(Paint.Style.FILL);paint.setColor(0xeeffffff);
+            paint.setTextSize(Math.min(14*getResources().getDisplayMetrics().scaledDensity,r.width()/6));
+            float centre=r.cy();
+            canvas.drawText("DRAG DOWN",r.cx(),centre-16*d,paint);
+            canvas.drawText("↓",r.cx(),centre+4*d,paint);
+            paint.setTextSize(Math.min(11*getResources().getDisplayMetrics().scaledDensity,r.width()/10));
+            canvas.drawText("RELEASE TO LAUNCH",r.cx(),centre+22*d,paint);
         }
     }
     @Override public boolean onTouchEvent(MotionEvent event) {
