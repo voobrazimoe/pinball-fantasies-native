@@ -1,7 +1,5 @@
 package frontend
 
-import "pinballfantasies/internal/presentation"
-
 func (m *Model) originalCheat(program string) {
 	// FANTASIE/TILTRUT, SNAILRUT, BALLSRUT and FAIRPLAYRUT.
 	switch program {
@@ -14,7 +12,7 @@ func (m *Model) originalCheat(program string) {
 	case "FAIRPLAYTS":
 		m.cheatTiltDisabled, m.cheatFastBall, m.cheatBalls = false, true, 3
 	}
-	if session, ok := m.Session.(interface{ MatrixDisplay() *presentation.Display }); ok {
+	if session, ok := m.Session.(matrixOwner); ok {
 		d := session.MatrixDisplay()
 		if m.cheatTimeline == nil {
 			current := d.Attract(m.Counter, m.cheatNames(), m.cheatScores())

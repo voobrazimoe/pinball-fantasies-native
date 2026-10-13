@@ -3,6 +3,7 @@ package speeddevils
 import (
 	"image"
 	"pinballfantasies/internal/assets"
+	"pinballfantasies/internal/physics"
 	"pinballfantasies/internal/presentation"
 	"strconv"
 )
@@ -45,6 +46,9 @@ func (g *Game) applyLamp(p *[768]byte, n int, on bool) {
 func (g *Game) Frame() *image.RGBA { return g.FrameInto(nil) }
 
 // FrameInto composes the frame into dst, reusing it when its size matches.
+// PlayfieldPhysics exposes the ball/camera state the presentation override uses.
+func (g *Game) PlayfieldPhysics() *physics.Game { return g.Physics }
+
 func (g *Game) FrameInto(dst *image.RGBA) *image.RGBA {
 	p := presentation.MatrixPaletteMode(g.Palette(), g.Physics.ReferenceMode, 128)
 	return g.Physics.ComposeFrame(dst, p, g.Display, 98, 128)

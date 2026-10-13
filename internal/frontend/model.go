@@ -191,13 +191,13 @@ func (m *Model) startPlayers(count int) error {
 	if e != nil {
 		return e
 	}
-	if g, ok := s.(interface{ CarryLoadedTableState(any) }); ok {
+	if g, ok := s.(loadedStateCarrier); ok {
 		g.CarryLoadedTableState(m.Session)
 	}
 	// LATE_RASTER_INTERRUPT_DEMO starts FIRST_NO_OF_PLAYERSTS in the same
 	// loaded VGA memory. NEW_BALL's VISAKEYS branch retains this program.
-	if next, ok := s.(interface{ MatrixDisplay() *presentation.Display }); ok {
-		if old, ok := m.Session.(interface{ MatrixDisplay() *presentation.Display }); ok {
+	if next, ok := s.(matrixOwner); ok {
+		if old, ok := m.Session.(matrixOwner); ok {
 			var names, scores [4]string
 			for i, e := range m.Scores[m.Selected-1] {
 				names[i], scores[i] = string(e.Name[:]), e.Digits.String()
@@ -223,13 +223,13 @@ func (m *Model) startPlayers(count int) error {
 		}
 	}
 	m.Session = s
-	if g, ok := s.(interface{ SetCheatRules(bool, bool, int) }); ok {
+	if g, ok := s.(cheatRuleSetter); ok {
 		g.SetCheatRules(m.cheatTiltDisabled, m.cheatFastBall, m.cheatBalls)
 	}
 	m.cheatTimeline = nil
 	m.gameOverTimeline = nil
 	m.sourceScoreStage = 0
-	if g, ok := s.(interface{ StartPlayers(int) }); ok {
+	if g, ok := s.(playerStarter); ok {
 		g.StartPlayers(count)
 	}
 	m.scoreQueue = nil
@@ -261,7 +261,7 @@ func (m *Model) loadTable(table int) error {
 	m.End = Active
 	m.Final = tablelogic.Decimal{}
 	m.Counter = 0
-	if table, ok := s.(interface{ AttractCue() string }); ok {
+	if table, ok := s.(attractCuer); ok {
 		s.Cue(table.AttractCue())
 	} else {
 		s.Cue("S_MAIN")
@@ -292,7 +292,7 @@ func (m *Model) finish(d tablelogic.Decimal) {
 func (m *Model) attract() {
 	m.Mode = TableAttract
 	m.Counter = 0
-	if s, ok := m.Session.(interface{ AttractCue() string }); ok {
+	if s, ok := m.Session.(attractCuer); ok {
 		m.Session.Cue(s.AttractCue())
 	}
 }
@@ -325,13 +325,13 @@ func (m *Model) Update(in Input) error {
 	}
 	// READ_KEYBOARD observes CLOSE1's ADDPLAYERS write before accepting F1..F8.
 	if m.Mode == Playing {
-		if g, ok := m.Session.(interface{ PlayerSelectionReady() bool }); ok && !g.PlayerSelectionReady() {
+		if g, ok := m.Session.(playerSelector); ok && !g.PlayerSelectionReady() {
 			m.selectionOpen = false
 		}
 	}
 	initialMode := m.Mode
 	if m.sourceScoreStage == 1 {
-		if d, ok := m.Session.(interface{ MatrixDisplay() *presentation.Display }); ok {
+		if d, ok := m.Session.(matrixOwner); ok {
 			d.MatrixDisplay().Flash()
 		}
 		if m.Mode == Initials && m.entrySetup {
@@ -439,7 +439,7 @@ func (m *Model) Update(in Input) error {
 				// checkstartkeys compares PLAYERS with eight before resetting
 				// PLAYERS_CP. After an eight-player game Enter is ignored.
 				if k == Enter {
-					if g, ok := m.Session.(interface{ PlayerCount() int }); ok && g.PlayerCount() == 8 {
+					if g, ok := m.Session.(playerCounter); ok && g.PlayerCount() == 8 {
 						continue
 					}
 				}
@@ -473,7 +473,7 @@ func (m *Model) Update(in Input) error {
 				}
 			}
 			if k == 50 {
-				if g, ok := m.Session.(interface{ ToggleMusic() }); ok {
+				if g, ok := m.Session.(musicToggler); ok {
 					g.ToggleMusic()
 				}
 			}
@@ -569,7 +569,7 @@ func (m *Model) Update(in Input) error {
 			m.selectionDelay--
 		}
 		ready := m.SessionReady()
-		if g, ok := m.Session.(interface{ PlayerSelectionReady() bool }); ok {
+		if g, ok := m.Session.(playerSelector); ok {
 			ready = g.PlayerSelectionReady()
 		}
 		if !ready {
@@ -583,7 +583,7 @@ func (m *Model) Update(in Input) error {
 			return e
 		}
 		matrixTestTrace(m)
-		if g, ok := m.Session.(interface{ DemoFinished() bool }); ok && g.DemoFinished() {
+		if g, ok := m.Session.(demoSession); ok && g.DemoFinished() {
 			// Linked QUIT(0): TABLE1 exits and the launcher runs INTRO again.
 			m.restartIntro()
 			return nil
@@ -593,7 +593,7 @@ func (m *Model) Update(in Input) error {
 			m.End = Completed
 			m.Mode = GameEnd
 			m.Counter = 5
-			if src, ok := m.Session.(interface{ ScoreEntryPending() bool }); ok && src.ScoreEntryPending() {
+			if src, ok := m.Session.(scoreEntryReporter); ok && src.ScoreEntryPending() {
 				m.sourceScoreStage = 1
 				m.loadScoreQueue()
 				m.Counter = 1 // First SPINTSEL_IN_HIGH visit is next sync.
@@ -644,7 +644,7 @@ func (m *Model) Update(in Input) error {
 
 // SessionReady is the narrow lifecycle capability for Escape in the chute.
 func (m *Model) SessionReady() bool {
-	s, ok := m.Session.(interface{ InChute() bool })
+	s, ok := m.Session.(chuteReporter)
 	return ok && s.InChute()
 }
 func (m *Model) advanceSelector(enter bool) {
@@ -741,7 +741,7 @@ func (m *Model) openOptions() {
 // no session and restores the persisted S_IM byte.
 func (m *Model) SessionConfig() settings.Config {
 	c := m.Settings
-	if live, ok := m.Session.(interface{ MusicDisabled() bool }); ok {
+	if live, ok := m.Session.(musicReporter); ok {
 		c.Music = 0
 		if live.MusicDisabled() {
 			c.Music = 1
@@ -770,7 +770,7 @@ func (m *Model) nextScore() {
 		if !m.highscorePlayed {
 			m.Session.Cue("S_GAMEOVER")
 		}
-		m.Session.(interface{ FinishScoreEntry() }).FinishScoreEntry()
+		m.Session.(scoreEntryFinisher).FinishScoreEntry()
 		m.sourceScoreStage = 2
 		m.Mode = GameEnd
 		return
@@ -782,7 +782,7 @@ func (m *Model) nextScore() {
 }
 
 func (m *Model) loadScoreQueue() {
-	if s, ok := m.Session.(interface{ PlayerScores() []tablelogic.Decimal }); ok {
+	if s, ok := m.Session.(playerScorer); ok {
 		m.scoreQueue = s.PlayerScores()
 	} else {
 		m.scoreQueue = []tablelogic.Decimal{m.Final}
@@ -791,7 +791,7 @@ func (m *Model) loadScoreQueue() {
 	m.highscorePlayed = false
 }
 func (m *Model) sourceEntry(stars bool) {
-	if d, ok := m.Session.(interface{ MatrixDisplay() *presentation.Display }); ok {
+	if d, ok := m.Session.(matrixOwner); ok {
 		d.MatrixDisplay().ScoreEntry(m.scorePlayer, m.Entry, stars)
 	}
 }

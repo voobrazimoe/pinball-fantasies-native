@@ -26,7 +26,7 @@ type View struct {
 }
 
 func (v *View) sessionFrame(m *Model) *image.RGBA {
-	if s, ok := m.Session.(interface{ FrameInto(*image.RGBA) *image.RGBA }); ok && v.Reuse {
+	if s, ok := m.Session.(frameReuser); ok && v.Reuse {
 		v.scratch = s.FrameInto(v.scratch)
 		return v.scratch
 	}
@@ -73,7 +73,7 @@ func (v *View) framePresentation(m *Model, full bool) *image.RGBA {
 	}
 	var out *image.RGBA
 	if m.Mode == TableAttract {
-		if session, ok := m.Session.(interface{ AttractFrame(int) *image.RGBA }); ok {
+		if session, ok := m.Session.(attractRenderer); ok {
 			out = session.AttractFrame(m.Counter)
 		}
 	}
