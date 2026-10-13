@@ -6,12 +6,13 @@ import (
 	"os"
 	"path/filepath"
 	"pinballfantasies/internal/gameplay"
+	"pinballfantasies/internal/testinputs"
 	"strings"
 	"testing"
 )
 
 func TestExperimentalLifecycleDiagnosticAndClose(t *testing.T) {
-	demo, canonical := os.Getenv("PF_10MIN_DEMO_DATA"), os.Getenv("PF_RUNTIME_DATA")
+	demo, canonical := testinputs.DemoDir(), os.Getenv("PF_RUNTIME_DATA")
 	if demo == "" || canonical == "" {
 		t.Skip("owner-local inputs NOT AVAILABLE")
 	}

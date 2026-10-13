@@ -131,8 +131,17 @@ canonical game over.
 
 ## Verification
 
+The demo bundled in `internal/demodata` is the default test input, so every
+CI job runs the demo tests below without private data. `PF_10MIN_DEMO_DATA`
+points them at another copy. `TestDemoGolden` in `internal/engine` plays a
+fixed input script through INTRO, a played table, the timer expiry and the
+fresh INTRO for each scrolling mode, and compares frame and PCM digests at
+fixed checkpoints. After an intended behaviour change, regenerate the table
+with `PF_UPDATE_DEMO_GOLDEN=1 go test -run TestDemoGolden -v ./internal/engine`.
+
 ```
-PF_10MIN_DEMO_DATA=<demo> tools/go.sh test ./internal/datalayout ./internal/partyland ./internal/frontend -run 'Demo|TimedDemo' -v
+tools/go.sh test ./internal/engine -run DemoGolden -v
+tools/go.sh test ./internal/datalayout ./internal/partyland ./internal/frontend -run 'Demo|TimedDemo' -v
 PF_10MIN_DEMO_DATA=<demo> PF_RUNTIME_DATA=<A> tools/go.sh test -tags demodev ./internal/partyland -run TimedDemoMatchesReference -v
 PF_10MIN_DEMO_DATA=<demo> PF_DEMO_RESEARCH_WITNESS=<drain-json> PF_DEMO_COLLISION_WITNESS=<collision-json> \
   tools/go.sh test -tags dmoimpl1 ./internal/partyland ./internal/physics -run '^TestDemo' -v

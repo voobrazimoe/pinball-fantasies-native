@@ -6,14 +6,12 @@ import (
 	"testing"
 
 	"pinballfantasies/internal/partyland"
+	"pinballfantasies/internal/testinputs"
 )
 
 func privateDemoDir(t *testing.T) string {
 	t.Helper()
-	dir := os.Getenv("PF_10MIN_DEMO_DATA")
-	if dir == "" {
-		t.Skip("set PF_10MIN_DEMO_DATA to the private 10-minute demo")
-	}
+	dir := testinputs.DemoDir()
 	// Copy only the five runtime roles, so the launcher/drivers are irrelevant.
 	out := t.TempDir()
 	for _, name := range DemoNamesRequired {
@@ -203,7 +201,7 @@ func TestPrivateDemoClosingMessage(t *testing.T) {
 	if _, err := Load(dir, nil); err != nil {
 		t.Fatal(err)
 	}
-	b, err := os.ReadFile(filepath.Join(os.Getenv("PF_10MIN_DEMO_DATA"), "PINBALL.EXE"))
+	b, err := os.ReadFile(filepath.Join(testinputs.DemoDir(), "PINBALL.EXE"))
 	if err != nil {
 		t.Skip("demo launcher not supplied")
 	}

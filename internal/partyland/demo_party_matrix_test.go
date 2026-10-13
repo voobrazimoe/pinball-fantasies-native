@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"pinballfantasies/internal/physics"
 	"pinballfantasies/internal/presentation"
+	"pinballfantasies/internal/testinputs"
 	"reflect"
 	"testing"
 )
@@ -28,10 +29,7 @@ func prepareDemoParty(t *testing.T, d *demoConnected) {
 
 func pinnedDemoBytes(t *testing.T) []byte {
 	t.Helper()
-	root := os.Getenv("PF_10MIN_DEMO_DATA")
-	if root == "" {
-		t.Skip("pinned demo presentation NOT AVAILABLE")
-	}
+	root := testinputs.DemoDir()
 	cmd := exec.Command("python3", "-c", `import os,sys
 from pathlib import Path
 sys.path.insert(0,'../../tools')
@@ -41,6 +39,7 @@ for name,(size,identity) in FILES.items():
  b=(root/name).read_bytes()
  require(len(b)==size and digest(b)==identity,'private demo identity mismatch')
 `)
+	cmd.Env = append(os.Environ(), "PF_10MIN_DEMO_DATA="+root)
 	if _, err := cmd.CombinedOutput(); err != nil {
 		t.Fatal("pinned demo validation", err)
 	}

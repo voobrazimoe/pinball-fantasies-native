@@ -8,15 +8,13 @@ import (
 	"pinballfantasies/internal/datalayout"
 	"pinballfantasies/internal/physics"
 	"pinballfantasies/internal/settings"
+	"pinballfantasies/internal/testinputs"
 )
 
 // Private: requires the legally supplied official demo, never canonical A.
 func timedDemoFixture(t *testing.T) *Game {
 	t.Helper()
-	dir := os.Getenv("PF_10MIN_DEMO_DATA")
-	if dir == "" {
-		t.Skip("set PF_10MIN_DEMO_DATA to the private 10-minute demo")
-	}
+	dir := testinputs.DemoDir()
 	intro, err := os.ReadFile(filepath.Join(dir, "INTRO.PRG"))
 	if err != nil {
 		t.Fatal(err)

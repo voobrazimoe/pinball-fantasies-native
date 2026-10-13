@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"pinballfantasies/internal/audio"
 	"pinballfantasies/internal/datalayout"
+	"pinballfantasies/internal/testinputs"
 	"reflect"
 	"testing"
 )
@@ -14,7 +15,7 @@ import (
 // The demo is admitted only as its own coherent profile with Party Land alone:
 // never through a full-installation profile or as a demo/full hybrid.
 func TestPrivate10MinuteDemoAdmissionBoundary(t *testing.T) {
-	dir, canonical := os.Getenv("PF_10MIN_DEMO_DATA"), os.Getenv("PF_RUNTIME_DATA")
+	dir, canonical := testinputs.DemoDir(), os.Getenv("PF_RUNTIME_DATA")
 	if dir == "" || canonical == "" {
 		t.Skip("set PF_10MIN_DEMO_DATA and PF_RUNTIME_DATA for private DMO0 evidence")
 	}

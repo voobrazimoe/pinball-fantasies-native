@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"pinballfantasies/internal/physics"
+	"pinballfantasies/internal/testinputs"
 )
 
 // The shipped demo layer is cross-checked against the bounded research
@@ -15,7 +16,7 @@ import (
 // canonical A are required, and nothing is written.
 func timedDemoReference(t *testing.T) *ExperimentalDemo {
 	t.Helper()
-	demo, a := os.Getenv("PF_10MIN_DEMO_DATA"), os.Getenv("PF_RUNTIME_DATA")
+	demo, a := testinputs.DemoDir(), os.Getenv("PF_RUNTIME_DATA")
 	if demo == "" || a == "" {
 		t.Skip("set PF_10MIN_DEMO_DATA and PF_RUNTIME_DATA for the research reference")
 	}

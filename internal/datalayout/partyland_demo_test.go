@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"pinballfantasies/internal/testinputs"
 )
 
 // Fixture-free: the descriptor stays inside the decoded space and carries
@@ -43,10 +45,7 @@ func TestPartyLandDemoDescriptor(t *testing.T) {
 
 func privateDemo(t *testing.T) (intro, table []byte) {
 	t.Helper()
-	dir := os.Getenv("PF_10MIN_DEMO_DATA")
-	if dir == "" {
-		t.Skip("set PF_10MIN_DEMO_DATA to the private 10-minute demo")
-	}
+	dir := testinputs.DemoDir()
 	var err error
 	if intro, err = os.ReadFile(filepath.Join(dir, "INTRO.PRG")); err != nil {
 		t.Fatal(err)
