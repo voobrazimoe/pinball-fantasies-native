@@ -19,6 +19,18 @@ type View struct {
 	Art            *assets.FrontendArt
 	Font5, Font13  []byte
 	Matrix         *presentation.Display
+	// Reuse lets table frames be composed into one retained buffer. The
+	// frame is then only valid until the next one is requested.
+	Reuse   bool
+	scratch *image.RGBA
+}
+
+func (v *View) sessionFrame(m *Model) *image.RGBA {
+	if s, ok := m.Session.(interface{ FrameInto(*image.RGBA) *image.RGBA }); ok && v.Reuse {
+		v.scratch = s.FrameInto(v.scratch)
+		return v.scratch
+	}
+	return m.Session.Frame()
 }
 
 func NewView(a *assets.FrontendArt, table []byte) *View {
@@ -53,10 +65,10 @@ func (v *View) framePresentation(m *Model, full bool) *image.RGBA {
 	// The table owns these frames whole; compose them exactly once.
 	switch m.Mode {
 	case Playing:
-		return m.Session.Frame()
+		return v.sessionFrame(m)
 	case GameEnd, Initials, EntryWait:
 		if m.sourceScoreStage != 0 {
-			return m.Session.Frame()
+			return v.sessionFrame(m)
 		}
 	}
 	var out *image.RGBA
@@ -66,7 +78,7 @@ func (v *View) framePresentation(m *Model, full bool) *image.RGBA {
 		}
 	}
 	if out == nil {
-		out = m.Session.Frame()
+		out = v.sessionFrame(m)
 	}
 	draw.Draw(out, image.Rect(0, c.MatrixY(), 320, c.MatrixY()+33), image.NewUniform(color.RGBA{0, 0, 0, 255}), image.Point{}, draw.Src)
 	switch m.Mode {

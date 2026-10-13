@@ -50,6 +50,7 @@ func Load(data, state string, ns int64) (*Engine, error) {
 // source.Runner directly. No second implementation of source scheduling exists.
 func New(rt *frontend.Runtime, ns int64) *Engine {
 	e := &Engine{now: time.Unix(0, ns), last: ns}
+	rt.ReuseFrames = true // Frame borrows the framebuffer until the next call.
 	e.runner = source.New(rt, func() time.Time { return e.now })
 	return e
 }

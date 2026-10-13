@@ -42,10 +42,12 @@ func (g *Game) applyLamp(p *[768]byte, n int, on bool) {
 		p[3*c.start+i] = v
 	}
 }
-func (g *Game) Frame() *image.RGBA {
+func (g *Game) Frame() *image.RGBA { return g.FrameInto(nil) }
+
+// FrameInto composes the frame into dst, reusing it when its size matches.
+func (g *Game) FrameInto(dst *image.RGBA) *image.RGBA {
 	p := presentation.MatrixPaletteMode(g.Palette(), g.Physics.ReferenceMode, 128)
-	d := *g.Display
-	return presentation.ComposeNative(g.Physics.FramePalette(p), &d, p, 98, 128, g.Physics.PresentationSettings(), g.Physics.ScreenOffset)
+	return g.Physics.ComposeFrame(dst, p, g.Display, 98, 128)
 }
 func (g *Game) AttractFrame(ticks int) *image.RGBA {
 	out := g.Frame()
