@@ -7,7 +7,8 @@ a4::PcmBuffer& androidAudioBuffer() { static a4::PcmBuffer buffer; return buffer
 namespace {
 std::atomic<int> entered{0}, calls{0}, suspends{0}, resumes{0}, destroys{0};
 bool suspended=false;
-uint64_t sourceTicks=12;
+uint64_t sourceTicks=12, tickStep=2;
+std::atomic<int> frames{0};
 struct Call {
     Call() { assert(entered.fetch_add(1)==0); ++calls; std::this_thread::yield(); }
     ~Call() { assert(entered.fetch_sub(1)==1); }
@@ -30,13 +31,13 @@ int32_t pf_engine_plunger_fire(uint64_t) { Call c; assert(!suspended); return PF
 int32_t pf_engine_set_presentation(uint64_t,int32_t) { Call c; return PF_OK; }
 int32_t pf_engine_advance(uint64_t,int64_t ns,pf_pcm_sink sink,void* context) {
     Call c; assert(ns>0 && !suspended && sink==a4::PcmBuffer::sink);
-    sourceTicks+=2;
+    sourceTicks+=tickStep;
     uint8_t borrowed[]={12,0,244,255};
     sink(context,borrowed,sizeof(borrowed));
     std::memset(borrowed,99,sizeof(borrowed)); return PF_OK;
 }
 int32_t pf_engine_frame(uint64_t,uint8_t** p,int32_t* w,int32_t* h,int32_t* stride) {
-    Call c; *p=framePixels; *w=1; *h=2; *stride=8; return PF_OK;
+    Call c; ++frames; *p=framePixels; *w=1; *h=2; *stride=8; return PF_OK;
 }
 }
 int main() {
@@ -66,6 +67,16 @@ int main() {
     androidAudioBuffer().render(audio,1);
     assert(audio[0]==12 && audio[1]==-12 && calls==abiCalls);
     assert(androidEngineFrame(true,pixels,w,h));
+    // Without a new source tick the previous copy stays valid: no frame call.
+    tickStep=0; bool changed=true; w=h=0;
+    assert(androidEngineFrame(true,pixels,w,h,nullptr,&changed));
+    const auto copied=frames.load();
+    assert(androidEngineFrame(true,pixels,w,h,nullptr,&changed) && !changed && frames==copied && w==1 && h==2);
+    assert(androidEngineFrame(false,pixels,w,h,nullptr,&changed) && changed && frames==copied+1);
+    std::vector<uint8_t> other; int ow=0,oh=0;
+    assert(androidEngineFrame(false,other,ow,oh,nullptr,&changed) && changed && other.size()==8);
+    tickStep=2;
+    assert(androidEngineFrame(true,pixels,w,h,nullptr,&changed) && changed);
     JNI_METHOD(nativeActive)(nullptr,nullptr,token,true,false);
     const auto before=calls.load();
     assert(!androidEngineFrame(false,pixels,w,h,&advanced) && advanced==-1);

@@ -3,11 +3,10 @@ package frontend
 import (
 	"fmt"
 	"image"
-	"os"
-	"path/filepath"
 	"pinballfantasies/internal/assets"
 	"pinballfantasies/internal/audio"
 	"pinballfantasies/internal/datalayout"
+	"pinballfantasies/internal/dosname"
 	"pinballfantasies/internal/gameshow"
 	"pinballfantasies/internal/partyland"
 	"pinballfantasies/internal/physics"
@@ -53,7 +52,7 @@ func LoadConfigured(dataDir string, store Store, configStore *settings.Store) (*
 	inputs := make(map[string][]byte)
 	prgs := make(map[string][]byte)
 	for _, name := range runtimeNamesRequired {
-		data, err := os.ReadFile(filepath.Join(dataDir, name))
+		data, err := dosname.ReadFile(dataDir, name)
 		if err != nil {
 			if missingFullInstallation(err) && demoFolder(dataDir) {
 				return loadDemo(dataDir, configStore)
@@ -125,7 +124,7 @@ func LoadConfigured(dataDir string, store Store, configStore *settings.Store) (*
 	if e != nil {
 		return nil, fmt.Errorf("MOD2.MOD: %w", e)
 	}
-	config := settings.Defaults()
+	var config settings.Config
 	if configStore != nil {
 		config, err = configStore.Load()
 	} else {

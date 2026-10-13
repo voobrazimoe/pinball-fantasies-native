@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 
 	"pinballfantasies/internal/demodata"
+	"pinballfantasies/internal/dosname"
 	"pinballfantasies/internal/frontend"
 )
 
@@ -32,7 +33,7 @@ func ChooseDataDir(value string) (string, func(), error) {
 		return PrepareDataDir(value)
 	}
 	if root, err := PortableRoot(); err == nil {
-		if _, err := os.Stat(filepath.Join(root, "INTRO.PRG")); err == nil {
+		if _, err := dosname.Stat(root, "INTRO.PRG"); err == nil {
 			return root, func() {}, nil
 		}
 	}
@@ -71,7 +72,7 @@ func chooseLaunch(imported string, ask func() launchChoice, pick func() (string,
 
 func complete(dir string) bool {
 	for _, name := range frontend.FullNamesRequired() {
-		if _, err := os.Stat(filepath.Join(dir, name)); err != nil {
+		if _, err := dosname.Stat(dir, name); err != nil {
 			return false
 		}
 	}
@@ -106,7 +107,7 @@ func importGame(source, destination string) error {
 	required := frontend.FullNamesRequired()
 	names := append(required, "PINBALL.CFG", "TABLE1.HI", "TABLE2.HI", "TABLE3.HI", "TABLE4.HI")
 	for i, name := range names {
-		b, err := os.ReadFile(filepath.Join(source, name))
+		b, err := dosname.ReadFile(source, name)
 		if errors.Is(err, os.ErrNotExist) && i >= len(required) {
 			continue
 		}

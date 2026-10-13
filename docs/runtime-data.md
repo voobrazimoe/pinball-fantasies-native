@@ -18,7 +18,7 @@ TABLE4.PRG
 TABLE4.MOD
 ```
 
-These eleven PRG/MOD files are read-only game data. The shared decoders validate the supported consumed-data layout, not exact whole-file identity. Windows, Linux and the macOS importer/host all use `frontend.LoadConfigured`. See [the compatibility audit](runtime-compatibility-audit.md) for the file-by-file policy and extension rules.
+These eleven PRG/MOD files are read-only game data. Names are matched without regard to letter case, as on DOS, so copies such as `intro.prg` also load; two files whose names differ only in case are rejected as ambiguous. The shared decoders validate the supported consumed-data layout, not exact whole-file identity. Windows, Linux and the macOS importer/host all use `frontend.LoadConfigured`. See [the compatibility audit](runtime-compatibility-audit.md) for the file-by-file policy and extension rules.
 
 `PINBALL.CFG` is optional mutable settings, separate from commercial payload. A valid six-byte DOS record may seed native settings. Missing or malformed CFG uses native defaults. Native state may contain a valid versioned PFNC record. No CFG hash is required.
 

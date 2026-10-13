@@ -169,10 +169,10 @@ func (h *hostWindow) surfaceTrace(start time.Time, size image.Point) {
 func (h *hostWindow) drawCall(times *[]transitionTime, name string, args ...uintptr) (uintptr, uintptr, error) {
 	h.lastDrawCall = name
 	if times == nil {
-		return gdi32.NewProc(name).Call(args...)
+		return cachedProc(gdi32, name).Call(args...)
 	}
 	start := time.Now()
-	v, r, e := gdi32.NewProc(name).Call(args...)
+	v, r, e := cachedProc(gdi32, name).Call(args...)
 	*times = append(*times, transitionTime{name, time.Since(start).Nanoseconds()})
 	return v, r, e
 }

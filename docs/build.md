@@ -68,4 +68,4 @@ journeys and owner physical-Mac acceptance are recorded in
 [macOS validation](macos-validation.md). Public bundles contain no commercial
 data and are not notarized. The published `v0.1.1` release contains only
 Windows/Linux downloads and checksums; Mac assets have not yet been published
-as a tagged release. Android remains unimplemented.
+as a tagged release. Android builds are described in [Android usage](android.md).

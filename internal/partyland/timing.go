@@ -161,7 +161,6 @@ func (g *Game) playJingle(label string) bool {
 func (g *Game) effectTiming(label string) bool {
 	key := label
 	if key == "MULTIBONUS" {
-		key = fmt.Sprintf("M%d", g.Multiplier+1)
 		if g.Multiplier == 1 {
 			key = "M2"
 		} else {

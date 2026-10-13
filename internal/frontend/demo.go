@@ -4,8 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"os"
-	"path/filepath"
+	"pinballfantasies/internal/dosname"
 
 	"pinballfantasies/internal/assets"
 	"pinballfantasies/internal/audio"
@@ -29,7 +28,7 @@ const DemoProfileID = datalayout.PartyLandDemoProfile
 func loadDemo(dataDir string, configStore *settings.Store) (*Runtime, error) {
 	inputs := make(map[string][]byte)
 	for _, name := range DemoNamesRequired {
-		data, err := os.ReadFile(filepath.Join(dataDir, name))
+		data, err := dosname.ReadFile(dataDir, name)
 		if err != nil {
 			return nil, err
 		}
@@ -71,7 +70,7 @@ func loadDemo(dataDir string, configStore *settings.Store) (*Runtime, error) {
 	if err != nil {
 		return nil, fmt.Errorf("MOD2.MOD: %w", err)
 	}
-	config := settings.Defaults()
+	var config settings.Config
 	if configStore != nil {
 		config, err = configStore.Load()
 	} else {
@@ -107,7 +106,7 @@ func loadDemo(dataDir string, configStore *settings.Store) (*Runtime, error) {
 	}
 	model.Demo = true
 	// The launcher is not a runtime role; its closing text is shown when supplied.
-	if launcher, err := os.ReadFile(filepath.Join(dataDir, "PINBALL.EXE")); err == nil {
+	if launcher, err := dosname.ReadFile(dataDir, "PINBALL.EXE"); err == nil {
 		if text, err := datalayout.DemoClosingMessage(launcher); err == nil {
 			model.ClosingText = text
 		}
@@ -122,7 +121,7 @@ func loadDemo(dataDir string, configStore *settings.Store) (*Runtime, error) {
 func missingFullInstallation(err error) bool { return errors.Is(err, fs.ErrNotExist) }
 func demoFolder(dataDir string) bool {
 	for _, name := range []string{"TABLE2.PRG", "TABLE3.PRG", "TABLE4.PRG"} {
-		if _, err := os.Stat(filepath.Join(dataDir, name)); !errors.Is(err, fs.ErrNotExist) {
+		if _, err := dosname.Stat(dataDir, name); !errors.Is(err, fs.ErrNotExist) {
 			return false
 		}
 	}

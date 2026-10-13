@@ -50,24 +50,33 @@ func (v *View) framePresentation(m *Model, full bool) *image.RGBA {
 	case Closing:
 		return v.closingFrame(m)
 	}
-	out := m.Session.Frame()
-	draw.Draw(out, image.Rect(0, c.MatrixY(), 320, c.MatrixY()+33), image.NewUniform(color.RGBA{0, 0, 0, 255}), image.Point{}, draw.Src)
+	// The table owns these frames whole; compose them exactly once.
 	switch m.Mode {
 	case Playing:
 		return m.Session.Frame()
-	case GameEnd:
+	case GameEnd, Initials, EntryWait:
 		if m.sourceScoreStage != 0 {
 			return m.Session.Frame()
 		}
+	}
+	var out *image.RGBA
+	if m.Mode == TableAttract {
+		if session, ok := m.Session.(interface{ AttractFrame(int) *image.RGBA }); ok {
+			out = session.AttractFrame(m.Counter)
+		}
+	}
+	if out == nil {
+		out = m.Session.Frame()
+	}
+	draw.Draw(out, image.Rect(0, c.MatrixY(), 320, c.MatrixY()+33), image.NewUniform(color.RGBA{0, 0, 0, 255}), image.Point{}, draw.Src)
+	switch m.Mode {
+	case GameEnd:
 		// end_gamen's six-sync handoff clears the display before score entry.
 	case Paused:
 		v.matrixText(out, "GAME PAUSED", 72, 2, m.Selected, c.MatrixY())
 	case QuitQuestion:
 		v.matrixText(out, "REALLY QUIT (Y OR N)", 0, 2, m.Selected, c.MatrixY())
 	case Initials, EntryWait:
-		if m.sourceScoreStage != 0 {
-			return m.Session.Frame()
-		}
 		text := "HIGHSCORE PL " + strconv.Itoa(max(1, m.scorePlayer)) + " (" + string(m.Entry[:]) + ")"
 		if m.Mode == EntryWait && m.Counter <= 30 {
 			text = "********************"
@@ -75,10 +84,6 @@ func (v *View) framePresentation(m *Model, full bool) *image.RGBA {
 		v.matrixText(out, text, 0, 2, m.Selected, c.MatrixY())
 
 	case TableAttract:
-		if session, ok := m.Session.(interface{ AttractFrame(int) *image.RGBA }); ok {
-			out = session.AttractFrame(m.Counter)
-		}
-		draw.Draw(out, image.Rect(0, c.MatrixY(), 320, c.MatrixY()+33), image.NewUniform(color.RGBA{0, 0, 0, 255}), image.Point{}, draw.Src)
 		d := v.Matrix
 		on, off := byte(242), byte(96)
 		if m.Selected == 2 && v.SpeedMatrix != nil {
@@ -150,48 +155,6 @@ func (v *View) matrixText(dst *image.RGBA, s string, x, y, table int, matrixY in
 		p = d.SourceMatrixPalette(p)
 	}
 	d.DrawAt(dst, p, off, on, matrixY)
-}
-func (v *View) smallText(dst *image.RGBA, s string, x, y int) { v.dotText(dst, s, x, y, 5, 1, v.Font5) }
-func (v *View) dotText(dst *image.RGBA, s string, x, y, h, scale int, font []byte) {
-	for _, c := range s {
-		idx := -1
-		if c >= '0' && c <= '9' {
-			idx = int(c - '0')
-		} else if c >= 'A' && c <= 'Z' {
-			idx = int(c-'A') + 10
-		}
-		if h == 13 {
-			switch c {
-			case '?':
-				idx = 36
-			case '(':
-				idx = 37
-			case ')':
-				idx = 38
-			case '-':
-				idx = 39
-			case '.':
-				idx = 40
-			case '*':
-				idx = 41
-			}
-		}
-		if idx >= 0 {
-			for row := 0; row < h; row++ {
-				for col := 0; col < 8; col++ {
-					if font[idx*h+row]&(128>>uint(col)) != 0 {
-						for yy := 0; yy < scale; yy++ {
-							for xx := 0; xx < scale; xx++ {
-								dst.SetRGBA(x+col*scale+xx, y+row*scale+yy, color.RGBA{242, 176, 64, 255})
-							}
-						}
-					}
-				}
-			}
-
-		}
-		x += 8 * scale
-	}
 }
 
 // PUTCHAR/fontlist: original 32-pixel-wide source cells, 18-pixel advance,

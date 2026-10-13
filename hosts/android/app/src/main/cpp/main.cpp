@@ -204,6 +204,7 @@ public:
             return false;
         }
         const std::vector<std::uint8_t> pixels = makeEmptyFrame();
+        textureCurrent_ = false;
         frameWidth_ = textureWidth_ = kFrameWidth;
         frameHeight_ = textureHeight_ = kFrameHeight;
         glBindTexture(GL_TEXTURE_2D, texture_);
@@ -294,10 +295,12 @@ public:
 
         int64_t sourceTicks = -1;
         const int64_t engineStart = diagnostic ? presentation::monotonicNs() : 0;
-        const bool hasFrame = androidEngineFrame(a3::portrait(surfaceWidth, surfaceHeight), pixels_, frameWidth_, frameHeight_, diagnostic ? &sourceTicks : nullptr);
+        bool changed = true;
+        const bool hasFrame = androidEngineFrame(a3::portrait(surfaceWidth, surfaceHeight), pixels_, frameWidth_, frameHeight_, diagnostic ? &sourceTicks : nullptr, &changed);
         const int64_t uploadStart = diagnostic ? presentation::monotonicNs() : 0;
         if (diagnostic) diagnostics_.engine.add(uploadStart-engineStart);
-        if (hasFrame) {
+        if (hasFrame && (changed || !textureCurrent_)) {
+            textureCurrent_ = true;
             glBindTexture(GL_TEXTURE_2D, texture_);
             if (textureWidth_ != frameWidth_ || textureHeight_ != frameHeight_) {
                 glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, frameWidth_, frameHeight_, 0,
@@ -426,6 +429,7 @@ private:
     int lastSurfaceWidth_ = -1;
     int lastSurfaceHeight_ = -1;
     bool firstFrame_ = true;
+    bool textureCurrent_ = false; // holds the latest engine frame
     bool resumed_ = false;
     bool resumeFrame_ = false;
 };

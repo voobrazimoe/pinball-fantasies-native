@@ -17,7 +17,7 @@ var winmm = syscall.NewLazyDLL("winmm.dll")
 
 //go:uintptrescapes
 func mm(name string, args ...uintptr) error {
-	code, _, _ := winmm.NewProc(name).Call(args...)
+	code, _, _ := cachedProc(winmm, name).Call(args...)
 	if code != 0 {
 		return fmt.Errorf("waveOut %s: multimedia error %d", name, code)
 	}
@@ -70,7 +70,7 @@ func (a *AudioDevice) reap(force bool) (int, error) {
 				failure = e
 				keep = append(keep, p)
 			} else {
-				kernel32.NewProc("LocalFree").Call(p)
+				cachedProc(kernel32, "LocalFree").Call(p)
 			}
 		} else {
 			queued += int(h.Length)
@@ -142,7 +142,7 @@ func (a *AudioDevice) Queue(pcm []byte) error {
 		return fmt.Errorf("waveOut PCM batch exceeds queue bound")
 	}
 	size := unsafe.Sizeof(waveHeader{})
-	p, _, e := kernel32.NewProc("LocalAlloc").Call(0x40, size+uintptr(len(pcm)))
+	p, _, e := cachedProc(kernel32, "LocalAlloc").Call(0x40, size+uintptr(len(pcm)))
 	if p == 0 {
 		return apiError("audio LocalAlloc", e)
 	}
@@ -151,7 +151,7 @@ func (a *AudioDevice) Queue(pcm []byte) error {
 	h.Length = uint32(len(pcm))
 	copy(unsafe.Slice((*byte)(unsafe.Pointer(h.Data)), len(pcm)), pcm)
 	if e := mm("waveOutPrepareHeader", a.id, p, size); e != nil {
-		kernel32.NewProc("LocalFree").Call(p)
+		cachedProc(kernel32, "LocalFree").Call(p)
 		return e
 	}
 	if e := mm("waveOutWrite", a.id, p, size); e != nil {
@@ -159,7 +159,7 @@ func (a *AudioDevice) Queue(pcm []byte) error {
 			a.blocks = append(a.blocks, p)
 			return fmt.Errorf("%v; %w", e, ue)
 		}
-		kernel32.NewProc("LocalFree").Call(p)
+		cachedProc(kernel32, "LocalFree").Call(p)
 		return e
 	}
 	a.blocks = append(a.blocks, p)

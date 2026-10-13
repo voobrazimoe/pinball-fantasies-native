@@ -3,7 +3,9 @@
 package frontend
 
 import (
+	"fmt"
 	"image"
+	"os"
 	"pinballfantasies/internal/gameplay"
 	"pinballfantasies/internal/physics"
 	"pinballfantasies/internal/presentation"
@@ -118,7 +120,6 @@ type Model struct {
 	TextTick, TextExitTick, PreviousPage int
 	ReturnMode                           Mode
 	PauseDelay                           int
-	audioMode                            Mode
 	// Demo is the official 10-minute demo INTRO: Party Land only, its own
 	// two SHOWTEXT pages, one player started directly, and QUIT returning
 	// to INTRO. ClosingText is the
@@ -176,7 +177,6 @@ func (m *Model) selector() {
 	m.Reveal = 0
 	m.SidebarTick = 0
 }
-func (m *Model) start() error { return m.startPlayers(1) }
 
 // restartIntro is a fresh INTRO process after the demo's QUIT.
 func (m *Model) restartIntro() {
@@ -241,9 +241,7 @@ func (m *Model) startPlayers(count int) error {
 	return nil
 }
 func (m *Model) loadTable(table int) error {
-	if e := m.saveSettings(); e != nil {
-		return e
-	}
+	m.saveSettings()
 	m.Selected = table
 	m.cheatDecoder = gameplay.CheatDecoder{}
 	m.cheatTimeline = nil
@@ -312,9 +310,7 @@ func (m *Model) Update(in Input) error {
 	m.Tick++
 	m.sessionSynced = false
 	if in.Close {
-		if e := m.saveSettings(); e != nil {
-			return e
-		}
+		m.saveSettings()
 		m.Mode = Quit
 		m.End = ProgramQuit
 		return nil
@@ -357,9 +353,7 @@ func (m *Model) Update(in Input) error {
 			}
 		case Selector, SelectorText:
 			if k == Escape {
-				if e := m.saveSettings(); e != nil {
-					return e
-				}
+				m.saveSettings()
 				if len(m.ClosingText) > 0 {
 					m.Mode = Closing // the launcher prints its text, then waits for Esc
 					return nil
@@ -520,7 +514,7 @@ func (m *Model) Update(in Input) error {
 					scores.Insert(m.Rank, m.Final, m.Entry)
 					if m.Store != nil {
 						if e := m.Store.Save(m.Selected, scores); e != nil {
-							return e
+							storageWarning("high scores", e)
 						}
 					}
 					m.Scores[m.Selected-1] = scores
@@ -718,11 +712,20 @@ func (m Mode) String() string {
 	return names[m]
 }
 
-func (m *Model) saveSettings() error {
+// saveSettings keeps the game running when the state folder cannot be
+// written (full disk, read-only folder): settings stay in memory.
+func (m *Model) saveSettings() {
 	if m.SettingsStore != nil {
-		return m.SettingsStore.Save(m.Settings)
+		if e := m.SettingsStore.Save(m.Settings); e != nil {
+			storageWarning("settings", e)
+		}
 	}
-	return nil
+}
+
+// storageWarning reports a failed state write without ending the session.
+// Windows redirects stderr into native.log.
+func storageWarning(what string, e error) {
+	fmt.Fprintf(os.Stderr, "could not save %s: %v\n", what, e)
 }
 
 func (m *Model) openOptions() {

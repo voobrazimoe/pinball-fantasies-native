@@ -266,6 +266,9 @@ than 16384 bytes. Each row is copied using the supplied stride into a reusable
 packed vector while the engine mutex is held. The engine pointer is never
 written, retained, freed or passed to GLES. Vector capacity is reused; texture
 storage changes only when dimensions change, with `glTexSubImage2D` otherwise.
+The frame changes only with a source tick or a presentation change, so on
+displays faster than the source the host skips `pf_engine_frame`, the copy and
+the upload until the source tick count or orientation changes.
 The Go renderer retains its existing allocations; A3 does not redesign it.
 
 GLES2 uses `GL_NEAREST` for both filters and black clearing outside a centred
