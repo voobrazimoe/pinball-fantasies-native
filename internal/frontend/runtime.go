@@ -305,7 +305,7 @@ func (r *Runtime) Update(in Input) error {
 		return nil
 	}
 	if m.Session != nil {
-		if s, ok := m.Session.(interface{ PresentationAudioSync() }); ok {
+		if s, ok := m.Session.(presentationAudio); ok {
 			s.PresentationAudioSync()
 			r.PCM = m.Session.PCM()
 		}
@@ -327,18 +327,8 @@ func (r *Runtime) FramePresentation(full bool) *image.RGBA {
 	if r.session != nil {
 		return r.session.Frame(full)
 	}
-	var p *physics.Game
-	switch g := r.Model.Session.(type) {
-	case *partyland.Game:
-		p = g.Physics
-	case *speeddevils.Game:
-		p = g.Physics
-	case *gameshow.Game:
-		p = g.Physics
-	case *stones.Game:
-		p = g.Physics
-	}
-	if p != nil {
+	if t, ok := r.Model.Session.(playfieldOwner); ok && t.PlayfieldPhysics() != nil {
+		p := t.PlayfieldPhysics()
 		previous := p.PresentationFullTable
 		p.PresentationFullTable = full
 		defer func() { p.PresentationFullTable = previous }()
