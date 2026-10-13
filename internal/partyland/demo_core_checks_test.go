@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"pinballfantasies/internal/presentation"
 	"pinballfantasies/internal/tablelogic"
+	"pinballfantasies/internal/testinputs"
 	"reflect"
 	"strings"
 	"testing"
@@ -224,9 +225,6 @@ func TestDemoPriorityAdmission(t *testing.T) {
 	}
 }
 func TestDemoPrivateCandidate(t *testing.T) {
-	if os.Getenv("PF_10MIN_DEMO_DATA") == "" {
-		t.Skip("private demo inputs NOT AVAILABLE")
-	}
 	// Existing identity helper only; no audit CLI, search, replay or exported bytes.
 	cmd := exec.Command("python3", "-c", `import os,sys,struct
 from pathlib import Path
@@ -284,6 +282,7 @@ require(u16(0x3afe+2)==0xd0 and u16(0x3b10+2)==0x34f1,'matrix guards')
 
 
 `)
+	cmd.Env = append(os.Environ(), "PF_10MIN_DEMO_DATA="+testinputs.DemoDir())
 	if _, err := cmd.CombinedOutput(); err != nil {
 		t.Fatal("private candidate identity/semantic input validation failed", err)
 	}

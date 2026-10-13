@@ -50,3 +50,13 @@ func Require(t *testing.T, paths ...string) {
 		}
 	}
 }
+
+// DemoDir is the official 10-minute demo for tests: PF_10MIN_DEMO_DATA when
+// set, otherwise the copy bundled in internal/demodata. Callers are package
+// tests under internal/, so the relative path resolves from their directory.
+func DemoDir() string {
+	if dir := os.Getenv("PF_10MIN_DEMO_DATA"); dir != "" {
+		return dir
+	}
+	return filepath.Join("..", "demodata", "assets", "demo")
+}

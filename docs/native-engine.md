@@ -123,6 +123,9 @@ on all four tables, SOFT/full-table OFF, complete gameplay/matrix/task checkpoin
 PCM bytes/counts, frame hashes, original cheat strings, keyboard/mouse launch,
 flippers/tilt, drains, player/new-ball handoff, suspend/resume and slow wakeups.
 Original-backed tests skip explicitly without external user-supplied assets.
+`TestDemoGolden` needs no external assets: it plays the bundled Party Land demo
+through the engine boundary and pins frame and PCM digests, so public CI checks
+the whole stack on every platform.
 
 To exercise actual C calls against the direct Runner oracle:
 

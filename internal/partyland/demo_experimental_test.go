@@ -6,13 +6,14 @@ import (
 	"bytes"
 	"os"
 	"pinballfantasies/internal/physics"
+	"pinballfantasies/internal/testinputs"
 	"reflect"
 	"testing"
 )
 
 func experimentalFixture(t *testing.T) *ExperimentalDemo {
 	t.Helper()
-	demo, canonical := os.Getenv("PF_10MIN_DEMO_DATA"), os.Getenv("PF_RUNTIME_DATA")
+	demo, canonical := testinputs.DemoDir(), os.Getenv("PF_RUNTIME_DATA")
 	if demo == "" || canonical == "" {
 		t.Skip("owner-local demo and canonical inputs NOT AVAILABLE")
 	}
