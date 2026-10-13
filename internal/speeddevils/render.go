@@ -2,7 +2,6 @@ package speeddevils
 
 import (
 	"image"
-	"image/color"
 	"pinballfantasies/internal/assets"
 	"pinballfantasies/internal/presentation"
 	"strconv"
@@ -47,34 +46,6 @@ func (g *Game) Frame() *image.RGBA {
 	p := presentation.MatrixPaletteMode(g.Palette(), g.Physics.ReferenceMode, 128)
 	d := *g.Display
 	return presentation.ComposeNative(g.Physics.FramePalette(p), &d, p, 98, 128, g.Physics.PresentationSettings(), g.Physics.ScreenOffset)
-}
-func (g *Game) text(out *image.RGBA, s string, x, y, h, scale int) {
-	font := g.font5
-	if h == 13 {
-		font = g.font13
-	}
-	for _, ch := range s {
-		index := -1
-		if ch >= '0' && ch <= '9' {
-			index = int(ch - '0')
-		} else if ch >= 'A' && ch <= 'Z' {
-			index = int(ch-'A') + 10
-		}
-		if index >= 0 {
-			for row := 0; row < h; row++ {
-				for col := 0; col < 8; col++ {
-					if font[index*h+row]&(128>>uint(col)) != 0 {
-						for yy := 0; yy < scale; yy++ {
-							for xx := 0; xx < scale; xx++ {
-								out.SetRGBA(x+col*scale+xx, y+row*scale+yy, color.RGBA{242, 176, 64, 255})
-							}
-						}
-					}
-				}
-			}
-		}
-		x += 8 * scale
-	}
 }
 func (g *Game) AttractFrame(ticks int) *image.RGBA {
 	out := g.Frame()

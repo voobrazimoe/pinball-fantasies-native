@@ -41,7 +41,16 @@ jstring error(JNIEnv* env, const char* message) {
     jstring encoding = env->NewStringUTF("UTF-8");
     return static_cast<jstring>(env->NewObject(stringClass, constructor, bytes, encoding));
 }
+// Identity of the last frame copied into a host vector.
+struct Presented {
+    bool valid = false, portrait = false;
+    uint64_t engine = 0, tick = 0;
+    const uint8_t* buffer = nullptr;
+    size_t size = 0;
+    int width = 0, height = 0;
+} presented;
 void stop() {
+    presented = {};
     androidAudioBuffer().reset();
     if (persistent != 0) {
         pf_engine_destroy(persistent);
@@ -113,9 +122,10 @@ extern "C" JNIEXPORT void JNICALL JNI_METHOD(nativeInput)(JNIEnv*, jclass, jlong
  case 5: pf_engine_plunger_target(persistent, a); break;
  }
 }
-bool androidEngineFrame(bool portrait, std::vector<uint8_t>& pixels, int& width, int& height, int64_t* advancedTicks) {
+bool androidEngineFrame(bool portrait, std::vector<uint8_t>& pixels, int& width, int& height, int64_t* advancedTicks, bool* changed) {
  std::lock_guard<std::mutex> guard(lock);
  if (advancedTicks) *advancedTicks = -1;
+ if (changed) *changed = true;
  if (!opened || !persistent || !active()) return false;
  uint64_t before=0, after=0; uint32_t mode=0, table=0, flags=0;
  const bool measured = advancedTicks &&
@@ -124,16 +134,24 @@ bool androidEngineFrame(bool portrait, std::vector<uint8_t>& pixels, int& width,
  // queue depth/device callbacks never influence this monotonic deadline.
  if (pf_engine_set_presentation(persistent, portrait ? 1 : 0) != PF_OK ||
      pf_engine_advance(persistent, now(), a4::PcmBuffer::sink, &androidAudioBuffer()) != PF_OK) return false;
- if (measured && pf_engine_state(persistent,&after,&mode,&table,&flags)==PF_OK && after>=before)
+ const bool current = pf_engine_state(persistent,&after,&mode,&table,&flags)==PF_OK;
+ if (measured && current && after>=before)
      *advancedTicks = static_cast<int64_t>(after-before);
+ // Displays faster than the 71 Hz source see the same frame several times.
+ if (current && presented.valid && presented.engine == persistent && presented.tick == after &&
+     presented.portrait == portrait && presented.buffer == pixels.data() && presented.size == pixels.size()) {
+  width = presented.width; height = presented.height;
+  if (changed) *changed = false;
+  return true;
+ }
  uint8_t* borrowed = nullptr;
  int32_t w = 0, h = 0, stride = 0;
  if (pf_engine_frame(persistent, &borrowed, &w, &h, &stride) != PF_OK ||
-     !a3::copyFrame(borrowed, w, h, stride, pixels)) return false;
+     !a3::copyFrame(borrowed, w, h, stride, pixels)) { presented = {}; return false; }
  width = w; height = h;
+ presented = {current, portrait, persistent, after, pixels.data(), pixels.size(), w, h};
  return true;
 }
-
 extern "C" JNIEXPORT jboolean JNICALL JNI_METHOD(nativeHasEngine)(JNIEnv*, jclass, jlong token) {
  std::lock_guard<std::mutex> guard(lock);
  return opened && token == generation && persistent != 0;

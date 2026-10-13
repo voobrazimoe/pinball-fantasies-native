@@ -110,7 +110,3 @@ func (g *Game) newBall() {
 	}
 	g.emit("NewBall", "NEW_BALL", uint64(g.BallNumber))
 }
-func (g *Game) endGame() {
-	g.Phase = GameOver
-	g.emit("GameOver", "_2_DEMO_MODE", g.Score.Uint64())
-}

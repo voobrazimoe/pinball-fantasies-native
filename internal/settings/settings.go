@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"pinballfantasies/internal/dosname"
 )
 
 // ScrollMode extends the three DOS camera modes with native presentation OFF.
@@ -152,9 +153,9 @@ func MonoRGB(b []byte) []byte {
 type Store struct{ Directory, SeedDirectory string }
 
 func (s Store) Load() (Config, error) {
-	b, e := os.ReadFile(filepath.Join(s.Directory, "PINBALL.CFG"))
+	b, e := dosname.ReadFile(s.Directory, "PINBALL.CFG")
 	if os.IsNotExist(e) && s.SeedDirectory != "" {
-		b, e = os.ReadFile(filepath.Join(s.SeedDirectory, "PINBALL.CFG"))
+		b, e = dosname.ReadFile(s.SeedDirectory, "PINBALL.CFG")
 	}
 	if os.IsNotExist(e) {
 		return Defaults(), nil

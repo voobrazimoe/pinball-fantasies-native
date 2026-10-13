@@ -2,7 +2,6 @@ package partyland
 
 import (
 	"image"
-	"image/color"
 	"pinballfantasies/internal/assets"
 	"pinballfantasies/internal/presentation"
 )
@@ -31,33 +30,4 @@ func (g *Game) Frame() *image.RGBA {
 	}
 	d := *g.Display
 	return presentation.ComposeNative(g.Physics.FramePalette(p), &d, p, 96, 242, g.Physics.PresentationSettings(), g.Physics.ScreenOffset)
-}
-func (g *Game) text(out *image.RGBA, s string, x, y, height, scale int, c color.RGBA) {
-	font := g.font5
-	if height == 13 {
-		font = g.font13
-	}
-	for _, ch := range s {
-		index := -1
-		if ch >= '0' && ch <= '9' {
-			index = int(ch - '0')
-		} else if ch >= 'A' && ch <= 'Z' {
-			index = int(ch-'A') + 10
-		}
-		if index >= 0 {
-			for row := 0; row < height; row++ {
-				bits := font[index*height+row]
-				for col := 0; col < 8; col++ {
-					if bits&(128>>uint(col)) != 0 {
-						for yy := 0; yy < scale; yy++ {
-							for xx := 0; xx < scale; xx++ {
-								out.SetRGBA(x+col*scale+xx, y+row*scale+yy, c)
-							}
-						}
-					}
-				}
-			}
-		}
-		x += 8 * scale
-	}
 }

@@ -8,6 +8,7 @@ import (
 	"os"
 	"pinballfantasies/internal/diagnostics"
 	"runtime"
+	"sync"
 	"syscall"
 	"time"
 	"unsafe"
@@ -17,7 +18,21 @@ var user32 = syscall.NewLazyDLL("user32.dll")
 var gdi32 = syscall.NewLazyDLL("gdi32.dll")
 var kernel32 = syscall.NewLazyDLL("kernel32.dll")
 
-func up(name string) *syscall.LazyProc { return user32.NewProc(name) }
+func up(name string) *syscall.LazyProc { return cachedProc(user32, name) }
+
+var procs sync.Map
+
+// cachedProc resolves each export once. NewProc returns a fresh LazyProc whose
+// first Call repeats the GetProcAddress lookup, which per-frame and per-audio
+// block calls would otherwise pay every time.
+func cachedProc(dll *syscall.LazyDLL, name string) *syscall.LazyProc {
+	key := dll.Name + "!" + name
+	if p, ok := procs.Load(key); ok {
+		return p.(*syscall.LazyProc)
+	}
+	p, _ := procs.LoadOrStore(key, dll.NewProc(name))
+	return p.(*syscall.LazyProc)
+}
 
 var defWindowProc = up("DefWindowProcW")
 var windowCallback = syscall.NewCallback(windowProc)

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"pinballfantasies/internal/dosname"
 	"pinballfantasies/internal/tablelogic"
 )
 
@@ -103,7 +104,7 @@ func (f FileStore) loadWithDefault(table int, fallback Scores) (Scores, error) {
 		if f.SeedDirectory == "" {
 			return fallback, nil
 		}
-		b, e = os.ReadFile(filepath.Join(f.SeedDirectory, name))
+		b, e = dosname.ReadFile(f.SeedDirectory, name)
 		if os.IsNotExist(e) {
 			return fallback, nil
 		}
