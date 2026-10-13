@@ -38,9 +38,9 @@ userdata/
 
 This includes settings, high scores and logs. If the directory beside the executable/AppImage is not writable, the normal per-user configuration directory is used as fallback. The Windows/Linux CLI provides `-config-dir` and `-high-score-dir` overrides.
 
-macOS imports originals into `~/Library/Application Support/PinballFantasies/Data/` and writes native settings/high scores in the sibling `State/` directory. It does not write `userdata/` beside the app or modify the bundle. The native importer copies only PRG/MOD files and optional CFG, not legacy high-score files. See [macOS storage and import](macos.md).
+macOS imports originals into `~/Library/Application Support/PinballFantasies/Data/` and writes native settings/high scores in the sibling `State/` directory. It does not write `userdata/` beside the app or modify the bundle. The native importer copies the PRG/MOD files, optional CFG and, for the full game, optional legacy `TABLE*.HI` score seeds. See [macOS storage and import](macos.md).
 
-On Windows/Linux, optional legacy `TABLE*.HI` files may be read as score seeds in a normal asset-free installation. They are never required runtime inputs and are not modified. Without them, the native factory high-score tables are used.
+Optional legacy `TABLE*.HI` files may be read as score seeds in a normal asset-free installation; the macOS and Android importers copy them into the imported data. They are never required runtime inputs and are not modified. Without them, the native factory high-score tables are used.
 
 ## Personal builds
 

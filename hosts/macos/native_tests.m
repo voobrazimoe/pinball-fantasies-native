@@ -179,12 +179,13 @@ static void demoStorageTests(void) {
     NSString *source=[root stringByAppendingPathComponent:@"pinbfan"];
     NSString *data=[root stringByAppendingPathComponent:@"Data"];
     assert([fm createDirectoryAtPath:source withIntermediateDirectories:YES attributes:nil error:&error]);
-    for (NSString *name in [pf_demo_assets() arrayByAddingObject:@"PINBALL.EXE"]) assert([[@"test" dataUsingEncoding:NSUTF8StringEncoding]
+    for (NSString *name in [pf_demo_assets() arrayByAddingObjectsFromArray:@[@"PINBALL.EXE",@"TABLE1.HI"]]) assert([[@"test" dataUsingEncoding:NSUTF8StringEncoding]
         writeToFile:[source stringByAppendingPathComponent:name] atomically:YES]);
     assert([pf_installation_assets(source) isEqualToArray:pf_demo_assets()]);
     assert(pf_import_assets(source,data,acceptDemoTestFiles,&error));
     assert([fm contentsOfDirectoryAtPath:data error:&error].count==6); /* five roles + launcher text */
     assert([fm fileExistsAtPath:[data stringByAppendingPathComponent:@"PINBALL.EXE"]]);
+    assert(![fm fileExistsAtPath:[data stringByAppendingPathComponent:@"TABLE1.HI"]]);
     assert([fm removeItemAtPath:[source stringByAppendingPathComponent:@"MOD2.MOD"] error:&error]);
     assert(!pf_import_assets(source,data,acceptDemoTestFiles,&error));
     assert([fm contentsOfDirectoryAtPath:data error:NULL].count==6);
@@ -204,23 +205,34 @@ static void storageTests(void) {
     assert([fm createDirectoryAtPath:source withIntermediateDirectories:YES attributes:nil error:&error]);
     for (NSString *name in pf_required_assets()) assert([[@"test" dataUsingEncoding:NSUTF8StringEncoding]
         writeToFile:[source stringByAppendingPathComponent:name] atomically:YES]);
-    assert([[@"not imported" dataUsingEncoding:NSUTF8StringEncoding] writeToFile:[source stringByAppendingPathComponent:@"TABLE1.HI"] atomically:YES]);
+    assert([[@"seed" dataUsingEncoding:NSUTF8StringEncoding] writeToFile:[source stringByAppendingPathComponent:@"TABLE1.HI"] atomically:YES]);
+    assert([[@"not imported" dataUsingEncoding:NSUTF8StringEncoding] writeToFile:[source stringByAppendingPathComponent:@"TABLE1.BAK"] atomically:YES]);
     assert(pf_import_assets(source,data,acceptTestFiles,&error));
-    assert([fm contentsOfDirectoryAtPath:data error:&error].count==11);
-    assert(![fm fileExistsAtPath:[data stringByAppendingPathComponent:@"TABLE1.HI"]]);
+    assert([fm contentsOfDirectoryAtPath:data error:&error].count==12); /* DOS high scores seed State */
+    assert([fm fileExistsAtPath:[data stringByAppendingPathComponent:@"TABLE1.HI"]]);
     assert(pf_import_assets(source,data,acceptTestFiles,&error)); /* replacement transaction */
     NSString *input=[source stringByAppendingPathComponent:@"TABLE4.PRG"];
     assert([fm removeItemAtPath:input error:&error]);
     assert(!pf_import_assets(source,data,acceptTestFiles,&error));
-    assert([fm contentsOfDirectoryAtPath:data error:NULL].count==11); /* original adopted set preserved */
+    assert([fm contentsOfDirectoryAtPath:data error:NULL].count==12); /* original adopted set preserved */
     assert([fm createSymbolicLinkAtPath:input withDestinationPath:[source stringByAppendingPathComponent:@"TABLE3.PRG"] error:&error]);
     assert(!pf_import_assets(source,data,acceptTestFiles,&error));
     assert(!pf_validate_assets(data,&error)); /* real ABI rejects synthetic commercial files */
+    /* Lower-case names from a case-sensitive volume import under DOS names. */
+    NSString *lower=[root stringByAppendingPathComponent:@"lower"];
+    NSString *lowerData=[root stringByAppendingPathComponent:@"LowerData"];
+    assert([fm createDirectoryAtPath:lower withIntermediateDirectories:YES attributes:nil error:&error]);
+    for (NSString *name in [pf_required_assets() arrayByAddingObject:@"TABLE2.HI"]) assert([[@"test" dataUsingEncoding:NSUTF8StringEncoding]
+        writeToFile:[lower stringByAppendingPathComponent:name.lowercaseString] atomically:YES]);
+    assert([pf_installation_assets(lower) isEqualToArray:pf_required_assets()]);
+    assert(pf_import_assets(lower,lowerData,acceptTestFiles,&error));
+    NSArray<NSString *> *imported=[fm contentsOfDirectoryAtPath:lowerData error:&error];
+    assert(imported.count==12 && [imported containsObject:@"TABLE4.PRG"] && [imported containsObject:@"TABLE2.HI"]);
     NSString *path=pf_support_path(@"/Users/Test/Library/Application Support");
     NSString *cwd=fm.currentDirectoryPath; assert([fm changeCurrentDirectoryPath:@"/"]);
     assert([path isEqualToString:pf_support_path(@"/Users/Test/Library/Application Support")]);
     assert([fm changeCurrentDirectoryPath:cwd]); assert([fm removeItemAtPath:root error:&error]);
-    puts("PASS import whitelist, staged replacement, missing/symlink rejection, ABI validation, CWD-independent storage");
+    puts("PASS import whitelist, high-score seeds, case-insensitive names, staged replacement, missing/symlink rejection, ABI validation, CWD-independent storage");
 }
 static void frameTests(void) {
     PFFrameView *view=[[PFFrameView alloc] initWithFrame:NSMakeRect(0,0,8,4)];

@@ -71,7 +71,7 @@ is proved and what follows the full-game rules.
 
 The originals are treated as read-only data. Windows/Linux write native settings, high scores and logs to `userdata/` beside the executable/AppImage, with a per-user configuration directory as fallback. macOS imports originals into `~/Library/Application Support/PinballFantasies/Data/` and writes settings and high scores to `~/Library/Application Support/PinballFantasies/State/`, outside the app bundle.
 
-On Windows/Linux, optional legacy `TABLE*.HI` files are read-only score seeds; without them the native factory scores are used. The macOS importer copies only the required PRG/MOD files and optional CFG, using factory scores when there is no saved native state.
+Optional legacy `TABLE*.HI` files are read-only score seeds on every platform; the macOS and Android importers copy them with the full game. Without them the native factory scores are used.
 
 ## What is implemented
 

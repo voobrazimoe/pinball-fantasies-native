@@ -175,15 +175,15 @@ PASS means only the narrowly described check, never overall acceptance.
 
 Required direct children: `INTRO.PRG`, `INTRO.MOD`, `MOD2.MOD`, `TABLE1.PRG`,
 `TABLE1.MOD`, `TABLE2.PRG`, `TABLE2.MOD`, `TABLE3.PRG`, `TABLE3.MOD`,
-`TABLE4.PRG`, `TABLE4.MOD`. `PINBALL.CFG` is optional. `TABLE*.HI` is never
-required/imported. Use only the owner's legitimate originals, with a safe backup
+`TABLE4.PRG`, `TABLE4.MOD`. `PINBALL.CFG` and `TABLE1-4.HI` are optional;
+the HI files are imported as read-only score seeds. Use only the owner's legitimate originals, with a safe backup
 under their control. Never alter their only copy for rejection tests.
 
 | Check | Status | Short notes |
 | --- | --- | --- |
 | Real SAF folder selection, all 11 inputs accepted | NOT TESTED | Provider type only; omit source URI |
 | Optional CFG present accepted / absent accepted | NOT TESTED | Test variants in owner-controlled copies |
-| Irrelevant files and TABLE*.HI ignored | NOT TESTED | |
+| Irrelevant files ignored; TABLE*.HI seeds factory scores | NOT TESTED | |
 | Real shared engine validates, staging adopted, persistent engine starts | NOT TESTED | |
 | Inputs in app-private noBackupFilesDir/Data; state in filesDir/State | NOT TESTED | Architecture + behavior; do not export contents |
 | Successful import no longer needs source provider | NOT TESTED | Safely disconnect/revoke source access, relaunch |
