@@ -65,11 +65,15 @@ func openHost(first *image.RGBA) (_ *hostWindow, err error) {
 			C.SDL_QuitSubSystem(C.SDL_INIT_VIDEO)
 		}
 	}()
-	hint := C.CString("SDL_MOUSE_RELATIVE_SCALING")
-	value := C.CString("0")
-	C.SDL_SetHint(hint, value)
-	C.SDL_free(unsafe.Pointer(hint))
-	C.SDL_free(unsafe.Pointer(value))
+	setHint := func(name, value string) {
+		n, v := C.CString(name), C.CString(value)
+		C.SDL_SetHint(n, v)
+		C.SDL_free(unsafe.Pointer(n))
+		C.SDL_free(unsafe.Pointer(v))
+	}
+	setHint("SDL_MOUSE_RELATIVE_SCALING", "0")
+	// Scaled pixels stay nearest-neighbour on every renderer.
+	setHint("SDL_RENDER_SCALE_QUALITY", "0")
 	title := C.CString("Pinball Fantasies")
 	defer C.SDL_free(unsafe.Pointer(title))
 	w, h := C.int(first.Rect.Dx()), C.int(first.Rect.Dy())
@@ -83,9 +87,21 @@ func openHost(first *image.RGBA) (_ *hostWindow, err error) {
 			C.SDL_DestroyWindow(window)
 		}
 	}()
-	renderer := C.SDL_CreateRenderer(window, -1, C.SDL_RENDERER_SOFTWARE)
+	// A vsynced GPU renderer removes tearing and CPU scaling. RenderPresent then
+	// waits for the display, and the loop shows the newest completed tick; ticks
+	// keep their own deadlines, so the simulation does not change. Without a
+	// usable driver the software renderer still works, unsynchronized.
+	renderer := C.SDL_CreateRenderer(window, -1, C.SDL_RENDERER_ACCELERATED|C.SDL_RENDERER_PRESENTVSYNC)
+	if renderer == nil {
+		diagnostics.Println("PF6 accelerated vsync renderer unavailable:", C.GoString(C.SDL_GetError()))
+		renderer = C.SDL_CreateRenderer(window, -1, C.SDL_RENDERER_SOFTWARE)
+	}
 	if renderer == nil {
 		return nil, fail()
+	}
+	var info C.SDL_RendererInfo
+	if C.SDL_GetRendererInfo(renderer, &info) == 0 {
+		diagnostics.Printf("PF6 renderer %s vsync=%t\n", C.GoString(info.name), info.flags&C.SDL_RENDERER_PRESENTVSYNC != 0)
 	}
 	defer func() {
 		if err != nil {
