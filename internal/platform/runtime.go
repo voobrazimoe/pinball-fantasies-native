@@ -33,6 +33,8 @@ func showFrontend(r *frontend.Runtime, duration time.Duration, device *AudioDevi
 		return err
 	}
 	defer host.Close()
+	// Present copies each frame into the window surface before the next one.
+	r.ReuseFrames = true
 	audit, err := openPacingLog()
 	if err != nil {
 		return err

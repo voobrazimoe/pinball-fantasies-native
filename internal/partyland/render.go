@@ -23,11 +23,13 @@ func (g *Game) applyLamp(p *[768]byte, n int, on bool) {
 
 // Frame composes the playfield and original VGA matrix split.
 // Matrix command timing belongs to the gameplay scheduler.
-func (g *Game) Frame() *image.RGBA {
+func (g *Game) Frame() *image.RGBA { return g.FrameInto(nil) }
+
+// FrameInto composes the frame into dst, reusing it when its size matches.
+func (g *Game) FrameInto(dst *image.RGBA) *image.RGBA {
 	p := presentation.MatrixPaletteMode(g.Palette(), g.Physics.ReferenceMode, 242)
 	if fade, ok := g.demoFadePalette(); ok {
 		p = fade
 	}
-	d := *g.Display
-	return presentation.ComposeNative(g.Physics.FramePalette(p), &d, p, 96, 242, g.Physics.PresentationSettings(), g.Physics.ScreenOffset)
+	return g.Physics.ComposeFrame(dst, p, g.Display, 96, 242)
 }

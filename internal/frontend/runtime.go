@@ -35,6 +35,9 @@ type Runtime struct {
 	Player      *audio.Player
 	PCM         []byte
 	ProfileID   string
+	// ReuseFrames is for hosts that copy or present each frame before asking
+	// for the next: table frames then reuse one buffer instead of allocating.
+	ReuseFrames bool
 }
 
 var runtimeNamesRequired = []string{"INTRO.PRG", "INTRO.MOD", "MOD2.MOD", "TABLE1.PRG", "TABLE1.MOD", "TABLE2.PRG", "TABLE2.MOD", "TABLE3.PRG", "TABLE3.MOD", "TABLE4.PRG", "TABLE4.MOD"}
@@ -262,6 +265,7 @@ func (r *Runtime) Frame() *image.RGBA {
 	if r.session != nil {
 		return r.session.Frame(false)
 	}
+	r.View.Reuse = r.ReuseFrames
 	return r.View.Frame(r.Model)
 }
 func (r *Runtime) FocusLost(close bool) error {
@@ -339,5 +343,6 @@ func (r *Runtime) FramePresentation(full bool) *image.RGBA {
 		p.PresentationFullTable = full
 		defer func() { p.PresentationFullTable = previous }()
 	}
+	r.View.Reuse = r.ReuseFrames
 	return r.View.framePresentation(r.Model, full)
 }
