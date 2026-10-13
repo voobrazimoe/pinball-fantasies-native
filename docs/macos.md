@@ -212,8 +212,13 @@ physical-Mac acceptance items.
 The public bundle contains no commercial files and offers only native import
 until valid owner-supplied originals exist. NSOpenPanel accepts the containing
 folder or a file within it. The required set is INTRO.PRG, INTRO.MOD, MOD2.MOD,
-and TABLE1–4.PRG/MOD. PINBALL.CFG is copied when present; commercial executables,
-drivers, existing mutable TABLE*.HI and unrelated files are not copied.
+and TABLE1–4.PRG/MOD. PINBALL.CFG is copied when present, and so are TABLE1–4.HI
+for the full game: like on Windows/Linux they are read-only score seeds, and
+native scores are saved in State. Commercial executables (except the demo's
+PINBALL.EXE, read only for its closing text), drivers and unrelated files are not
+copied. Names are matched case-insensitively, also on case-sensitive volumes;
+several case variants of one name are rejected as ambiguous, and copies get the
+canonical upper-case DOS names.
 
 Files must be regular, non-symlink inputs. A sibling staging directory receives
 the allowlisted copies. Validation creates/destroys a temporary ABI engine,

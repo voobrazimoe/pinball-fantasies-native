@@ -38,10 +38,13 @@ final class DataImport {
     DataImport(File root, File state, Engine engine, Rename rename) {
         this.root = root; this.state = state; this.engine = engine; this.rename = rename;
     }
+    // Optional seeds, as on the desktop: settings and the DOS high-score tables.
+    static final List<String> SEEDS = Collections.unmodifiableList(Arrays.asList(
+            "PINBALL.CFG", "TABLE1.HI", "TABLE2.HI", "TABLE3.HI", "TABLE4.HI"));
     static String canonical(String name) {
         if (name == null) return null;
         String upper = name.toUpperCase(Locale.ROOT);
-        return REQUIRED.contains(upper) || "PINBALL.CFG".equals(upper) || "PINBALL.EXE".equals(upper) ? upper : null;
+        return REQUIRED.contains(upper) || SEEDS.contains(upper) || "PINBALL.EXE".equals(upper) ? upper : null;
     }
     static Map<String, String> select(Map<String, String> entries) throws IOException {
         Map<String, String> selected = new LinkedHashMap<>();
@@ -53,7 +56,9 @@ final class DataImport {
         for (String name : requiredFor(selected))
             if (!selected.containsKey(name)) throw new IOException("Missing required file: " + name);
         // The demo launcher only supplies the closing text; full installations ignore it.
+        // The demo keeps no high scores, so its folder never seeds them.
         if (requiredFor(selected) != DEMO) selected.remove("PINBALL.EXE");
+        else for (int table = 1; table <= 4; table++) selected.remove("TABLE" + table + ".HI");
         return selected;
     }
     File data() { return new File(root, "Data"); }

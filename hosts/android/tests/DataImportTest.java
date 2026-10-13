@@ -31,7 +31,7 @@ public final class DataImportTest {
         Source() {
             for (String name : DataImport.REQUIRED) names.put(name.toLowerCase(Locale.ROOT), name);
             names.put("pinball.cfg", "PINBALL.CFG");
-            for (String name : Arrays.asList("PINBALL.EXE", "TABLE1.HI", "OTHER.MOD", "subfolder")) names.put(name, name);
+            for (String name : Arrays.asList("PINBALL.EXE", "TABLE1.BAK", "OTHER.MOD", "subfolder")) names.put(name, name);
         }
         public Map<String, String> entries() { return names; }
         public InputStream open(String id) throws IOException {
@@ -90,8 +90,17 @@ public final class DataImportTest {
             check(DataImport.requiredFor(DataImport.select(demo.entries())).equals(DataImport.DEMO));
             importer.install(demo); check(importer.data().list().length == 6); // + PINBALL.EXE
             check(new File(importer.data(), "PINBALL.EXE").isFile());
+            // DOS high-score tables seed a full import under canonical names, never the demo's.
+            Source scores = new Source(); scores.names.put("table3.hi", "TABLE3.HI");
+            importer.install(scores); check(importer.data().list().length == 13);
+            check(new File(importer.data(), "TABLE3.HI").isFile());
+            Source demoScores = new Source(); demoScores.names.put("table1.hi", "TABLE1.HI");
+            for (String name : Arrays.asList("table2.prg", "table2.mod", "table3.prg", "table3.mod", "table4.prg", "table4.mod"))
+                demoScores.names.remove(name);
+            importer.install(demoScores); check(importer.data().list().length == 7); // + PINBALL.EXE, PINBALL.CFG
+            check(!new File(importer.data(), "TABLE1.HI").exists());
             Source partial = new Source(); partial.names.remove("table2.prg");
-            rejects(() -> importer.install(partial)); check(importer.data().list().length == 6);
+            rejects(() -> importer.install(partial)); check(importer.data().list().length == 7);
             importer.install(new Source()); check(importer.data().list().length == 12);
             // Failed initial rename leaves Data at its original path.
             DataImport firstRenameFailure = new DataImport(storage, state, engine, (from, to) -> {

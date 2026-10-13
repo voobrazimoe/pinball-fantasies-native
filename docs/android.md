@@ -141,8 +141,12 @@ copied, with canonical uppercase private filenames:
 - Required: `INTRO.PRG`, `INTRO.MOD`, `MOD2.MOD`, and `TABLE1.PRG`/`TABLE1.MOD`
   through `TABLE4.PRG`/`TABLE4.MOD` (11 files).
 - Optional: `PINBALL.CFG`; it is user state and is not pinned to a pristine hash.
+- Optional for the full game: `TABLE1.HI` through `TABLE4.HI`, read-only DOS
+  high-score seeds as on Windows/Linux. Native scores are saved in private state.
+  The 10-minute demo keeps no high scores and ignores them.
 
-Executables, `TABLE*.HI`, other files and directories are ignored. Cursors,
+Executables (except the demo's `PINBALL.EXE`, read only for its closing text),
+other files and directories are ignored. Cursors,
 provider input streams and private output streams use try-with-resources.
 No persistable URI permission is needed after copying. There is no external
 storage output and no commercial fallback in public APKs or tests. A local personal APK can supply

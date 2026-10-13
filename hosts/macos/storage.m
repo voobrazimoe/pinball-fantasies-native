@@ -12,12 +12,34 @@ NSArray<NSString *> *pf_required_assets(void) {
 NSArray<NSString *> *pf_demo_assets(void) {
     return @[@"INTRO.PRG",@"INTRO.MOD",@"MOD2.MOD",@"TABLE1.PRG",@"TABLE1.MOD"];
 }
+/* Names match like the desktop and Android importers, also on case-sensitive
+   volumes: an exact upper-case name wins, otherwise a single case-insensitive
+   match; several case variants of one name are ambiguous (NSNull). */
+static NSDictionary *source_names(NSString *source) {
+    NSArray<NSString *> *entries=[NSFileManager.defaultManager contentsOfDirectoryAtPath:source error:NULL];
+    NSMutableDictionary *names=[NSMutableDictionary new];
+    for (NSString *entry in entries) {
+        NSString *upper=entry.uppercaseString;
+        id prior=names[upper];
+        if ([entry isEqualToString:upper] || !prior) names[upper]=entry;
+        else if (![prior isEqual:upper]) names[upper]=NSNull.null;
+    }
+    return names;
+}
+static NSString *source_path(NSDictionary *names,NSString *source,NSString *name,NSError **error) {
+    id entry=names[name];
+    if (entry==NSNull.null) {
+        if (error) *error=failure([NSString stringWithFormat:@"Ambiguous filename: %@",name]);
+        return nil;
+    }
+    return [source stringByAppendingPathComponent:entry ?: name];
+}
 /* A folder without any TABLE2-4.PRG is offered as the official 10-minute
    Party Land demo. The shared engine alone decides whether it is that demo. */
 NSArray<NSString *> *pf_installation_assets(NSString *source) {
-    NSFileManager *fm=NSFileManager.defaultManager;
+    NSDictionary *names=source_names(source);
     for (NSString *name in @[@"TABLE2.PRG",@"TABLE3.PRG",@"TABLE4.PRG"])
-        if ([fm fileExistsAtPath:[source stringByAppendingPathComponent:name]]) return pf_required_assets();
+        if (names[name]) return pf_required_assets();
     return pf_demo_assets();
 }
 NSString *pf_support_path(NSString *base) { return [base stringByAppendingPathComponent:@"PinballFantasies"]; }
@@ -49,20 +71,26 @@ BOOL pf_import_assets(NSString *source,NSString *destination,PFValidateAssets va
     NSString *stage=[parent stringByAppendingPathComponent:[@".import-" stringByAppendingString:NSUUID.UUID.UUIDString]];
     if (![fm createDirectoryAtPath:stage withIntermediateDirectories:NO attributes:@{NSFilePosixPermissions:@0700} error:error]) return NO;
     BOOL ok=NO;
+    NSDictionary *present=source_names(source);
     NSMutableArray *names=[pf_installation_assets(source) mutableCopy];
-    if ([fm fileExistsAtPath:[source stringByAppendingPathComponent:@"PINBALL.CFG"]]) [names addObject:@"PINBALL.CFG"];
+    BOOL demo=![names containsObject:@"TABLE2.PRG"];
+    if (present[@"PINBALL.CFG"]) [names addObject:@"PINBALL.CFG"];
     /* The demo launcher only supplies the closing text; it is never executed. */
-    if ([names containsObject:@"TABLE1.PRG"] && ![names containsObject:@"TABLE2.PRG"] &&
-        [fm fileExistsAtPath:[source stringByAppendingPathComponent:@"PINBALL.EXE"]]) [names addObject:@"PINBALL.EXE"];
+    if (demo && present[@"PINBALL.EXE"]) [names addObject:@"PINBALL.EXE"];
+    /* DOS high-score tables seed a full import, as on the desktop. They are only
+       read: native scores are saved in State. The demo keeps no high scores. */
+    for (NSString *name in @[@"TABLE1.HI",@"TABLE2.HI",@"TABLE3.HI",@"TABLE4.HI"])
+        if (!demo && present[name]) [names addObject:name];
     for (NSString *name in names) {
-        if (!regular([source stringByAppendingPathComponent:name],error)) goto cleanup;
+        NSString *input=source_path(present,source,name,error);
+        if (!input || !regular(input,error)) goto cleanup;
     }
     /* Copy only a compatible installation. Revalidate the isolated copies too,
        so a changed source during copying cannot publish an invalid import. */
     if (!validate(source,error)) goto cleanup;
     for (NSString *name in names) {
-        NSString *input=[source stringByAppendingPathComponent:name];
-        if (!regular(input,error) || ![fm copyItemAtPath:input toPath:[stage stringByAppendingPathComponent:name] error:error]) goto cleanup;
+        NSString *input=source_path(present,source,name,error);
+        if (!input || !regular(input,error) || ![fm copyItemAtPath:input toPath:[stage stringByAppendingPathComponent:name] error:error]) goto cleanup;
     }
     /* Shared Go layout compatibility, decoders and settings semantics are authoritative. */
     if (!validate(stage,error)) goto cleanup;
