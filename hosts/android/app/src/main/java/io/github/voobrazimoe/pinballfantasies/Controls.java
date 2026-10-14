@@ -55,9 +55,11 @@ final class Controls {
         if(layout.nudge.contains(x,y)) return PENDING;
         return NONE;
     }
-    boolean pulling() {
-        for (Pointer p:pointers.values()) if (p.region==PLUNGER) return true;
-        return false;
+    boolean pulling() { return spring()!=null; }
+    /** The one pointer that owns the spring, or null. */
+    Pointer spring() {
+        for (Pointer p:pointers.values()) if (p.region==PLUNGER) return p;
+        return null;
     }
     void down(int id, float x, float y, long time) {
         if (!enabled || keyboardMode || !gameplay || pointers.containsKey(id)) return;

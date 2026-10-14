@@ -1,16 +1,19 @@
 package io.github.voobrazimoe.pinballfantasies;
 
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.os.SystemClock;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
+import android.view.animation.OvershootInterpolator;
 
 final class ControlOverlay extends View {
     private final Controls controls;
     SemanticUi state;
-    private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint paint = new Paint();
     private final int[] viewport=new int[8];
     void viewport(int[] bounds) {
         if(java.util.Arrays.equals(viewport,bounds)) return;
@@ -39,26 +42,97 @@ final class ControlOverlay extends View {
         if (oldw>0 && oldh>0) controls.cancel();
         updateGeometry();
     }
+    // Released spring: the drawn knob snaps back past its start, independent of engine input.
+    private ValueAnimator spring;
+    private float springX, springY, springOffset;
+    private boolean wasPulling;
+    private static final long BOB_MS=150, BLINK_MS=530;
+    private static boolean animated() { return ValueAnimator.areAnimatorsEnabled(); }
     @Override protected void onDraw(Canvas canvas) {
-        paint.setColor(0x99ffffff); paint.setTextSize(14*getResources().getDisplayMetrics().scaledDensity);
-        paint.setTextAlign(Paint.Align.CENTER);
+        float d=getResources().getDisplayMetrics().density;
+        int u=Vga.unit(d), s=PixelFont.scale(16*d);
+        long now=SystemClock.uptimeMillis();
+        paint.setStyle(Paint.Style.FILL);
         if (state!=null && state.mode==SemanticUi.STARTUP) {
-            canvas.drawText("Tap to continue",getWidth()/2f,getHeight()*.8f,paint);
+            String text=PixelFont.normalize("Tap to continue");
+            if (!animated() || (now/BLINK_MS)%2==0) {
+                float x=Math.round((getWidth()-PixelFont.width(text,s))/2f), y=Math.round(getHeight()*.8f);
+                paint.setColor(Vga.BLACK); PixelFont.draw(canvas,text,x+s,y+s,s,paint);
+                paint.setColor(Vga.AMBER); PixelFont.draw(canvas,text,x,y,s,paint);
+            }
+            if (animated()) postInvalidateDelayed(BLINK_MS-now%BLINK_MS);
         }
-        if (!controls.gameplay) return;
+        if (!controls.gameplay || controls.layout==null) return;
         for(int control:new int[]{Controls.LEFT,Controls.RIGHT}) {
             InteractionGeometry.Rect r=controls.region(control);
-            paint.setStyle(Paint.Style.FILL); paint.setColor(0x18ffffff);
-            canvas.drawRoundRect(r.left,r.top,r.right,r.bottom,12,12,paint);
-            paint.setStyle(Paint.Style.STROKE); paint.setStrokeWidth(getResources().getDisplayMetrics().density);
-            paint.setColor(0x66ffffff); canvas.drawRoundRect(r.left,r.top,r.right,r.bottom,12,12,paint);
-            paint.setStyle(Paint.Style.FILL); paint.setColor(0x99ffffff);
-            canvas.drawText(control==Controls.LEFT?"L":"R",r.cx(),r.cy()-(paint.ascent()+paint.descent())/2,paint);
+            // A constant faint wash: pressing never changes it, so the zones don't flash during play.
+            paint.setColor(0x0ff3b245); canvas.drawRect(r.left,r.top,r.right,r.bottom,paint);
+            paint.setColor(0x4df3b245);
+            float inset=10*d, arm=Math.min(22*d,r.width()/4), line=Math.max(2*u,Math.round(3*d));
+            canvas.drawRect(r.left+inset,r.top+inset,r.left+inset+arm,r.top+inset+line,paint);
+            canvas.drawRect(r.left+inset,r.top+inset,r.left+inset+line,r.top+inset+arm,paint);
+            canvas.drawRect(r.right-inset-arm,r.top+inset,r.right-inset,r.top+inset+line,paint);
+            canvas.drawRect(r.right-inset-line,r.top+inset,r.right-inset,r.top+inset+arm,paint);
+            String letter=control==Controls.LEFT?"L":"R";
+            int big=2*s;
+            PixelFont.draw(canvas,letter,Math.round(r.cx()-PixelFont.CELL*big/2f),Math.round(r.cy()-PixelFont.CELL*big/2f),big,paint);
         }
-        if (controls.plungerAvailable) {
-            InteractionGeometry.Rect r=controls.layout.plunger;
-            canvas.drawText("Pull ↓",r.cx(),r.cy()-(paint.ascent()+paint.descent())/2,paint);
+        if (!controls.plungerAvailable) { wasPulling=false; return; }
+        InteractionGeometry.Rect c=controls.layout.plunger;
+        Controls.Pointer p=controls.spring();
+        boolean springing=spring!=null && spring.isRunning();
+        if (p!=null) {
+            springX=p.x; springY=p.y; springOffset=p.position/32f*p.travel; wasPulling=true;
+            if (springing) spring.cancel();
+            paint.setColor(0x8cf3b245);
+            canvas.drawRect(c.left,c.top,c.left+u,c.bottom,paint);
+        } else if (wasPulling) {
+            wasPulling=false;
+            spring=ValueAnimator.ofFloat(springOffset,0f);
+            spring.setDuration(260); spring.setInterpolator(new OvershootInterpolator(3f));
+            spring.addUpdateListener(a->{ springOffset=(float)a.getAnimatedValue(); invalidate(); });
+            spring.start(); springing=true;
         }
+        if (p==null && !springing) {
+            String pull=PixelFont.normalize("Pull");
+            float y=Math.round(c.top+c.height()*.62f), x=Math.round(c.cx()-PixelFont.width(pull,s)/2f);
+            paint.setColor(0xb8000000);
+            canvas.drawRect(x-3*s,y-3*s,x+PixelFont.width(pull,s)+3*s,y+PixelFont.CELL*s+2*s,paint);
+            paint.setColor(Vga.AMBER);
+            canvas.drawRect(x-3*s,y-3*s,x+PixelFont.width(pull,s)+3*s,y-2*s,paint);
+            canvas.drawRect(x-3*s,y+PixelFont.CELL*s+s,x+PixelFont.width(pull,s)+3*s,y+PixelFont.CELL*s+2*s,paint);
+            canvas.drawRect(x-3*s,y-3*s,x-2*s,y+PixelFont.CELL*s+2*s,paint);
+            canvas.drawRect(x+PixelFont.width(pull,s)+2*s,y-3*s,x+PixelFont.width(pull,s)+3*s,y+PixelFont.CELL*s+2*s,paint);
+            PixelFont.draw(canvas,pull,x,y,s,paint);
+            int[] bob={0,1,2,1};
+            float shift=animated() ? bob[(int)((now/BOB_MS)%4)]*s : 0;
+            String arrow=String.valueOf(PixelFont.LOWER);
+            float ax=Math.round(c.cx()-PixelFont.CELL*s/2f);
+            PixelFont.draw(canvas,arrow,ax,y+12*s+shift,s,paint);
+            paint.setColor(0x8cf3b245);
+            PixelFont.draw(canvas,arrow,ax,y+20*s+shift,s,paint);
+            if (animated()) postInvalidateDelayed(BOB_MS-now%BOB_MS);
+        }
+        if (p==null && !springing) return;
+        // Charge meter: eight segments filling upward with the drawn spring travel.
+        int lit=p==null ? 0 : Math.round(p.position/32f*8);
+        float segW=7*u*2, segH=Math.round(4.5f*d), gap=Math.round(1.5f*d);
+        float mx=Math.round(c.left+6*d), mBottom=Math.round(c.bottom-8*d), mTop=mBottom-8*segH-7*gap;
+        paint.setColor(0xb8000000);
+        canvas.drawRect(mx-2*u,mTop-2*u,mx+segW+2*u,mBottom+2*u,paint);
+        for (int i=0;i<8;i++) {
+            boolean on=8-i<=lit;
+            paint.setColor(on ? (i<2 ? Vga.AMBER_HOT : Vga.AMBER) : Vga.DOT_OFF);
+            float top=mTop+i*(segH+gap);
+            canvas.drawRect(mx,top,mx+segW,top+segH,paint);
+        }
+        // The finger's rubber band: a rail from the touch-down point to a knob at the charge.
+        float knob=springY+springOffset;
+        paint.setColor(0xb3f3b245);
+        canvas.drawRect(springX-u,Math.min(springY,knob),springX+u,Math.max(springY,knob),paint);
+        float kw=36*d, kh=20*d;
+        Vga.bevel(canvas,paint,Math.round(springX-kw/2),Math.round(knob-kh/2),Math.round(springX+kw/2),Math.round(knob+kh/2),
+                u,Vga.FACE,Vga.LIGHT,Vga.SHADE,false);
     }
     @Override public boolean onTouchEvent(MotionEvent event) {
         if (controls.keyboardMode) return false;
