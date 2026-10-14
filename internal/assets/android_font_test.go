@@ -17,7 +17,8 @@ func TestAndroidOverlayFontMatchesSidebarFont(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	text := string(raw)
+	// Windows checkouts may carry CRLF line endings.
+	text := strings.ReplaceAll(string(raw), "\r\n", "\n")
 	i, j := strings.Index(text, begin), strings.Index(text, end)
 	if i < 0 || j < i {
 		t.Fatal("PixelFont.java lacks the generated table markers")
