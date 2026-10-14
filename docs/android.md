@@ -335,6 +335,25 @@ Initials remain A–Z and Space as `*`; no numeric row is added. Touch controls
 (including selector cards and the menu icon) do not take hardware keyboard focus.
 | GAME_END / ENTRY_WAIT / QUIT | No contextual controls |
 
+### Overlay look
+
+Every overlay is drawn in the selector frontend's own colours: lavender
+panels with raised VGA bevels, a dark title strip, red for Play and the demo,
+and the dot-matrix amber for in-game hints. All overlay text uses the sidebar's
+8x8 alphabet (`PixelFont`, generated from `assets.SidebarFont`; regenerate with
+`PF_UPDATE_ANDROID_FONT=1 go test ./internal/assets`) at whole-pixel scales.
+Buttons remain `Button`s with their semantic text, which accessibility reads,
+and show the DOS key they send as a chip (P, M, ESC, F1–F5).
+
+The menu is a tab under the dot-matrix display. A tap or a downward pull opens
+the utility sheet, which drops in from above with a small overshoot; contextual
+panels rise from below and selector cards arrive one after another. During a
+pull, a rail follows the finger to a knob and an eight-segment charge meter
+fills; on release the knob springs back past its start. These animations only
+move drawing (`translationY`, alpha, overlay paint): layout bounds, touch
+rectangles and engine input are unchanged, and the system animator scale,
+including "remove animations", applies to all of them.
+
 The accepted semantic architecture is preserved. This A6 polish adds only host
 geometry; A6 remains **NOT TESTED** pending another physical pass, A7 is not
 started, and `main` is not merged.
@@ -398,7 +417,8 @@ L/R are explicit lower-corner rectangles. Height is min(30% of safe height,
 160 dp). Portrait width is min(46% of safe width, 200 dp). Landscape width uses
 actual side-letterbox space plus 48 dp, at least 160 dp, bounded by 40% of safe
 width and 240 dp. Drawing and hit testing use those same rectangle objects:
-faint translucent fill, rounded outline, and L/R at the exact rectangle centers.
+amber corner brackets, a pixel-font L/R at the exact rectangle centers, and an
+amber fill while the flipper is held.
 No Nudge region is drawn. Transparent guards extend 24 dp above/inward of each
 flipper; starts in guards stay dead throughout that gesture. Flipper starts are
 immediate and retain pointer ownership, even after crossing or leaving a zone.
