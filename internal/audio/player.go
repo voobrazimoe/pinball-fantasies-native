@@ -251,7 +251,9 @@ func (p *Player) Render(frames int) []byte {
 				}
 			}
 			if index < len(s.PCM) {
-				// Linear interpolation suppresses nearest-neighbor resampling steps.
+				// Linear interpolation, as in the DOS drivers' top quality setting:
+				// SBLASTER/SBPRO/SB20/SM2.SDR mix with two-point interpolation there,
+				// and the GUS interpolates in hardware. SB16/PAS16.SDR stay nearest.
 				next := index + 1
 				if next >= end && s.LoopLength > 2 {
 					next = s.LoopStart
