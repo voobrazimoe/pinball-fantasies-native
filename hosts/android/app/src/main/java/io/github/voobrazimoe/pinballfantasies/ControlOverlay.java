@@ -65,9 +65,9 @@ final class ControlOverlay extends View {
         if (!controls.gameplay || controls.layout==null) return;
         for(int control:new int[]{Controls.LEFT,Controls.RIGHT}) {
             InteractionGeometry.Rect r=controls.region(control);
-            boolean on=controls.held[control];
-            if (on) { paint.setColor(0x38f3b245); canvas.drawRect(r.left,r.top,r.right,r.bottom,paint); }
-            paint.setColor(on ? Vga.AMBER : 0x99f3b245);
+            // A constant faint wash: pressing never changes it, so the zones don't flash during play.
+            paint.setColor(0x0ff3b245); canvas.drawRect(r.left,r.top,r.right,r.bottom,paint);
+            paint.setColor(0x4df3b245);
             float inset=10*d, arm=Math.min(22*d,r.width()/4), line=Math.max(2*u,Math.round(3*d));
             canvas.drawRect(r.left+inset,r.top+inset,r.left+inset+arm,r.top+inset+line,paint);
             canvas.drawRect(r.left+inset,r.top+inset,r.left+inset+line,r.top+inset+arm,paint);

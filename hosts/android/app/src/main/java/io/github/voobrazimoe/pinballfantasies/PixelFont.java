@@ -198,7 +198,8 @@ final class PixelFont {
         List<String> lines=new ArrayList<>();
         columns=Math.max(1,columns);
         StringBuilder line=new StringBuilder();
-        for(String word:text.trim().split(" +")) {
+        // Only spaces separate words: String.trim() would also eat the arrow glyphs below 0x20.
+        for(String word:text.replaceAll("^ +| +$","").split(" +")) {
             while(word.length()>columns) {
                 if(line.length()>0) { lines.add(line.toString()); line.setLength(0); }
                 lines.add(word.substring(0,columns)); word=word.substring(columns);

@@ -59,7 +59,8 @@ final class VgaButton extends android.widget.Button {
         }
         Vga.bevel(canvas,paint,l,t,r,b,u,face,light,shade,pressed);
         float shift=pressed?u:0;
-        float pad=3*u+Math.max(u,4*d);
+        // Narrow keys (the QWERTY rows) keep their glyph large rather than a wide margin.
+        float pad=3*u+Math.min(4*d,Math.max(u,(r-l)/12f));
         float left=l+pad+shift, right=r-pad+shift, top=t+3*u+shift, bottom=b-3*u+shift;
         String label=PixelFont.normalize(glyph!=null ? glyph : getText().toString());
         String key=hint==null ? null : PixelFont.normalize(hint);

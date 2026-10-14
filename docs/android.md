@@ -346,7 +346,11 @@ Buttons remain `Button`s with their semantic text, which accessibility reads,
 and show the DOS key they send as a chip (P, M, ESC, F1–F5).
 
 The menu is a tab under the dot-matrix display. A tap or a downward pull opens
-the utility sheet, which drops in from above with a small overshoot; contextual
+a short utility list that drops in from just under the tab with a small
+overshoot, over a dimmed game; the advanced keyboard drops the same way, with
+equal-size letter keys on a ten-column grid. While either is open it is modal:
+the tab (now ▲), Back, or a tap outside closes it, and that tap never reaches
+the game. Contextual
 panels rise from below and selector cards arrive one after another. During a
 pull, a rail follows the finger to a knob and an eight-segment charge meter
 fills; on release the knob springs back past its start. These animations only
@@ -365,8 +369,8 @@ at most 360 dp wide and leaves at least 12 dp outside each safe edge. Landscape
 uses three columns then Stones 'N Bones / Options, at most 600 dp wide, with the
 same 64 dp cells. Neither selector scrolls. Ordinary contextual panels use 48 dp
 rows and a 360 dp maximum width in both orientations.
-The playing utility menu (Close / Pause, Music / Advanced keyboard) sits above
-flipper guard areas. Only advanced/initials keyboards may use ScrollView. Hidden
+The playing utility list (Pause, Music, Advanced keyboard; 44 dp rows, at most
+280 dp wide) sits under the menu tab and above flipper guard areas. Only advanced/initials keyboards may use ScrollView. Hidden
 panels are GONE and clear their touch exclusion rectangle. The menu has a 48 dp accessible touch target; its viewport-relative placement is described below. System bars, cutouts and gesture insets are respected.
 
 The placement pass anchors SELECTOR / SELECTOR_TEXT, ATTRACT, OPTIONS, PAUSED
@@ -417,8 +421,8 @@ L/R are explicit lower-corner rectangles. Height is min(30% of safe height,
 160 dp). Portrait width is min(46% of safe width, 200 dp). Landscape width uses
 actual side-letterbox space plus 48 dp, at least 160 dp, bounded by 40% of safe
 width and 240 dp. Drawing and hit testing use those same rectangle objects:
-amber corner brackets, a pixel-font L/R at the exact rectangle centers, and an
-amber fill while the flipper is held.
+a faint constant amber wash, dim corner brackets and a pixel-font L/R at the
+exact rectangle centers. Holding a flipper does not change the drawing.
 No Nudge region is drawn. Transparent guards extend 24 dp above/inward of each
 flipper; starts in guards stay dead throughout that gesture. Flipper starts are
 immediate and retain pointer ownership, even after crossing or leaving a zone.
