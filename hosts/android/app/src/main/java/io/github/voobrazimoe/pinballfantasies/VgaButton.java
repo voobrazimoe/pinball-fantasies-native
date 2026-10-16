@@ -65,6 +65,18 @@ final class VgaButton extends android.widget.Button {
         String label=PixelFont.normalize(glyph!=null ? glyph : getText().toString());
         String key=hint==null ? null : PixelFont.normalize(hint);
         int scale=PixelFont.scale(Math.min(16*d,(bottom-top)*.5f));
+        // The key chip and the label shrink together, so a narrow key keeps both readable.
+        List<String> lines;
+        float textLeft;
+        while(true) {
+            textLeft=key==null ? left : left+PixelFont.width(key,scale)+7*scale;
+            int columns=(int)Math.floor((right-textLeft)/(PixelFont.CELL*scale));
+            lines=PixelFont.wrap(label,columns);
+            float textHeight=lines.size()*PixelFont.CELL*scale+(lines.size()-1)*3*scale;
+            boolean fits=columns>0 && textHeight<=bottom-top && longestWord(label)<=columns;
+            if(fits || scale==1) break;
+            scale--;
+        }
         if(key!=null) {
             int ks=scale;
             float kw=PixelFont.width(key,ks)+4*ks, kh=PixelFont.CELL*ks+4*ks;
@@ -72,17 +84,8 @@ final class VgaButton extends android.widget.Button {
             paint.setColor(chip); canvas.drawRect(left,ky,left+kw,ky+kh,paint);
             paint.setColor(enabled?Vga.LIGHT:Vga.FACE);
             PixelFont.draw(canvas,key,left+2*ks,ky+2*ks,ks,paint);
-            left+=kw+3*ks;
         }
-        List<String> lines;
-        while(true) {
-            int columns=(int)Math.floor((right-left)/(PixelFont.CELL*scale));
-            lines=PixelFont.wrap(label,columns);
-            float textHeight=lines.size()*PixelFont.CELL*scale+(lines.size()-1)*3*scale;
-            boolean fits=columns>0 && textHeight<=bottom-top && longestWord(label)<=columns;
-            if(fits || scale==1) break;
-            scale--;
-        }
+        left=textLeft;
         float lineHeight=PixelFont.CELL*scale+3*scale;
         float y=(top+bottom-(lines.size()*lineHeight-3*scale))/2;
         paint.setColor(ink);

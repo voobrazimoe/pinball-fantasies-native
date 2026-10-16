@@ -20,6 +20,9 @@ final class ControlMenu extends FrameLayout {
     final Button menu;
     private final VgaButton tab;
     final VgaPanel sheet;
+    /** Landscape Options only: Select and Back in a short strip under the original settings list. */
+    final VgaPanel lower;
+    private LinearLayout lowerContent;
     private LinearLayout content;
     private FrameLayout selector;
     private boolean scrollable;
@@ -33,11 +36,15 @@ final class ControlMenu extends FrameLayout {
     private float dim;
     private android.animation.ValueAnimator fade;
     private boolean swallow;
+    /** Landscape: the contextual panel stands as one column in the right letterbox, beside the original screen. */
+    private boolean side;
     ControlMenu(Context context, Controls controls) {
         super(context); this.controls=controls;
         sheet=new VgaPanel(context);
         sheet.setOnTouchListener((v,e)->false);
         addView(sheet,new FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT,LayoutParams.WRAP_CONTENT,Gravity.BOTTOM));
+        lower=new VgaPanel(context); lower.setVisibility(GONE);
+        addView(lower,new FrameLayout.LayoutParams(LayoutParams.WRAP_CONTENT,LayoutParams.WRAP_CONTENT,Gravity.TOP|Gravity.LEFT));
         tab=new VgaButton(context,"Menu",VgaButton.TAB); tab.glyph="▼";
         menu=tab; menu.setContentDescription("Mobile menu");
         addView(menu,new FrameLayout.LayoutParams(dp(44),dp(44),Gravity.TOP|Gravity.RIGHT));
@@ -166,8 +173,20 @@ final class ControlMenu extends FrameLayout {
             default: sheet.title(null,null); break;
         }
     }
+    private int sideRoom() {
+        if(getWidth()<=getHeight()) return 0;
+        InteractionGeometry.Rect frame=InteractionGeometry.viewport(viewport,getWidth(),getHeight());
+        return frame.width()>0 ? Math.round(getWidth()-safeRight-frame.right) : 0;
+    }
+    private boolean wantSide() {
+        boolean panel=state.mode==SemanticUi.ATTRACT || state.mode==SemanticUi.OPTIONS
+                || state.mode==SemanticUi.PAUSED || state.mode==SemanticUi.QUESTION;
+        return panel && !opened && !advanced && sideRoom()>=dp(120);
+    }
     private void rebuild() {
+        side=wantSide();
         sheet.removeAllViews();
+        lower.removeAllViews(); lowerContent=null;
         selector=null; scrollable=advanced || (!opened && state.mode==SemanticUi.INITIALS);
         content=new LinearLayout(getContext()); content.setOrientation(LinearLayout.VERTICAL);
         content.setPadding(dp(8)-gap()/2,dp(8),dp(8)-gap()/2,dp(8));
@@ -218,15 +237,26 @@ final class ControlMenu extends FrameLayout {
         } else if(state.mode==SemanticUi.INITIALS) letters(content);
         else if(state.mode!=SemanticUi.STARTUP) {
             String[] actions=state.actions();
-            for(int i=0;i<actions.length;i+=2) {
+            int perRow=side ? 1 : 2;
+            if(side && state.mode==SemanticUi.OPTIONS) {
+                // ↑ ↓ stand beside the settings list; Select and Back sit in their own strip under it.
+                actions=new String[]{"Up","Down"};
+                lowerContent=new LinearLayout(getContext()); lowerContent.setOrientation(LinearLayout.VERTICAL);
+                lowerContent.setPadding(dp(8)-gap()/2,dp(8),dp(8)-gap()/2,dp(8));
+                lower.addView(lowerContent);
+                LinearLayout r=row(lowerContent); r.getLayoutParams().height=dp(40);
+                for(String label:new String[]{"Select","Back"}) button(r,label,()->action(label));
+            }
+            for(int i=0;i<actions.length;i+=perRow) {
                 LinearLayout r=row(content);
-                for(int j=i;j<Math.min(i+2,actions.length);j++) {String label=actions[j]; button(r,label,()->action(label));}
+                for(int j=i;j<Math.min(i+perRow,actions.length);j++) {String label=actions[j]; button(r,label,()->action(label));}
             }
         }
         title();
         tab.glyph=modal() ? "▲" : "▼"; tab.invalidate();
         fadeScrim();
         sheet.setVisibility(selector==null && content.getChildCount()==0 ? GONE : VISIBLE);
+        lower.setVisibility(lowerContent==null ? GONE : VISIBLE);
         // The selector's text pages keep the same cards, so they do not replay the entrance.
         int mode=state.mode==SemanticUi.SELECTOR_TEXT ? SemanticUi.SELECTOR : state.mode;
         String key=mode+(opened?"o":"")+(advanced?"a":"");
@@ -254,6 +284,8 @@ final class ControlMenu extends FrameLayout {
     }
     private void place() {
         if(getWidth()==0 || getHeight()==0) return;
+        // Rotation or a new viewport can open or close the side letterbox; rebuild re-enters here once.
+        if(wantSide()!=side) { rebuild(); return; }
         float d=getResources().getDisplayMetrics().density;
         FrameLayout.LayoutParams panel=(FrameLayout.LayoutParams)sheet.getLayoutParams();
         InteractionGeometry.Panel grid=new InteractionGeometry.Panel(getWidth(),getHeight(),safeLeft,safeTop,
@@ -285,7 +317,14 @@ final class ControlMenu extends FrameLayout {
             height=content.getMeasuredHeight()+padY;
         }
         panel.gravity=Gravity.TOP|Gravity.LEFT; panel.width=width; panel.height=height;
+        if(side) {
+            width=Math.min(sideRoom()-dp(16),dp(200));
+            content.measure(MeasureSpec.makeMeasureSpec(width-padX,MeasureSpec.EXACTLY),MeasureSpec.makeMeasureSpec(0,MeasureSpec.UNSPECIFIED));
+            height=content.getMeasuredHeight()+padY;
+            panel.width=width; panel.height=height;
+        }
         int x=Math.round(grid.bounds.left);
+        if(side) x=Math.round(frame.right+(getWidth()-safeRight-frame.right-width)/2f);
         if(opened) x=Math.round(Math.max(safeLeft,Math.min(iconBounds.right-width,getWidth()-safeRight-width)));
         int end=getHeight()-safeBottom;
         if(controls.gameplay && !scrollable && controls.layout!=null)
@@ -295,7 +334,8 @@ final class ControlMenu extends FrameLayout {
                 || state.mode==SemanticUi.ATTRACT || state.mode==SemanticUi.OPTIONS || state.mode==SemanticUi.PAUSED
                 || state.mode==SemanticUi.QUESTION);
         int y;
-        if(contextual) y=Math.round(InteractionGeometry.lowerTop(safe,frame,height,d));
+        if(side) y=safeTop+Math.max(0,(end-safeTop-height)/2);
+        else if(contextual) y=Math.round(InteractionGeometry.lowerTop(safe,frame,height,d));
         else if(modal()) {
             // Menu and keyboard drop from just under the tab, lifted only as far as they must be to fit.
             if(advanced) height=panel.height=Math.min(height,Math.max(0,end-safeTop-dp(4)));
@@ -303,6 +343,17 @@ final class ControlMenu extends FrameLayout {
         }
         else y=scrollable ? safeTop+Math.max(0,(end-safeTop-height)/2) : grid.topWithin(safeTop,end);
         panel.setMargins(x,y,0,0); sheet.setLayoutParams(panel);
+        if(lowerContent!=null) {
+            // The original list (rows 14-174 of 240, x 164-400 of 640) leaves the frame's lowest quarter free.
+            int lw=Math.round(Math.min(dp(280),frame.width()*.45f));
+            lowerContent.measure(MeasureSpec.makeMeasureSpec(lw-padX,MeasureSpec.EXACTLY),MeasureSpec.makeMeasureSpec(0,MeasureSpec.UNSPECIFIED));
+            int lh=lowerContent.getMeasuredHeight()+lower.getPaddingTop()+lower.getPaddingBottom();
+            FrameLayout.LayoutParams lp=(FrameLayout.LayoutParams)lower.getLayoutParams();
+            lp.gravity=Gravity.TOP|Gravity.LEFT; lp.width=lw; lp.height=lh;
+            float bottom=Math.min(safe.bottom,frame.bottom)-dp(8);
+            lp.setMargins(Math.round(frame.left+frame.width()*282/640f-lw/2f),Math.round(Math.max(safe.top,bottom-lh)),0,0);
+            lower.setLayoutParams(lp);
+        }
         controls.panel=!controls.keyboardMode && sheet.getVisibility()==VISIBLE ? new InteractionGeometry.Rect(x,y,x+panel.width,y+height) : null;
         FrameLayout.LayoutParams icon=(FrameLayout.LayoutParams)menu.getLayoutParams();
         icon.gravity=Gravity.TOP|Gravity.LEFT;
@@ -326,6 +377,10 @@ final class ControlMenu extends FrameLayout {
                         .setInterpolator(new DecelerateInterpolator(1.6f));
             }
             return;
+        }
+        if(lower.getVisibility()==VISIBLE) {
+            lower.animate().cancel(); lower.setTranslationY(dp(32)); lower.setAlpha(0);
+            lower.animate().translationY(0).alpha(1).setStartDelay(60).setDuration(220).setInterpolator(new OvershootInterpolator(1f));
         }
         sheet.setTranslationY(fromBelow ? dp(32) : -dp(48)); sheet.setAlpha(0);
         sheet.animate().translationY(0).alpha(1).setDuration(fromBelow ? 220 : 300)
