@@ -382,8 +382,9 @@ Options and Players/Play retain compact two-row panels, leaving original content
 and settings values visible above. In landscape, when the right letterbox is at
 least 120 dp wide, ATTRACT, PAUSED and QUIT_QUESTION panels stand there as one
 column beside the original screen instead. Options splits: ↑ and ↓ stand in
-that column beside the settings list, and Select and Back sit in a short strip
-under the list, inside the frame's lowest quarter that the original leaves empty. Placement uses the renderer snapshot and
+that column, untitled, beside the settings list, and Select and Back sit in a
+short strip centred under the OPTIONS MENU heading, inside the frame's lowest
+quarter that the original leaves empty. Placement uses the renderer snapshot and
 never computes another aspect ratio in Java.
 
 The mobile menu's top is `viewport.top + viewport.height * 33 / source.height`

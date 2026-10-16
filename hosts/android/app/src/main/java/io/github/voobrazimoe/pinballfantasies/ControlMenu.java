@@ -166,7 +166,8 @@ final class ControlMenu extends FrameLayout {
         }
         else switch(state.mode) {
             case SemanticUi.ATTRACT: sheet.title(tableName(),null); break;
-            case SemanticUi.OPTIONS: sheet.title("Options",null); break;
+            // Beside the original OPTIONS MENU heading the ↑ ↓ column needs no title of its own.
+            case SemanticUi.OPTIONS: sheet.title(side ? null : "Options",null); break;
             case SemanticUi.PAUSED: sheet.title(tableName(),"Paused"); break;
             case SemanticUi.QUESTION: sheet.title(tableName(),"Sure?"); break;
             case SemanticUi.INITIALS: sheet.title("High score",null); break;
@@ -344,14 +345,14 @@ final class ControlMenu extends FrameLayout {
         else y=scrollable ? safeTop+Math.max(0,(end-safeTop-height)/2) : grid.topWithin(safeTop,end);
         panel.setMargins(x,y,0,0); sheet.setLayoutParams(panel);
         if(lowerContent!=null) {
-            // The original list (rows 14-174 of 240, x 164-400 of 640) leaves the frame's lowest quarter free.
+            // The original list (rows 14-174 of 240, centred on x 380 of 640) leaves the frame's lowest quarter free.
             int lw=Math.round(Math.min(dp(280),frame.width()*.45f));
             lowerContent.measure(MeasureSpec.makeMeasureSpec(lw-padX,MeasureSpec.EXACTLY),MeasureSpec.makeMeasureSpec(0,MeasureSpec.UNSPECIFIED));
             int lh=lowerContent.getMeasuredHeight()+lower.getPaddingTop()+lower.getPaddingBottom();
             FrameLayout.LayoutParams lp=(FrameLayout.LayoutParams)lower.getLayoutParams();
             lp.gravity=Gravity.TOP|Gravity.LEFT; lp.width=lw; lp.height=lh;
             float bottom=Math.min(safe.bottom,frame.bottom)-dp(8);
-            lp.setMargins(Math.round(frame.left+frame.width()*282/640f-lw/2f),Math.round(Math.max(safe.top,bottom-lh)),0,0);
+            lp.setMargins(Math.round(frame.left+frame.width()*380/640f-lw/2f),Math.round(Math.max(safe.top,bottom-lh)),0,0);
             lower.setLayoutParams(lp);
         }
         controls.panel=!controls.keyboardMode && sheet.getVisibility()==VISIBLE ? new InteractionGeometry.Rect(x,y,x+panel.width,y+height) : null;
