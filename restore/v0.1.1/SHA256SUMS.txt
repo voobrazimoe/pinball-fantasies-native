@@ -1,0 +1,2 @@
+e9f1871945d771387d4981a0411da0bbddf0e709b817481af722c8a13f7abb0f  pinballfantasies.exe
+3b7b7d78f72857182fa4abc8b2ceedd76be36938d1bb622c4d099fe7de06c9ff  PinballFantasies-x86_64.AppImage

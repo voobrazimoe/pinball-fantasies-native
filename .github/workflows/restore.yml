@@ -1,0 +1,29 @@
+name: Restore tags and releases
+on:
+  push:
+    branches: ['claude/project-thread-epldm8']
+permissions:
+  contents: write
+jobs:
+  restore:
+    runs-on: ubuntu-24.04
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Recreate tags and releases
+        run: |
+          set -eu
+          while read tag sha; do
+            if ! gh api "repos/$GH_REPO/git/ref/tags/$tag" >/dev/null 2>&1; then
+              gh api -X POST "repos/$GH_REPO/git/refs" -f ref="refs/tags/$tag" -f sha="$sha"
+            fi
+            if gh release view "$tag" >/dev/null 2>&1; then continue; fi
+            if [ "$tag" = v0.1.1 ]; then title="Pinball Fantasies Native $tag"; else title="Pinball Fantasies $tag"; fi
+            files=$(find "restore/$tag" -type f ! -name RELEASE-NOTES.md | sort)
+            gh release create "$tag" --verify-tag --prerelease --latest=false --title "$title" --notes-file "restore/$tag/RELEASE-NOTES.md" $files
+          done < restore/TAGS
+          gh release edit v0.1.7 --latest
+      - name: Delete this branch
+        run: gh api -X DELETE "repos/$GH_REPO/git/refs/heads/${GITHUB_REF_NAME}"
