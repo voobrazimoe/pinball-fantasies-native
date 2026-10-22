@@ -14,19 +14,13 @@ jobs:
       - uses: actions/checkout@v4
       - name: Recreate tags and releases
         run: |
-          set -u
-          trap 'echo "::error::failed at line $LINENO: $(tail -c 600 /tmp/err | tr "\n" " ")"' ERR
-          set -eE
-          exec 2> >(tee /tmp/err >&2)
+          fail() { echo "::error::$1: $(tr '\n' ' ' < /tmp/out | tail -c 700)"; exit 1; }
           while read tag sha; do
-            if ! gh api "repos/$GH_REPO/git/ref/tags/$tag" >/dev/null 2>&1; then
-              gh api -X POST "repos/$GH_REPO/git/refs" -f ref="refs/tags/$tag" -f sha="$sha"
-            fi
-            if gh release view "$tag" >/dev/null 2>&1; then continue; fi
+            gh api "repos/$GH_REPO/git/ref/tags/$tag" >/tmp/out 2>&1 || gh api -X POST "repos/$GH_REPO/git/refs" -f ref="refs/tags/$tag" -f sha="$sha" >/tmp/out 2>&1 || fail "tag $tag"
+            gh release view "$tag" >/tmp/out 2>&1 && continue
             if [ "$tag" = v0.1.1 ]; then title="Pinball Fantasies Native $tag"; else title="Pinball Fantasies $tag"; fi
             files=$(find "restore/$tag" -type f ! -name RELEASE-NOTES.md | sort)
-            gh release create "$tag" --verify-tag --prerelease --latest=false --title "$title" --notes-file "restore/$tag/RELEASE-NOTES.md" $files
+            gh release create "$tag" --verify-tag --prerelease --latest=false --title "$title" --notes-file "restore/$tag/RELEASE-NOTES.md" $files >/tmp/out 2>&1 || fail "release $tag"
           done < restore/TAGS
-          gh release edit v0.1.7 --latest
       - name: Delete this branch
         run: gh api -X DELETE "repos/$GH_REPO/git/refs/heads/${GITHUB_REF_NAME}"
