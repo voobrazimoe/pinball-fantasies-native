@@ -16,11 +16,11 @@ jobs:
         run: |
           fail() { echo "::error::$1: $(tr '\n' ' ' < /tmp/out | tail -c 700)"; exit 1; }
           while read tag sha; do
-            gh api "repos/$GH_REPO/git/ref/tags/$tag" >/tmp/out 2>&1 || gh api -X POST "repos/$GH_REPO/git/refs" -f ref="refs/tags/$tag" -f sha="$sha" >/tmp/out 2>&1 || fail "tag $tag"
             gh release view "$tag" >/tmp/out 2>&1 && continue
             if [ "$tag" = v0.1.1 ]; then title="Pinball Fantasies Native $tag"; else title="Pinball Fantasies $tag"; fi
             files=$(find "restore/$tag" -type f ! -name RELEASE-NOTES.md | sort)
-            gh release create "$tag" --verify-tag --prerelease --latest=false --title "$title" --notes-file "restore/$tag/RELEASE-NOTES.md" $files >/tmp/out 2>&1 || fail "release $tag"
+            gh release create "$tag" --target "$sha" --prerelease --latest=false --title "$title" --notes-file "restore/$tag/RELEASE-NOTES.md" $files >/tmp/out 2>&1 || fail "release $tag"
           done < restore/TAGS
+          gh release edit v0.1.7 --latest >/tmp/out 2>&1 || fail "latest"
       - name: Delete this branch
         run: gh api -X DELETE "repos/$GH_REPO/git/refs/heads/${GITHUB_REF_NAME}"
