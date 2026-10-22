@@ -17,7 +17,7 @@ import sys
 import zipfile
 
 ROOT=Path(__file__).resolve().parent.parent
-VERSION,VERSION_CODE='0.1.6','6'
+VERSION,VERSION_CODE='0.1.7','7'
 sys.path.insert(0,str(ROOT/'tools'))
 from check_app_icons import check_exe
 from bundled_demo import DEMO,demo_bytes
