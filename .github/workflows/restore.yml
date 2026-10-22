@@ -14,7 +14,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Recreate tags and releases
         run: |
-          set -eu
+          set -u
+          trap 'echo "::error::failed at line $LINENO: $(tail -c 600 /tmp/err | tr "\n" " ")"' ERR
+          set -eE
+          exec 2> >(tee /tmp/err >&2)
           while read tag sha; do
             if ! gh api "repos/$GH_REPO/git/ref/tags/$tag" >/dev/null 2>&1; then
               gh api -X POST "repos/$GH_REPO/git/refs" -f ref="refs/tags/$tag" -f sha="$sha"
