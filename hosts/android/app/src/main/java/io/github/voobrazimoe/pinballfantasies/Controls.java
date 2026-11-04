@@ -38,7 +38,11 @@ final class Controls {
     Controls(Sink sink, Delay delay) { this.sink=sink; this.delay=delay; }
     void geometry(float width,float height,float safeLeft,float safeTop,float safeRight,float safeBottom,
                   float touchSlop,long timeout,float density,InteractionGeometry.Rect viewport) {
-        layout=new InteractionGeometry(width,height,safeLeft,safeTop,safeRight,safeBottom,density,viewport);
+        geometry(width,height,safeLeft,safeTop,safeRight,safeBottom,touchSlop,timeout,density,viewport,383);
+    }
+    void geometry(float width,float height,float safeLeft,float safeTop,float safeRight,float safeBottom,
+                  float touchSlop,long timeout,float density,InteractionGeometry.Rect viewport,int sourceHeight) {
+        layout=new InteractionGeometry(width,height,safeLeft,safeTop,safeRight,safeBottom,density,viewport,sourceHeight);
         slop=touchSlop; tapTimeout=timeout;
         pullTravel=Math.max(2*slop,layout.safe.height()*.25f);
     }

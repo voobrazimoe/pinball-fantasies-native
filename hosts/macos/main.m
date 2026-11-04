@@ -2,6 +2,7 @@
 #import "frame_view.h"
 #import <mach/mach_time.h>
 #import "native_input.h"
+#import "gamepad.h"
 #include <stdio.h>
 static const char *pacingPath;
 #ifdef PF_DEMODEV
@@ -38,6 +39,7 @@ static void inputEvent(void *context,PFHostEvent event,int32_t a,int32_t b) {
     uint64_t _engine, _epoch;
     mach_timebase_info_data_t _timebase;
     PFInput _input;
+    PFGamepad *_gamepad;
     PFAudio _audio;
     BOOL _focused, _mouseActive, _cursorHidden, _failed, _sleeping, _stepping;
     id _sleepObserver, _wakeObserver;
@@ -120,6 +122,12 @@ static void inputEvent(void *context,PFHostEvent event,int32_t a,int32_t b) {
     [self syncFocus];
     if (!pf_audio_open(&_audio)) NSLog(@"CoreAudio unavailable: %d (game remains playable)",_audio.error);
     __weak PFApp *weakSelf=self;
+    _gamepad=[[PFGamepad alloc] initWithSink:^(int32_t kind,int32_t a,int32_t b) {
+        PFApp *owner=weakSelf;
+        if (!owner || !owner->_engine || owner->_failed) return;
+        [owner check:pf_engine_gamepad(owner->_engine,kind,a,b)];
+        [owner step];
+    }];
     pf_audio_watch_device(&_audio, ^{ [weakSelf deviceChanged]; });
     NSNotificationCenter *workspace=NSWorkspace.sharedWorkspace.notificationCenter;
     _sleepObserver=[workspace addObserverForName:NSWorkspaceWillSleepNotification object:nil
@@ -316,6 +324,7 @@ static void inputEvent(void *context,PFHostEvent event,int32_t a,int32_t b) {
 - (void)applicationDidResignActive:(NSNotification *)n { (void)n; [self syncFocus]; }
 - (BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication *)app { (void)app; return YES; }
 - (void)applicationWillTerminate:(NSNotification *)n {
+    [_gamepad close]; _gamepad=nil;
     (void)n;
     if (_timer) dispatch_source_cancel(_timer);
     _timer=nil;

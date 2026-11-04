@@ -7,6 +7,7 @@ import (
 	"image"
 	"os"
 	"pinballfantasies/internal/diagnostics"
+	"pinballfantasies/internal/gamepad"
 	"runtime"
 	"sync"
 	"syscall"
@@ -91,6 +92,7 @@ type hostWindow struct {
 	hwnd                                     uintptr
 	presentation                             WindowPresentation
 	input                                    windowsKeys
+	gamepad                                  windowsGamepad
 	focused                                  bool
 	mouseActive, mouseDown                   bool
 	inputLog                                 *os.File
@@ -170,7 +172,9 @@ func openHost(first *image.RGBA) (_ *hostWindow, err error) {
 		h.Close()
 		return nil, err
 	}
+	h.registerGamepads()
 	up("ShowWindow").Call(hwnd, 5)
+	h.pollGamepad()
 	diagnostics.Printf("Win32 window opened HWND=%#x; %s\n", hwnd, dpiPolicy)
 	return h, nil
 }
@@ -226,9 +230,12 @@ func windowProc(hwnd uintptr, msg uint32, w, l uintptr) uintptr {
 			}
 			h.events = append(h.events, h.input.key(uint32(w), l, msg == 0x100 || msg == 0x104)...)
 			return 0 // consume system keys too; Alt remains a flipper, Alt+Enter shared shortcut
-		case 0xff: // WM_INPUT: unscaled hardware-relative mouse motion.
-			h.rawMouse(l)
+		case 0xff: // WM_INPUT: unscaled relative mouse motion and Sony HID gamepads.
+			h.rawInput(l)
 			// DefWindowProc must clean up foreground raw-input resources.
+		case 0xfe: // WM_INPUT_DEVICE_CHANGE
+			h.hidDeviceChange(w, l)
+			return 0
 		case 0x7: // WM_SETFOCUS
 			h.focused = true
 			h.refreshMouseCursor()
@@ -239,14 +246,10 @@ func windowProc(hwnd uintptr, msg uint32, w, l uintptr) uintptr {
 			h.refreshMouseCursor()
 			h.mouseDown = false
 			h.input = windowsKeys{}
+			// Raw HID reports stop in the background; do not keep stale holds.
+			h.gamepad.hid.state = gamepad.Snapshot{}
 			h.refreshInput("focus-loss", 0, 0, false)
-			keep := h.events[:0]
-			for _, e := range h.events {
-				if e.kind == 1 {
-					keep = append(keep, e)
-				}
-			}
-			h.events = append(keep, hostEvent{kind: 5})
+			h.events = focusLostEvents(h.events)
 			return 0
 
 		case 0x14: // WM_ERASEBKGND: the complete offscreen frame owns the background.
@@ -347,6 +350,7 @@ func (h *hostWindow) serviceSources() error {
 	return nil
 }
 func (h *hostWindow) Event() hostEvent {
+	h.pollGamepad()
 	if len(h.events) == 0 {
 		return hostEvent{}
 	}

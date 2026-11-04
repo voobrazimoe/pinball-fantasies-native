@@ -13,6 +13,7 @@ final class SemanticUi {
     }
     boolean gameplay() { return mode==PLAYING; }
     boolean plunger() { return gameplay() && (flags&4)!=0; }
+    boolean controllerHints() { return (flags&8)!=0 && mode!=INITIALS; }
     void players(int delta) { players=Math.max(1,Math.min(8,players+delta)); }
     String[] actions() {
         switch(mode) {

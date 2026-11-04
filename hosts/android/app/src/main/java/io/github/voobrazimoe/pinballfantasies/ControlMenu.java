@@ -256,7 +256,8 @@ final class ControlMenu extends FrameLayout {
         title();
         tab.glyph=modal() ? "▲" : "▼"; tab.invalidate();
         fadeScrim();
-        sheet.setVisibility(selector==null && content.getChildCount()==0 ? GONE : VISIBLE);
+        sheet.setVisibility((state.controllerHints() && !opened && !advanced)
+                || (selector==null && content.getChildCount()==0) ? GONE : VISIBLE);
         lower.setVisibility(lowerContent==null ? GONE : VISIBLE);
         // The selector's text pages keep the same cards, so they do not replay the entrance.
         int mode=state.mode==SemanticUi.SELECTOR_TEXT ? SemanticUi.SELECTOR : state.mode;

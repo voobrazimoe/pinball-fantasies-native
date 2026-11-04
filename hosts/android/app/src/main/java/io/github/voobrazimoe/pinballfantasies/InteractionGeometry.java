@@ -12,6 +12,9 @@ final class InteractionGeometry {
     }
     final Rect safe,frame,left,right,leftGuard,rightGuard,nudge,plunger;
     InteractionGeometry(float w,float h,float l,float t,float r,float b,float density,Rect viewport) {
+        this(w,h,l,t,r,b,density,viewport,383);
+    }
+    InteractionGeometry(float w,float h,float l,float t,float r,float b,float density,Rect viewport,int sourceHeight) {
         safe=new Rect(l,t,w-r,h-b);
         frame=new Rect(Math.max(l,viewport.left),Math.max(t,viewport.top),
                 Math.min(w-r,viewport.right),Math.min(h-b,viewport.bottom));
@@ -28,7 +31,8 @@ final class InteractionGeometry {
         rightGuard=new Rect(Math.max(l,right.left-guard),Math.max(t,right.top-guard),safe.right,safe.bottom);
         float neutralBottom=Math.min(frame.bottom,Math.min(leftGuard.top,rightGuard.top)-gap);
         float corridorWidth=Math.min(frame.width()*.25f,96*density);
-        plunger=new Rect(frame.right-corridorWidth,frame.top,frame.right,neutralBottom);
+        float pullTop=frame.top+frame.height()*33/Math.max(33,sourceHeight)+gap;
+        plunger=new Rect(frame.right-corridorWidth,pullTop,frame.right,neutralBottom);
         nudge=new Rect(frame.left+gap,frame.top+gap,plunger.left-gap,neutralBottom);
     }
     // Renderer coordinates remain authoritative; no Java aspect-ratio policy.

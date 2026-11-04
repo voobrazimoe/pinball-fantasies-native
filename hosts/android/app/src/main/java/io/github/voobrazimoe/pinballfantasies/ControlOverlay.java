@@ -23,7 +23,7 @@ final class ControlOverlay extends View {
     ControlOverlay(Context context, Controls controls) {
         super(context); this.controls=controls;
         controls.changed=this::invalidate;
-        setContentDescription("Game controls: outlined lower corners flippers; upper central playfield tap nudge; Pull corridor downward drag plunger");
+        setContentDescription("Game controls: lower corners flippers; central playfield tap nudge; Pull corridor: drag down, then release to launch the ball");
     }
     void safeArea(int left, int top, int right, int bottom) {
         safeLeft=left; safeTop=top; safeRight=right; safeBottom=bottom;
@@ -32,7 +32,7 @@ final class ControlOverlay extends View {
     private void updateGeometry() {
         controls.geometry(getWidth(),getHeight(),safeLeft,safeTop,safeRight,safeBottom,
                 ViewConfiguration.get(getContext()).getScaledTouchSlop(),ViewConfiguration.getLongPressTimeout(),
-                getResources().getDisplayMetrics().density,frameBounds());
+                getResources().getDisplayMetrics().density,frameBounds(),viewport[7]);
         invalidate();
     }
     private InteractionGeometry.Rect frameBounds() {
