@@ -22,6 +22,10 @@ type windowsGamepad struct {
 	active             int
 	lastPoll, nextScan time.Time
 	tracker            gamepad.Tracker
+	// Sony HID controllers are used only while no XInput slot is active, so a
+	// controller that Steam Input also exposes as XInput is not read twice.
+	hid       hidGamepad
+	hidActive bool
 }
 
 func (p *windowsGamepad) read(slot int) (xinputState, bool) {
@@ -52,7 +56,8 @@ func (h *hostWindow) pollGamepad() {
 			}
 		}
 	}
-	if (p.proc == nil && p.readState == nil) || now.Sub(p.lastPoll) < 4*time.Millisecond {
+	xinput := p.proc != nil || p.readState != nil
+	if (!xinput && !p.hid.present && !p.hidActive) || now.Sub(p.lastPoll) < 4*time.Millisecond {
 		return
 	}
 	p.lastPoll = now
@@ -67,16 +72,34 @@ func (h *hostWindow) pollGamepad() {
 			p.nextScan = time.Time{}
 		}
 	}
-	if p.active < 0 && !now.Before(p.nextScan) {
+	if xinput && p.active < 0 && !now.Before(p.nextScan) {
 		p.nextScan = now.Add(time.Second)
 		for slot := 0; slot < 4; slot++ {
 			state, ok := p.read(slot)
 			if ok {
+				if p.hidActive {
+					p.hidActive = false
+					events = append(events, p.tracker.Disconnect()...)
+				}
 				p.active = slot
 				events = append(events, p.tracker.Sample(gamepad.XInputSnapshot(state.Buttons, state.LeftTrigger, state.RightTrigger))...)
 				break
 			}
 		}
+	}
+	if p.active < 0 {
+		switch {
+		case p.hid.present:
+			p.hidActive = true
+			events = append(events, p.tracker.Sample(p.hid.state)...)
+		case p.hidActive:
+			p.hidActive = false
+			events = append(events, p.tracker.Disconnect()...)
+		}
+	}
+	family := gamepad.Xbox
+	if p.hidActive {
+		family = gamepad.PlayStation
 	}
 	for _, event := range events {
 		kind := 9 + event.Kind
@@ -88,7 +111,7 @@ func (h *hostWindow) pollGamepad() {
 		}
 		h.events = append(h.events, hostEvent{kind: kind, key: event.A, mouseY: event.B})
 		if event.Kind == 2 {
-			h.events = append(h.events, hostEvent{kind: 13, key: int(gamepad.Xbox)})
+			h.events = append(h.events, hostEvent{kind: 13, key: int(family)})
 		}
 	}
 }

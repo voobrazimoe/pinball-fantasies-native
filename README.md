@@ -112,7 +112,7 @@ Inside a loaded table:
 
 On macOS, `Z` / `/` and Left / Right Arrow are alternate left/right flipper controls. If your Mac reports Shift sides reversed, enable **View → Swap Left/Right Shift**; the correction persists across launches and affects only Shift.
 
-Gamepads are supported through SDL2 on Linux, XInput on Windows,
+Gamepads are supported through SDL2 on Linux, XInput and native DualSense/DualShock 4 HID on Windows,
 GameController on macOS and Android controller events: shoulders/triggers operate the flippers,
 X charges/releases the plunger, Y nudges, and Start pauses. See
 [gamepad controls and two Steam Deck layouts](docs/gamepads-steam-deck.md) for

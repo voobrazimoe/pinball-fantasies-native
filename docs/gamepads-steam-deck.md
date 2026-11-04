@@ -21,14 +21,17 @@ The same standard buttons and menu policy below are shared by all four hosts.
 | Platform | Native device API | Scope |
 | --- | --- | --- |
 | Linux / Steam Deck | SDL2 GameController | Recognized standard SDL controllers; first active device |
-| Windows | XInput 1.4, fallback 9.1.0 | Xbox/XInput-compatible devices, including compatible Steam Input emulation |
+| Windows | XInput 1.4, fallback 9.1.0; raw input HID | Xbox/XInput-compatible devices, including Steam Input emulation; DualSense, DualSense Edge and DualShock 4 over USB or Bluetooth without extra software |
 | macOS ARM64 / Intel | Apple GameController | Controllers with an extended gamepad profile |
 | Android | InputManager, KeyEvent, MotionEvent | Devices advertising GAMEPAD or JOYSTICK; trigger axes/digital buttons and D-pad keys/hats |
 
 Windows reads snapshots at host input collection, with a 4 ms minimum polling
 interval and a one-second scan when no device is connected. A press/release
-entirely between two XInput snapshots cannot be observed. Raw DirectInput
-controllers need external XInput emulation. macOS callbacks run on the main
+entirely between two XInput snapshots cannot be observed. Sony controllers are
+read from their HID input reports (raw input, foreground window only) and
+sampled at the same polling points; an active XInput slot takes precedence, so
+a pad that Steam Input also exposes as XInput is not read twice. Other
+DirectInput controllers need external XInput emulation. macOS callbacks run on the main
 queue; background controller events maintain physical history while the engine
 remains suspended. Android retains historical motion samples, chooses supported
 LTRIGGER/RTRIGGER axes or BRAKE/GAS fallback, and filters other devices. Android
@@ -124,8 +127,9 @@ unchanged. Disconnecting the controller removes the panel.
 Linux uses SDL's controller type; macOS uses the GameController profile and
 reported face-button symbols; Android uses vendor/device identity. Xbox and
 PlayStation controls have their corresponding letters or shapes, with a generic
-ABXY fallback. Windows XInput and Steam Input can expose a virtual Xbox device,
-so its Xbox glyphs are shown even if the physical pad is a PlayStation pad.
+ABXY fallback. A Sony pad read over HID on Windows shows PlayStation glyphs;
+when Steam Input exposes it as a virtual Xbox device, XInput wins and Xbox
+glyphs are shown.
 Nintendo profiles use the corresponding physical face-button letters.
 
 Android also highlights its actual launch touch region with a translucent blue
