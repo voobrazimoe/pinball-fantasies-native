@@ -150,61 +150,60 @@ func glyph(dst *image.RGBA, p *Input, button, x, y int) {
 
 // Overlay composes into separate host pixels. It never mutates a source frame.
 // Hidden overlays reuse the source pointer; dst is reusable host storage.
+//
+// The hint panel is drawn over the bottom of the frame, which keeps its size:
+// a frame that grows while hints are visible makes hosts resize or rescale
+// the window and push the table around. The top of the frame (the dot-matrix
+// display) is never covered.
 func Overlay(dst, src *image.RGBA, p *Input, rows []Hint) *image.RGBA {
 	if !p.Connected() || len(rows) == 0 || src.Rect.Dx() < 260 || src.Rect.Dy() < 150 {
 		return src
 	}
-	// Preserve the complete source image, with its original scanline aspect.
-	// Hints occupy an additional host-only strip below it.
+	// 640x240 frames are shown with doubled scanlines, so their pixels are
+	// twice as tall as wide. Doubling the panel horizontally keeps it square.
 	scale := 1
-	if src.Rect.Size() == image.Pt(640, 240) {
+	if src.Rect.Dx() >= 520 {
 		scale = 2
 	}
-	sourceHeight := src.Rect.Dy() * scale
-	stripHeight := 28 + len(rows)*16
-	bounds := image.Rect(src.Rect.Min.X, src.Rect.Min.Y, src.Rect.Max.X, src.Rect.Min.Y+sourceHeight+stripHeight*scale)
-	if dst == nil || dst.Rect != bounds {
-		dst = image.NewRGBA(bounds)
+	if dst == nil || dst.Rect != src.Rect {
+		dst = image.NewRGBA(src.Rect)
 	}
-	draw.Draw(dst, dst.Rect, image.NewUniform(color.RGBA{0, 0, 0, 255}), image.Point{}, draw.Src)
-	for row := 0; row < src.Rect.Dy(); row++ {
-		for repeat := 0; repeat < scale; repeat++ {
-			draw.Draw(dst, image.Rect(bounds.Min.X, bounds.Min.Y+row*scale+repeat, bounds.Max.X, bounds.Min.Y+row*scale+repeat+1), src, image.Pt(src.Rect.Min.X, src.Rect.Min.Y+row), draw.Src)
-		}
+	copy(dst.Pix, src.Pix)
+
+	width, height := 300, 20+len(rows)*16
+	if max := src.Rect.Dy() / 2; height > max {
+		height = max
 	}
-	width := 300
-	x := bounds.Min.X + (src.Rect.Dx()/scale-width)/2
-	y := bounds.Min.Y + sourceHeight + 4
-	panel := image.Rect(x, y, x+width, y+stripHeight-8)
-	draw.Draw(dst, panel, image.NewUniform(color.NRGBA{12, 18, 26, 195}), image.Point{}, draw.Over)
+	panel := image.NewRGBA(image.Rect(0, 0, width, height))
+	draw.Draw(panel, panel.Rect, image.NewUniform(color.NRGBA{12, 18, 26, 205}), image.Point{}, draw.Src)
 	title := "GAMEPAD"
-	if p.family == Xbox {
+	switch p.family {
+	case Xbox:
 		title = "XBOX"
-	}
-	if p.family == PlayStation {
+	case PlayStation:
 		title = "PLAYSTATION"
-	}
-	if p.family == Nintendo {
+	case Nintendo:
 		title = "NINTENDO"
 	}
-	text(dst, title, x+8, y+6, color.RGBA{170, 185, 200, 255})
+	text(panel, title, 8, 4, color.RGBA{170, 185, 200, 255})
 	for i, row := range rows {
-		yy := y + 18 + i*16
-		glyph(dst, p, row.Button, x+8, yy-2)
-		text(dst, row.Text, x+48, yy+1, ink)
+		y := 16 + i*16
+		glyph(panel, p, row.Button, 8, y-2)
+		text(panel, row.Text, 48, y+1, ink)
 	}
 	if scale == 2 {
-		// Expand the strip in place, backwards so its source pixels stay intact.
-		for row := stripHeight - 1; row >= 0; row-- {
-			for col := src.Rect.Dx()/scale - 1; col >= 0; col-- {
-				c := dst.RGBAAt(bounds.Min.X+col, bounds.Min.Y+sourceHeight+row)
-				for dy := 0; dy < scale; dy++ {
-					for dx := 0; dx < scale; dx++ {
-						dst.SetRGBA(bounds.Min.X+col*scale+dx, bounds.Min.Y+sourceHeight+row*scale+dy, c)
-					}
-				}
+		wide := image.NewRGBA(image.Rect(0, 0, width*2, height))
+		for y := 0; y < height; y++ {
+			for x := 0; x < width; x++ {
+				c := panel.RGBAAt(x, y)
+				wide.SetRGBA(2*x, y, c)
+				wide.SetRGBA(2*x+1, y, c)
 			}
 		}
+		panel = wide
 	}
+	x := src.Rect.Min.X + (src.Rect.Dx()-panel.Rect.Dx())/2
+	y := src.Rect.Max.Y - height - 4
+	draw.Draw(dst, image.Rect(x, y, x+panel.Rect.Dx(), y+height), panel, image.Point{}, draw.Over)
 	return dst
 }

@@ -61,13 +61,13 @@ func TestOverlayOwnsPixelsAndProtectsMatrix(t *testing.T) {
 	if dst == src || !bytes.Equal(src.Pix, original) || bytes.Equal(dst.Pix, src.Pix) {
 		t.Fatal("source frame changed or no overlay")
 	}
-	for row := 0; row < src.Rect.Dy(); row++ {
-		if !bytes.Equal(dst.Pix[row*dst.Stride:row*dst.Stride+src.Rect.Dx()*4], src.Pix[row*src.Stride:(row+1)*src.Stride]) {
-			t.Fatal("source content obscured", row)
-		}
+	if dst.Rect != src.Rect {
+		t.Fatal("hints resized the frame", dst.Rect)
 	}
-	if dst.Rect.Dy() <= src.Rect.Dy() {
-		t.Fatal("no separate hint strip")
+	// The upper half, with the dot-matrix display, stays untouched.
+	half := src.Rect.Dy() / 2 * src.Stride
+	if !bytes.Equal(dst.Pix[:half], src.Pix[:half]) {
+		t.Fatal("hints cover the upper frame")
 	}
 	if Overlay(dst, src, p, rows) != dst {
 		t.Fatal("host allocation not reused")
@@ -75,12 +75,12 @@ func TestOverlayOwnsPixelsAndProtectsMatrix(t *testing.T) {
 	if Overlay(dst, src, p, Hints(frontend.Playing, false, false, false)) != src {
 		t.Fatal("visible during ball play")
 	}
-	if dst.RGBAAt(12, src.Rect.Max.Y+5).R == 12 {
-		t.Fatal("opaque panel")
+	if c := dst.RGBAAt(12, src.Rect.Max.Y-6); c.R == 12 || c == src.RGBAAt(12, src.Rect.Max.Y-6) {
+		t.Fatal("panel missing or opaque", c)
 	}
 }
 
-func TestSelectorHintStripPreservesScanlineAspect(t *testing.T) {
+func TestSelectorHintsKeepFrameAndScanlineAspect(t *testing.T) {
 	p := New()
 	p.Connect(0)
 	src := image.NewRGBA(image.Rect(0, 0, 640, 240))
@@ -90,14 +90,29 @@ func TestSelectorHintStripPreservesScanlineAspect(t *testing.T) {
 		}
 	}
 	dst := Overlay(nil, src, p, Hints(frontend.Options, false, false, false))
-	if dst.Rect.Dy() <= 480 {
-		t.Fatal(dst.Rect)
+	if dst.Rect != src.Rect {
+		t.Fatal("hints resized the frame", dst.Rect)
 	}
-	for y := 0; y < 240; y++ {
+	for y := 0; y < 120; y++ {
 		for x := 0; x < 640; x++ {
-			if dst.RGBAAt(x, 2*y) != src.RGBAAt(x, y) || dst.RGBAAt(x, 2*y+1) != src.RGBAAt(x, y) {
-				t.Fatal("changed selector", x, y)
+			if dst.RGBAAt(x, y) != src.RGBAAt(x, y) {
+				t.Fatal("covered upper selector", x, y)
 			}
 		}
+	}
+	// Panel pixels come in horizontal pairs, matching the doubled scanlines.
+	ink := 0
+	for y := 120; y < 240; y++ {
+		for x := 20; x < 620; x += 2 {
+			if dst.RGBAAt(x, y) == (color.RGBA{240, 245, 250, 255}) {
+				ink++
+				if dst.RGBAAt(x+1, y) != dst.RGBAAt(x, y) {
+					t.Fatal("panel not doubled horizontally", x, y)
+				}
+			}
+		}
+	}
+	if ink == 0 {
+		t.Fatal("no hint text drawn")
 	}
 }

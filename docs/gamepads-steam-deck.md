@@ -115,12 +115,14 @@ importable VDF preset.
 
 ### Contextual controls on screen
 
-A translucent controller panel in a separate strip below the source image shows
+A translucent controller panel drawn over the bottom of the image shows
 table/button identities in the selector,
 options navigation, start/player selection, pause and quit actions. Before a
 ball is launched it also shows the flipper and charged-launch controls. It
-disappears during normal ball play and leaves the entire source image unobstructed.
-The 640x240 frontend keeps its doubled-scanline aspect.
+disappears during normal ball play. The frame keeps its size, so the window
+and the table do not move when the panel appears; the panel never covers the
+upper half of the image with the dot-matrix display. On 640x240 frontend
+frames the panel is doubled horizontally to match the doubled scanlines.
 These are host presentation pixels; source frames and source game logic are
 unchanged. Disconnecting the controller removes the panel.
 
