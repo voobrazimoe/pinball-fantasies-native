@@ -212,6 +212,10 @@ func (h *hostWindow) Present(frame *image.RGBA) error {
 	C.SDL_RenderPresent(h.renderer)
 	return nil
 }
+
+// WaitComposition is false: RenderPresent already waits for vsync.
+func (h *hostWindow) WaitComposition() bool { return false }
+
 func (h *hostWindow) Event() hostEvent {
 	if h.controllerMetadata {
 		h.controllerMetadata = false

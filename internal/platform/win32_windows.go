@@ -85,7 +85,7 @@ type paintStruct struct {
 type hostWindow struct {
 	surfaceDC, surfaceBitmap, originalBitmap uintptr
 	surfaceSize                              image.Point
-	dirty, noPresent                         bool
+	dirty, noPresent, noVsync                bool
 	surfaceNeedsClear                        bool
 	paints, erases, blits                    uint64
 	savedRect                                rect
@@ -153,7 +153,7 @@ func openHost(first *image.RGBA) (_ *hostWindow, err error) {
 	if v, _, e := up("AdjustWindowRectEx").Call(uintptr(unsafe.Pointer(&bounds)), style, 0, 0); v == 0 {
 		return nil, apiError("AdjustWindowRectEx", e)
 	}
-	h := &hostWindow{style: style, noPresent: os.Getenv("PF12_NO_PRESENT") == "1", size: first.Rect.Size(), pixels: frameBGRA(nil, first), dirty: true}
+	h := &hostWindow{style: style, noPresent: os.Getenv("PF12_NO_PRESENT") == "1", noVsync: os.Getenv("PF12_NO_VSYNC") == "1", size: first.Rect.Size(), pixels: frameBGRA(nil, first), dirty: true}
 	h.openInputLog()
 	defer func() {
 		if err != nil && h.inputLog != nil {
@@ -381,6 +381,23 @@ func (h *hostWindow) Present(f *image.RGBA) error {
 		}
 	}
 	return nil
+}
+
+var dwmFlush = cachedProc(syscall.NewLazyDLL("dwmapi.dll"), "DwmFlush")
+
+// WaitComposition blocks until the desktop compositor has taken the frame just
+// drawn, so the loop presents once per display refresh like the Linux, macOS
+// and Android hosts. Source ticks keep their own 60/71 Hz deadlines; this only
+// decides when the newest frame is shown. It reports false when DWM did not
+// actually wait (unavailable, failed or returned at once), and the caller then
+// sleeps until the next source deadline as before. PF12_NO_VSYNC=1 disables it.
+func (h *hostWindow) WaitComposition() bool {
+	if h.noPresent || h.noVsync || dwmFlush.Find() != nil {
+		return false
+	}
+	start := time.Now()
+	hr, _, _ := dwmFlush.Call()
+	return int32(hr) >= 0 && time.Since(start) >= time.Millisecond
 }
 
 func gdiOK(value uintptr) bool { return value != 0 && uint32(value) != 0xffffffff }

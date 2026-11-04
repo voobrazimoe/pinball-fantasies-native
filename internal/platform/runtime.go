@@ -241,6 +241,8 @@ func showFrontend(r *frontend.Runtime, duration time.Duration, device *AudioDevi
 		}
 		if runner.Suspended {
 			time.Sleep(time.Second / 60)
+		} else if host.WaitComposition() {
+			// Shown at a display refresh; the next pass advances every tick due by now.
 		} else if remaining := time.Until(runner.Next); remaining > 0 {
 			time.Sleep(remaining)
 		}
