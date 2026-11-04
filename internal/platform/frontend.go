@@ -213,8 +213,9 @@ func (h *hostWindow) Present(frame *image.RGBA) error {
 	return nil
 }
 
-// WaitComposition is false: RenderPresent already waits for vsync.
-func (h *hostWindow) WaitComposition() bool { return false }
+// RenderPresent already waits for vsync, so the shared loop adds no wait.
+func (h *hostWindow) WaitBeforePresent() bool { return false }
+func (h *hostWindow) WaitAfterPresent() bool  { return false }
 
 func (h *hostWindow) Event() hostEvent {
 	if h.controllerMetadata {

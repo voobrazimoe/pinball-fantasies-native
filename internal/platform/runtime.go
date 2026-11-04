@@ -233,6 +233,17 @@ func showFrontend(r *frontend.Runtime, duration time.Duration, device *AudioDevi
 		if runner.Done {
 			return nil
 		}
+		// A host that paces to the display blocks here until the refresh starts,
+		// then shows the newest frame with every tick due by that moment.
+		paced := !runner.Suspended && host.WaitBeforePresent()
+		if paced {
+			if err := advance(); err != nil {
+				return err
+			}
+			if runner.Done {
+				return nil
+			}
+		}
 		if err := present(); err != nil {
 			return err
 		}
@@ -241,7 +252,7 @@ func showFrontend(r *frontend.Runtime, duration time.Duration, device *AudioDevi
 		}
 		if runner.Suspended {
 			time.Sleep(time.Second / 60)
-		} else if host.WaitComposition() {
+		} else if paced || host.WaitAfterPresent() {
 			// Shown at a display refresh; the next pass advances every tick due by now.
 		} else if remaining := time.Until(runner.Next); remaining > 0 {
 			time.Sleep(remaining)
