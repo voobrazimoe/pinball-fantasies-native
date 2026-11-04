@@ -86,6 +86,7 @@ type hostWindow struct {
 	surfaceDC, surfaceBitmap, originalBitmap uintptr
 	surfaceSize                              image.Point
 	dirty, noPresent                         bool
+	vsync                                    displayWait
 	surfaceNeedsClear                        bool
 	paints, erases, blits                    uint64
 	savedRect                                rect
@@ -179,6 +180,7 @@ func openHost(first *image.RGBA) (_ *hostWindow, err error) {
 	return h, nil
 }
 func (h *hostWindow) Close() {
+	h.closeVBlank()
 	h.MouseActive(false)
 	if h.inputLog != nil {
 		defer h.inputLog.Close()

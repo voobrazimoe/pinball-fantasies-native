@@ -212,6 +212,11 @@ func (h *hostWindow) Present(frame *image.RGBA) error {
 	C.SDL_RenderPresent(h.renderer)
 	return nil
 }
+
+// RenderPresent already waits for vsync, so the shared loop adds no wait.
+func (h *hostWindow) WaitBeforePresent() bool { return false }
+func (h *hostWindow) WaitAfterPresent() bool  { return false }
+
 func (h *hostWindow) Event() hostEvent {
 	if h.controllerMetadata {
 		h.controllerMetadata = false
