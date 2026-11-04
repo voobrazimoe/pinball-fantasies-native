@@ -84,8 +84,6 @@ final class ControlOverlay extends View {
         if (p!=null) {
             springX=p.x; springY=p.y; springOffset=p.position/32f*p.travel; wasPulling=true;
             if (springing) spring.cancel();
-            paint.setColor(0x8cf3b245);
-            canvas.drawRect(c.left,c.top,c.left+u,c.bottom,paint);
         } else if (wasPulling) {
             wasPulling=false;
             spring=ValueAnimator.ofFloat(springOffset,0f);
