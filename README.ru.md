@@ -2,20 +2,29 @@
 
 [English](README.md) | **Русский**
 
-Первый публичный beta-релиз нативной реконструкции DOS-версии **Pinball Fantasies** для современных Windows, Linux, macOS и Android.
+Нативная beta-реконструкция DOS-версии **Pinball Fantasies** для современных Windows, Linux, macOS и Android.
 
 > **Важно:** публичные сборки содержат только официальную 10-минутную демоверсию Party Land. Для полной игры нужна собственная легально полученная DOS-версия.
 
 ## Быстрый старт
 
-Скачайте опубликованный [prerelease v0.1.7](https://github.com/voobrazimoe/pinball-fantasies-native/releases/tag/v0.1.7) для своей платформы:
+Скачайте актуальный [релиз v0.1.8](https://github.com/voobrazimoe/pinball-fantasies-native/releases/tag/v0.1.8) для своей платформы:
 
-- [Windows x86_64: pinballfantasies.exe](https://github.com/voobrazimoe/pinball-fantasies-native/releases/download/v0.1.7/pinballfantasies.exe)
-- [Linux x86_64: PinballFantasies-x86_64.AppImage](https://github.com/voobrazimoe/pinball-fantasies-native/releases/download/v0.1.7/PinballFantasies-x86_64.AppImage)
-- [macOS Apple Silicon ARM64: PinballFantasies-arm64.zip](https://github.com/voobrazimoe/pinball-fantasies-native/releases/download/v0.1.7/PinballFantasies-arm64.zip)
-- [macOS Intel x86_64: PinballFantasies-x86_64.zip](https://github.com/voobrazimoe/pinball-fantasies-native/releases/download/v0.1.7/PinballFantasies-x86_64.zip)
-- [Android ARM64 + x86_64: PinballFantasies-android.apk](https://github.com/voobrazimoe/pinball-fantasies-native/releases/download/v0.1.7/PinballFantasies-android.apk)
-- [Контрольные суммы SHA256](https://github.com/voobrazimoe/pinball-fantasies-native/releases/download/v0.1.7/SHA256SUMS.txt)
+- [Windows x86_64: pinballfantasies.exe](https://github.com/voobrazimoe/pinball-fantasies-native/releases/download/v0.1.8/pinballfantasies.exe)
+- [Linux x86_64: PinballFantasies-x86_64.AppImage](https://github.com/voobrazimoe/pinball-fantasies-native/releases/download/v0.1.8/PinballFantasies-x86_64.AppImage)
+- [macOS Apple Silicon ARM64: PinballFantasies-arm64.zip](https://github.com/voobrazimoe/pinball-fantasies-native/releases/download/v0.1.8/PinballFantasies-arm64.zip)
+- [macOS Intel x86_64: PinballFantasies-x86_64.zip](https://github.com/voobrazimoe/pinball-fantasies-native/releases/download/v0.1.8/PinballFantasies-x86_64.zip)
+- [Android ARM64 + x86_64: PinballFantasies-android.apk](https://github.com/voobrazimoe/pinball-fantasies-native/releases/download/v0.1.8/PinballFantasies-android.apk)
+- [Контрольные суммы SHA256](https://github.com/voobrazimoe/pinball-fantasies-native/releases/download/v0.1.8/SHA256SUMS.txt)
+
+## Что нового в v0.1.8
+
+- **Геймпады на всех платформах:** SDL2 GameController на Linux/Steam Deck, XInput на Windows, Apple GameController на macOS и ввод с контроллеров на Android. Плечевые кнопки и триггеры управляют флипперами, X — пружиной запуска, Y — толчком, Start — паузой. Контекстные подсказки отображаются поверх игрового кадра.
+- **Контроллеры PlayStation на Windows:** DualSense, DualSense Edge и DualShock 4 работают напрямую по USB или Bluetooth, без Steam и DS4Windows.
+- **Плавность на Windows:** вывод кадров синхронизирован с вертикальной развёрткой монитора. Переменная окружения `PF12_VSYNC` принимает значения `vblank` (по умолчанию), `dwm` или `off`.
+- **Исправление на Android:** убрана лишняя янтарная полоска рядом с кнопкой Pull при натяжении пружины.
+
+Правила и физика игры не изменились. Подробнее — в [описании релиза v0.1.8](https://github.com/voobrazimoe/pinball-fantasies-native/releases/tag/v0.1.8) и [инструкции по геймпадам и Steam Deck](docs/gamepads-steam-deck.md).
 
 Пока полная игра не установлена, при запуске любая сборка предлагает выбор: **импортировать полную игру** из папки с оригинальной DOS-версией или **запустить встроенную 10-минутную демоверсию**. Импортированные файлы проверяются и копируются в собственное хранилище приложения; после импорта полной игры выбор больше не появляется.
 
@@ -34,7 +43,7 @@ chmod +x PinballFantasies-x86_64.AppImage
 
 ## Быстрый старт на Android
 
-Скачайте публичный `PinballFantasies-android.apk` из prerelease v0.1.7 по ссылке выше:
+Скачайте публичный `PinballFantasies-android.apk` из релиза v0.1.8 по ссылке выше:
 
 1. Установите APK и откройте Pinball Fantasies (Android 8.1 или новее).
 2. Нажмите **Import DOS folder** и выберите папку с поддерживаемыми оригинальными DOS-файлами из списка ниже либо нажмите **Play 10-minute demo**.
@@ -42,8 +51,8 @@ chmod +x PinballFantasies-x86_64.AppImage
 4. Выберите стол через контекстные сенсорные элементы либо подключите физическую клавиатуру. При внешней клавиатуре сенсорные панели автоматически скрываются.
 
 Кроме 10-минутной демоверсии, файлы игры не включены. Универсальный APK содержит
-arm64-v8a и x86_64, подписан ключом разработки и поддерживает страницы памяти 16 КБ.
-Подробнее: [Android](docs/android.md), [подготовка кандидата](docs/release-v0.1.3.md).
+arm64-v8a и x86_64, подписан ключом разработки и поддерживает страницы памяти 16 КБ. Если прежний APK подписан другим ключом, перед установкой этого релиза удалите старую версию, а затем повторно импортируйте папку DOS-игры.
+Подробнее: [Android](docs/android.md), [управление с геймпада](docs/gamepads-steam-deck.md).
 
 Поддерживаются четыре DOS-установки: исходный розничный выпуск, набор Power Pack
 `21STCENT/FANTASY` и оба набора Deluxe CD `PFD/FANTASY` (включая копию GOG).
